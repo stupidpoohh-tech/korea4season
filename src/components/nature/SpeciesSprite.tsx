@@ -13,11 +13,17 @@ export function SpeciesSprite({
   entity,
   size = 20,
   className = '',
+  transform,
 }: {
   entity: NatureEntity;
   /** 담을 정사각 박스의 한 변 (px) */
   size?: number;
   className?: string;
+  /**
+   * 지도에서만 쓰는 변형(좌우 반전 · 기울기).
+   * 목록과 상세는 그림을 있는 그대로 보여준다.
+   */
+  transform?: string;
 }) {
   if (entity.illustration) {
     return (
@@ -29,13 +35,17 @@ export function SpeciesSprite({
         aria-hidden
         draggable={false}
         className={`object-contain ${className}`}
-        style={{ width: size, height: size }}
+        style={{ width: size, height: size, transform }}
       />
     );
   }
 
   return (
-    <span aria-hidden className={className} style={{ fontSize: size * 0.8, lineHeight: 1 }}>
+    <span
+      aria-hidden
+      className={className}
+      style={{ fontSize: size * 0.8, lineHeight: 1, transform, display: 'inline-block' }}
+    >
       {entity.icon}
     </span>
   );

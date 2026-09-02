@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { motion } from 'motion/react';
 import type { MapSprite } from '@/services/map-service';
 import { SpeciesSprite } from '@/components/nature/SpeciesSprite';
+import { spriteVariation, variationTransform } from '@/lib/sprite-variation';
 
 interface Props {
   sprite: MapSprite;
@@ -33,6 +34,8 @@ function NatureSpriteBase({
 }: Props) {
   const { position, prominence, restricted, accent, entity } = sprite;
   const peak = prominence >= 1;
+  // 같은 키에서 뽑으므로 리렌더나 재생 중에도 흔들리지 않는다
+  const variation = variationTransform(spriteVariation(sprite.key));
   const size = 30 + prominence * 10; // 36 ~ 40px
 
   return (
@@ -82,7 +85,7 @@ function NatureSpriteBase({
           }}
         >
           {entity ? (
-            <SpeciesSprite entity={entity} size={size * 0.78} />
+            <SpeciesSprite entity={entity} size={size * 0.78} transform={variation} />
           ) : (
             <span aria-hidden className="text-[13px] font-semibold text-[color:var(--color-ink)]">
               {sprite.placeLabel}

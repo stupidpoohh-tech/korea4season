@@ -100,9 +100,10 @@ SIMPLE = [
       'long-arm-octopus', 'black-porgy', 'spanish-mackerel']),
 ]
 
-# 시트 3: 셀마다 포즈가 여러 개다. 왼쪽을 보고 형태가 또렷한 것을 하나씩 고른다.
+# 시트 3: 셀마다 포즈가 여러 개다. 형태가 또렷한 것을 하나씩 고른다.
+# 방향은 통일하지 않는다 — 지도에서 물고기가 제각기 다른 쪽을 보는 편이 살아 있어 보인다.
 SHEET3 = [
-    ('largehead-hairtail',   0, 3, True),   # 가장 길고 또렷한 포즈. 방향만 좌우 반전
+    ('largehead-hairtail',   0, 3, False),
     ('chub-mackerel',        1, 0, False),
     ('pacific-cod',          2, 3, False),
     ('snow-crab',            3, 0, False),
