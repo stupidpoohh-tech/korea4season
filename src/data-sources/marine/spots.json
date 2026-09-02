@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "name": "공개 낚시 장소 (DEMO)",
+    "note": "널리 알려진 공개 장소만 담는다. 모든 권역을 정확한 GPS 포인트로 만들지 않는다는 제품 원칙을 따른다.",
+    "updatedAt": "2026-01-01",
+    "isDemo": true
+  },
+  "spots": [
+    { "code": "eurwangni-beach", "zone": "incheon-ganghwa", "name": "을왕리 해변", "type": "BEACH", "lat": 37.448, "lng": 126.372, "publicKnownSpot": true, "accessInfo": "공영주차장 인접" },
+    { "code": "sorae-port", "zone": "incheon-ganghwa", "name": "소래포구", "type": "PORT", "lat": 37.399, "lng": 126.738, "publicKnownSpot": true, "accessInfo": "수인분당선 소래포구역" },
+    { "code": "oido-pier", "zone": "gyeonggi-sihwa", "name": "오이도 선착장", "type": "PIER", "lat": 37.345, "lng": 126.686, "publicKnownSpot": true },
+    { "code": "sihwa-seawall", "zone": "gyeonggi-sihwa", "name": "시화방조제", "type": "BREAKWATER", "lat": 37.276, "lng": 126.606, "publicKnownSpot": true, "accessInfo": "구간별 주차 가능" },
+    { "code": "sinjindo-breakwater", "zone": "chungnam-taean", "name": "신진도 방파제", "type": "BREAKWATER", "lat": 36.685, "lng": 126.145, "publicKnownSpot": true },
+    { "code": "kkotji-beach", "zone": "chungnam-taean", "name": "안면도 꽃지해변", "type": "BEACH", "lat": 36.522, "lng": 126.324, "publicKnownSpot": true },
+    { "code": "daecheon-beach", "zone": "chungnam-boryeong", "name": "대천해수욕장", "type": "BEACH", "lat": 36.313, "lng": 126.508, "publicKnownSpot": true },
+    { "code": "gyeokpo-breakwater", "zone": "jeonbuk-gunsan", "name": "격포 방파제", "type": "BREAKWATER", "lat": 35.622, "lng": 126.462, "publicKnownSpot": true },
+    { "code": "dolsan-rock", "zone": "jeonnam-yeosu", "name": "돌산 갯바위", "type": "ROCK", "lat": 34.669, "lng": 127.762, "publicKnownSpot": true, "accessInfo": "구명조끼 필수 구간" },
+    { "code": "daebyeon-port", "zone": "busan-gijang", "name": "기장 대변항", "type": "PORT", "lat": 35.219, "lng": 129.226, "publicKnownSpot": true },
+    { "code": "songjeong-beach", "zone": "busan-gijang", "name": "송정 해변", "type": "BEACH", "lat": 35.178, "lng": 129.200, "publicKnownSpot": true },
+    { "code": "yeongilman-breakwater", "zone": "pohang-yeongdeok", "name": "영일만 방파제", "type": "BREAKWATER", "lat": 36.049, "lng": 129.379, "publicKnownSpot": true },
+    { "code": "namhangjin-breakwater", "zone": "gangneung-yangyang", "name": "강릉 남항진 방파제", "type": "BREAKWATER", "lat": 37.767, "lng": 128.951, "publicKnownSpot": true },
+    { "code": "cheongho-breakwater", "zone": "goseong-sokcho", "name": "속초 청호동 방파제", "type": "BREAKWATER", "lat": 38.199, "lng": 128.596, "publicKnownSpot": true },
+    { "code": "sagye-breakwater", "zone": "jeju-south", "name": "제주 사계 방파제", "type": "BREAKWATER", "lat": 33.226, "lng": 126.317, "publicKnownSpot": true }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "낚시 권역 (DEMO)",
+    "note": "권역은 넓은 단위다. 정확한 낚시 포인트를 무조건 공개하지 않는다는 제품 원칙에 따라 discovery 의 기본 단위를 권역으로 둔다.",
+    "updatedAt": "2026-01-01",
+    "isDemo": true
+  },
+  "zones": [
+    { "code": "incheon-ganghwa", "name": "인천 강화·영종권", "region": "인천", "seaRegion": "서해", "lat": 37.50, "lng": 126.25, "waterType": "coastal", "shoreTypes": ["BREAKWATER", "PORT", "BEACH"], "description": "한강 하구와 만나는 갯벌·조간대 중심 권역" },
+    { "code": "incheon-ongjin", "name": "인천 옹진·자월권", "region": "인천", "seaRegion": "서해", "lat": 37.25, "lng": 126.15, "waterType": "offshore", "shoreTypes": ["ROCK", "BREAKWATER", "BEACH"], "description": "섬이 많아 갯바위와 방파제가 두루 있는 권역" },
+    { "code": "gyeonggi-sihwa", "name": "경기 시화·화성권", "region": "경기", "seaRegion": "서해", "lat": 37.10, "lng": 126.35, "waterType": "bay", "shoreTypes": ["BREAKWATER", "PIER", "FISHING_PARK"], "description": "방조제와 인공 구조물이 많은 내만 권역" },
+    { "code": "chungnam-taean", "name": "충남 태안·안면권", "region": "충남", "seaRegion": "서해", "lat": 36.60, "lng": 126.05, "waterType": "coastal", "shoreTypes": ["BEACH", "ROCK", "BREAKWATER"], "description": "모래 해변이 길게 이어지는 서해 대표 권역" },
+    { "code": "chungnam-boryeong", "name": "충남 보령·서천권", "region": "충남", "seaRegion": "서해", "lat": 36.20, "lng": 126.25, "waterType": "coastal", "shoreTypes": ["BEACH", "BREAKWATER", "PORT"], "description": "섬과 해변이 섞인 중부 서해 권역" },
+    { "code": "jeonbuk-gunsan", "name": "전북 군산·부안권", "region": "전북", "seaRegion": "서해", "lat": 35.80, "lng": 126.25, "waterType": "estuary", "shoreTypes": ["BREAKWATER", "ROCK", "PORT"], "description": "금강 하구와 방조제가 이어지는 권역" },
+    { "code": "jeonnam-sinan", "name": "전남 신안·목포권", "region": "전남", "seaRegion": "서해", "lat": 34.85, "lng": 126.05, "waterType": "offshore", "shoreTypes": ["ROCK", "PORT", "BREAKWATER"], "description": "다도해 서쪽, 섬이 촘촘한 권역" },
+
+    { "code": "jeonnam-jindo", "name": "전남 진도·해남권", "region": "전남", "seaRegion": "남해", "lat": 34.20, "lng": 126.20, "waterType": "coastal", "shoreTypes": ["ROCK", "BREAKWATER", "PORT"], "description": "물살이 센 서남해 전이 권역" },
+    { "code": "jeonnam-yeosu", "name": "전남 여수·고흥권", "region": "전남", "seaRegion": "남해", "lat": 34.45, "lng": 127.45, "waterType": "coastal", "shoreTypes": ["ROCK", "BREAKWATER", "PIER"], "description": "갯바위가 발달한 남해 서부 권역" },
+    { "code": "gyeongnam-namhae", "name": "경남 남해·통영권", "region": "경남", "seaRegion": "남해", "lat": 34.60, "lng": 128.10, "waterType": "offshore", "shoreTypes": ["ROCK", "PORT", "BREAKWATER"], "description": "한려수도 중심, 섬과 물골이 많은 권역" },
+    { "code": "gyeongnam-geoje", "name": "경남 거제·진해권", "region": "경남", "seaRegion": "남해", "lat": 34.75, "lng": 128.65, "waterType": "bay", "shoreTypes": ["ROCK", "BREAKWATER", "PIER"], "description": "내만과 외해가 함께 있는 권역" },
+    { "code": "busan-gijang", "name": "부산 기장·해운대권", "region": "부산", "seaRegion": "남해", "lat": 35.25, "lng": 129.30, "waterType": "coastal", "shoreTypes": ["ROCK", "BREAKWATER", "FISHING_PARK"], "description": "남해와 동해가 만나는 도심 인접 권역" },
+
+    { "code": "ulsan-gyeongju", "name": "울산·경주권", "region": "울산", "seaRegion": "동해", "lat": 35.65, "lng": 129.60, "waterType": "coastal", "shoreTypes": ["ROCK", "BREAKWATER", "PORT"], "description": "동해 남부 시작 지점" },
+    { "code": "pohang-yeongdeok", "name": "포항·영덕권", "region": "경북", "seaRegion": "동해", "lat": 36.40, "lng": 129.65, "waterType": "offshore", "shoreTypes": ["ROCK", "BREAKWATER", "PORT"], "description": "수심이 빠르게 깊어지는 동해 중부 권역" },
+    { "code": "uljin-samcheok", "name": "울진·삼척권", "region": "경북", "seaRegion": "동해", "lat": 37.20, "lng": 129.45, "waterType": "offshore", "shoreTypes": ["ROCK", "PORT", "BEACH"], "description": "심해와 가까운 동해 중북부 권역" },
+    { "code": "gangneung-yangyang", "name": "강릉·양양권", "region": "강원", "seaRegion": "동해", "lat": 37.90, "lng": 129.10, "waterType": "coastal", "shoreTypes": ["BEACH", "BREAKWATER", "ROCK"], "description": "모래 해변과 방파제가 이어지는 권역" },
+    { "code": "goseong-sokcho", "name": "고성·속초권", "region": "강원", "seaRegion": "동해", "lat": 38.35, "lng": 128.80, "waterType": "coastal", "shoreTypes": ["BREAKWATER", "PORT", "ROCK"], "description": "동해 최북단 권역" },
+
+    { "code": "jeju-north", "name": "제주 북부권", "region": "제주", "seaRegion": "제주", "lat": 33.70, "lng": 126.55, "waterType": "coastal", "shoreTypes": ["ROCK", "BREAKWATER", "PORT"], "description": "제주시 앞바다 권역" },
+    { "code": "jeju-south", "name": "제주 남부권", "region": "제주", "seaRegion": "제주", "lat": 33.00, "lng": 126.50, "waterType": "offshore", "shoreTypes": ["ROCK", "BREAKWATER", "PORT"], "description": "서귀포 앞바다, 난류 영향이 큰 권역" }
+  ]
+}

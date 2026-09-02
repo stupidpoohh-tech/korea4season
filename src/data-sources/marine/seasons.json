@@ -1,0 +1,625 @@
+{
+  "meta": {
+    "name": "어종 시즌 (DEMO — 검증 필요)",
+    "note": "낚시 시즌은 법령처럼 한 날짜로 확정되지 않는다. 아래 값은 UI 검증용 placeholder 이며 production 데이터가 아니다.",
+    "disclaimer": "개발용 DEMO 시즌 데이터입니다. 실제 어황은 해마다 수온·조류·해역에 따라 크게 달라집니다. 공공기관·연구기관 자료로 대체하기 전까지 실제 출조 판단에 사용하지 마십시오.",
+    "confidencePolicy": "권역 단위 시기는 근거를 확인하지 않았으므로 전부 demo 로 둔다. lastVerifiedAt 이 비어 있으면 미검증이다.",
+    "updatedAt": "2026-01-01",
+    "isDemo": true
+  },
+  "seasons": [
+    {
+      "species": "japanese-sillago",
+      "windows": [
+        {
+          "zones": [
+            "incheon-ganghwa",
+            "incheon-ongjin",
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong",
+            "jeonbuk-gunsan"
+          ],
+          "start": "06-01",
+          "end": "10-25",
+          "peakStart": "07-10",
+          "peakEnd": "09-15",
+          "strength": "good",
+          "methods": [
+            "shore-cast",
+            "breakwater"
+          ]
+        },
+        {
+          "zones": [
+            "jeonnam-sinan",
+            "jeonnam-yeosu"
+          ],
+          "start": "06-15",
+          "end": "10-15",
+          "peakStart": "07-20",
+          "peakEnd": "09-05",
+          "strength": "fair",
+          "methods": [
+            "shore-cast"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "korean-rockfish",
+      "windows": [
+        {
+          "zones": [
+            "incheon-ongjin",
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong"
+          ],
+          "start": "03-15",
+          "end": "06-20",
+          "peakStart": "04-10",
+          "peakEnd": "05-25",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "breakwater",
+            "bottom"
+          ]
+        },
+        {
+          "zones": [
+            "incheon-ongjin",
+            "chungnam-taean",
+            "jeonbuk-gunsan"
+          ],
+          "start": "09-20",
+          "end": "12-15",
+          "peakStart": "10-15",
+          "peakEnd": "11-20",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "breakwater"
+          ]
+        },
+        {
+          "zones": [
+            "gyeongnam-geoje",
+            "busan-gijang",
+            "ulsan-gyeongju"
+          ],
+          "start": "10-01",
+          "end": "04-30",
+          "peakStart": "11-15",
+          "peakEnd": "02-20",
+          "strength": "fair",
+          "methods": [
+            "boat",
+            "rock"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "olive-flounder",
+      "windows": [
+        {
+          "zones": [
+            "chungnam-taean",
+            "chungnam-boryeong",
+            "jeonbuk-gunsan",
+            "incheon-ongjin"
+          ],
+          "start": "09-01",
+          "end": "12-10",
+          "peakStart": "10-05",
+          "peakEnd": "11-20",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "lure",
+            "shore-cast"
+          ]
+        },
+        {
+          "zones": [
+            "gangneung-yangyang",
+            "uljin-samcheok",
+            "pohang-yeongdeok"
+          ],
+          "start": "05-01",
+          "end": "11-15",
+          "peakStart": "09-15",
+          "peakEnd": "10-31",
+          "strength": "fair",
+          "methods": [
+            "lure",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "black-porgy",
+      "windows": [
+        {
+          "zones": [
+            "jeonnam-yeosu",
+            "gyeongnam-namhae",
+            "gyeongnam-geoje",
+            "busan-gijang"
+          ],
+          "start": "09-15",
+          "end": "02-28",
+          "peakStart": "10-25",
+          "peakEnd": "12-20",
+          "strength": "good",
+          "methods": [
+            "rock",
+            "float",
+            "breakwater"
+          ]
+        },
+        {
+          "zones": [
+            "jeonnam-jindo",
+            "jeonnam-sinan",
+            "jeju-north",
+            "jeju-south"
+          ],
+          "start": "10-01",
+          "end": "03-15",
+          "peakStart": "11-05",
+          "peakEnd": "01-20",
+          "strength": "fair",
+          "methods": [
+            "rock",
+            "float"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "red-seabream",
+      "windows": [
+        {
+          "zones": [
+            "gyeongnam-namhae",
+            "gyeongnam-geoje",
+            "jeonnam-yeosu"
+          ],
+          "start": "04-01",
+          "end": "06-30",
+          "peakStart": "04-25",
+          "peakEnd": "06-05",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "jigging"
+          ]
+        },
+        {
+          "zones": [
+            "jeju-north",
+            "jeju-south",
+            "busan-gijang",
+            "pohang-yeongdeok"
+          ],
+          "start": "09-20",
+          "end": "12-20",
+          "peakStart": "10-20",
+          "peakEnd": "11-30",
+          "strength": "fair",
+          "methods": [
+            "boat",
+            "jigging"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "gizzard-shad",
+      "windows": [
+        {
+          "zones": [
+            "chungnam-boryeong",
+            "jeonbuk-gunsan",
+            "jeonnam-sinan",
+            "jeonnam-yeosu",
+            "gyeongnam-namhae"
+          ],
+          "start": "08-20",
+          "end": "11-05",
+          "peakStart": "09-05",
+          "peakEnd": "10-15",
+          "strength": "good",
+          "methods": [
+            "breakwater",
+            "float",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "chub-mackerel",
+      "windows": [
+        {
+          "zones": [
+            "busan-gijang",
+            "ulsan-gyeongju",
+            "gyeongnam-geoje",
+            "jeju-north"
+          ],
+          "start": "06-15",
+          "end": "11-30",
+          "peakStart": "09-01",
+          "peakEnd": "11-10",
+          "strength": "good",
+          "methods": [
+            "breakwater",
+            "boat",
+            "lure"
+          ]
+        },
+        {
+          "zones": [
+            "pohang-yeongdeok",
+            "gangneung-yangyang"
+          ],
+          "start": "07-01",
+          "end": "11-15",
+          "peakStart": "09-10",
+          "peakEnd": "10-25",
+          "strength": "fair",
+          "methods": [
+            "breakwater",
+            "lure"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "spanish-mackerel",
+      "windows": [
+        {
+          "zones": [
+            "jeonnam-yeosu",
+            "gyeongnam-namhae",
+            "jeonnam-sinan",
+            "jeonnam-jindo"
+          ],
+          "start": "09-20",
+          "end": "12-31",
+          "peakStart": "10-20",
+          "peakEnd": "12-05",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "lure"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "largehead-hairtail",
+      "windows": [
+        {
+          "zones": [
+            "jeju-north",
+            "jeju-south"
+          ],
+          "start": "08-01",
+          "end": "12-15",
+          "peakStart": "09-10",
+          "peakEnd": "11-10",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "jigging"
+          ]
+        },
+        {
+          "zones": [
+            "gyeongnam-namhae",
+            "busan-gijang",
+            "jeonnam-yeosu"
+          ],
+          "start": "08-20",
+          "end": "11-30",
+          "peakStart": "09-20",
+          "peakEnd": "10-31",
+          "strength": "fair",
+          "methods": [
+            "boat",
+            "breakwater"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "webfoot-octopus",
+      "windows": [
+        {
+          "zones": [
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong",
+            "jeonbuk-gunsan"
+          ],
+          "start": "09-01",
+          "end": "11-30",
+          "peakStart": "09-20",
+          "peakEnd": "10-31",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "jigging"
+          ]
+        },
+        {
+          "zones": [
+            "chungnam-boryeong",
+            "jeonbuk-gunsan"
+          ],
+          "start": "03-01",
+          "end": "05-10",
+          "peakStart": "03-20",
+          "peakEnd": "04-25",
+          "strength": "fair",
+          "methods": [
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "long-arm-octopus",
+      "windows": [
+        {
+          "zones": [
+            "jeonnam-sinan",
+            "jeonbuk-gunsan",
+            "chungnam-boryeong"
+          ],
+          "start": "09-01",
+          "end": "12-20",
+          "peakStart": "10-01",
+          "peakEnd": "11-20",
+          "strength": "fair",
+          "methods": [
+            "net-free",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "common-octopus",
+      "windows": [
+        {
+          "zones": [
+            "gyeongnam-namhae",
+            "gyeongnam-geoje",
+            "jeju-north",
+            "jeju-south"
+          ],
+          "start": "07-01",
+          "end": "11-30",
+          "peakStart": "08-15",
+          "peakEnd": "10-20",
+          "strength": "fair",
+          "methods": [
+            "boat",
+            "net-free"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "blue-crab",
+      "windows": [
+        {
+          "zones": [
+            "incheon-ganghwa",
+            "incheon-ongjin",
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong"
+          ],
+          "start": "09-01",
+          "end": "11-20",
+          "peakStart": "09-20",
+          "peakEnd": "10-31",
+          "strength": "peak",
+          "methods": [
+            "net-free",
+            "boat"
+          ]
+        },
+        {
+          "zones": [
+            "incheon-ongjin",
+            "chungnam-taean",
+            "jeonbuk-gunsan"
+          ],
+          "start": "04-01",
+          "end": "06-15",
+          "peakStart": "04-20",
+          "peakEnd": "05-31",
+          "strength": "good",
+          "methods": [
+            "net-free",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "snow-crab",
+      "windows": [
+        {
+          "zones": [
+            "pohang-yeongdeok",
+            "uljin-samcheok",
+            "gangneung-yangyang"
+          ],
+          "start": "12-01",
+          "end": "05-20",
+          "peakStart": "01-10",
+          "peakEnd": "03-20",
+          "strength": "good",
+          "methods": [
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "pacific-cod",
+      "windows": [
+        {
+          "zones": [
+            "gyeongnam-geoje",
+            "busan-gijang"
+          ],
+          "start": "11-20",
+          "end": "02-10",
+          "peakStart": "12-10",
+          "peakEnd": "01-15",
+          "strength": "good",
+          "methods": [
+            "boat"
+          ]
+        },
+        {
+          "zones": [
+            "pohang-yeongdeok",
+            "uljin-samcheok"
+          ],
+          "start": "12-01",
+          "end": "02-20",
+          "peakStart": "12-20",
+          "peakEnd": "01-31",
+          "strength": "fair",
+          "methods": [
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "marbled-flounder",
+      "windows": [
+        {
+          "zones": [
+            "gyeongnam-namhae",
+            "gyeongnam-geoje",
+            "jeonnam-yeosu",
+            "busan-gijang"
+          ],
+          "start": "02-15",
+          "end": "05-20",
+          "peakStart": "03-10",
+          "peakEnd": "04-25",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "bottom"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "common-squid",
+      "windows": [
+        {
+          "zones": [
+            "pohang-yeongdeok",
+            "uljin-samcheok",
+            "gangneung-yangyang",
+            "goseong-sokcho"
+          ],
+          "start": "08-15",
+          "end": "01-31",
+          "peakStart": "09-20",
+          "peakEnd": "12-10",
+          "strength": "good",
+          "methods": [
+            "boat",
+            "jigging"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "dark-banded-rockfish",
+      "windows": [
+        {
+          "zones": [
+            "gyeongnam-namhae",
+            "gyeongnam-geoje",
+            "jeonnam-yeosu",
+            "busan-gijang"
+          ],
+          "start": "11-01",
+          "end": "04-15",
+          "peakStart": "12-10",
+          "peakEnd": "03-05",
+          "strength": "good",
+          "methods": [
+            "lure",
+            "rock",
+            "breakwater"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "small-yellow-croaker",
+      "windows": [
+        {
+          "zones": [
+            "jeonnam-sinan",
+            "jeonbuk-gunsan",
+            "chungnam-boryeong"
+          ],
+          "start": "03-20",
+          "end": "05-31",
+          "peakStart": "04-05",
+          "peakEnd": "05-10",
+          "strength": "fair",
+          "methods": [
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "yellowfin-goby",
+      "windows": [
+        {
+          "zones": [
+            "incheon-ganghwa",
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong",
+            "jeonbuk-gunsan",
+            "jeonnam-sinan"
+          ],
+          "start": "08-20",
+          "end": "11-30",
+          "peakStart": "09-15",
+          "peakEnd": "10-31",
+          "strength": "good",
+          "methods": [
+            "breakwater",
+            "shore-cast",
+            "bottom"
+          ]
+        }
+      ]
+    }
+  ]
+}

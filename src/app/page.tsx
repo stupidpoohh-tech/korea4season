@@ -4,6 +4,9 @@ import { seasonMeta } from '@/lib/season';
 import { hasDemoData } from '@/services/nature-service';
 import { TodayNature } from '@/components/today/TodayNature';
 import { NatureNow } from '@/components/today/NatureNow';
+import { TodaySea } from '@/components/marine/TodaySea';
+import { MarineNow } from '@/components/marine/MarineNow';
+import { FishingPicks } from '@/components/marine/FishingPicks';
 import { MapPreviewCard } from '@/components/map/MapPreviewCard';
 import { WeekDiscovery } from '@/components/discovery/WeekDiscovery';
 
@@ -27,21 +30,21 @@ export default function HomePage() {
           </span>
         </p>
         <h1 className="mt-1.5 text-[24px] font-semibold leading-tight tracking-tight sm:text-[28px]">
-          지금 대한민국의 자연에서는
+          지금 바다에서는
           <br />
-          무슨 일이 일어나고 있을까요?
+          무엇을 만날 수 있을까요?
         </h1>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10">
         <div className="order-2 space-y-8 lg:order-1">
-          <TodayNature date={date} />
-          <NatureNow date={date} />
+          <TodaySea date={date} />
+          <MarineNow date={date} />
 
-          <section aria-labelledby="week-preview">
+          <section aria-labelledby="week-fishing">
             <div className="mb-2.5 flex items-baseline justify-between gap-2">
-              <h2 id="week-preview" className="text-[15px] font-semibold tracking-tight">
-                이번 주 볼거리
+              <h2 id="week-fishing" className="text-[15px] font-semibold tracking-tight">
+                이번 주, 뭐 잡으러 갈까요?
               </h2>
               <Link
                 href="/week"
@@ -50,7 +53,26 @@ export default function HomePage() {
                 전체 보기
               </Link>
             </div>
-            <WeekDiscovery date={date} limit={2} />
+            <FishingPicks date={date} limit={4} />
+          </section>
+
+          <section aria-labelledby="today-land" className="space-y-8 border-t border-[color:var(--color-line-soft)] pt-8">
+            <TodayNature date={date} />
+            <NatureNow date={date} />
+            <div>
+              <div className="mb-2.5 flex items-baseline justify-between gap-2">
+                <h2 id="today-land" className="text-[15px] font-semibold tracking-tight">
+                  이번 주 볼거리
+                </h2>
+                <Link
+                  href="/week"
+                  className="text-[12.5px] text-[color:var(--color-muted)] underline underline-offset-2"
+                >
+                  전체 보기
+                </Link>
+              </div>
+              <WeekDiscovery date={date} limit={2} />
+            </div>
           </section>
         </div>
 
@@ -67,10 +89,10 @@ export default function HomePage() {
             DEMO 데이터 안내
           </strong>
           <br />
-          현재 표시되는 금어기·개화·단풍·철새 정보는 개발용 예시 데이터입니다. 실제 금어기와
-          금지체장은 수산자원관리법 시행령 개정과 시·도지사 고시에 따라 달라지며, 개화·단풍 시기는
-          해마다 기온에 따라 크게 변합니다. 조업·낚시·방문 전에는 반드시 원문과 관할 기관 고시를
-          확인해 주세요.
+현재 표시되는 어종 시즌·금어기·개화·단풍·철새 정보는 개발용 예시 데이터입니다. 어종
+          시즌은 근거를 대조하지 않은 placeholder 이며, 금어기와 금지체장은 수산자원관리법 시행령
+          개정과 시·도지사 고시에 따라 달라집니다. 출조·방문 전에는 반드시 원문과 관할 기관
+          고시를 확인해 주세요.
         </p>
       )}
     </main>

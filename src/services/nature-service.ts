@@ -18,15 +18,17 @@ import type {
 } from '@/domain/types';
 import { getNatureIndex } from '@/repositories/nature-repository';
 
-/** 지도에 동시에 그릴 sprite 상한. 레이어를 다 켜도 화면이 무너지지 않게 한다. (요구사항 #8) */
-export const MAX_SPRITES = 30;
-
 export interface NatureQuery {
   date: DateKey;
   /** 비어 있으면 전체 */
   categories?: NatureCategory[];
+  /** 해양처럼 전용 화면이 따로 있는 카테고리를 뺄 때 */
+  excludeCategories?: NatureCategory[];
   regions?: string[];
 }
+
+/** 바다는 marine-service 가 전담하므로 일반 자연 화면에서는 제외한다 */
+export const LAND_ONLY: NatureCategory[] = ['fishing'];
 
 function ctx() {
   const index = getNatureIndex();
@@ -34,6 +36,7 @@ function ctx() {
 }
 
 function matchesQuery(occ: NatureOccurrence, entity: NatureEntity, query: NatureQuery) {
+  if (query.excludeCategories?.includes(entity.category)) return false;
   if (query.categories?.length && !query.categories.includes(entity.category)) return false;
   if (query.regions?.length) {
     const hit = occ.regions.some((r) => query.regions!.includes(r));
@@ -67,76 +70,10 @@ export function resolveHappeningNow(query: NatureQuery): ResolvedOccurrence[] {
   return resolveAll(query).filter((r) => isHappeningNow(r.status));
 }
 
-/* ── 지도 sprite 배치 ──────────────────────────────────────── */
-
-export interface MapSprite {
-  key: string;
-  resolved: ResolvedOccurrence;
-  location: Location;
-  /** 겹침 분산이 적용된 최종 위치 */
-  position: MapPosition;
-  basePosition: MapPosition;
-}
-
-export interface MapSpriteLayout {
-  sprites: MapSprite[];
-  /** 상한 때문에 표시하지 않은 개수 */
-  hiddenCount: number;
-  totalCount: number;
-}
+/* ── 지도 좌표 ────────────────────────────────────────────── */
 
 export function locationPosition(location: Location): MapPosition {
   return location.mapPosition ?? projectGeo(location.geo);
-}
-
-/** 같은 장소에 여러 개가 겹칠 때 작은 원형으로 흩어 놓는다 */
-function spread(base: MapPosition, index: number, total: number): MapPosition {
-  if (total <= 1) return base;
-  const ratio = 1000 / 1300; // viewWidth / viewHeight — 픽셀상 원형이 되도록 보정
-  const radius = total <= 3 ? 0.022 : 0.034;
-  const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-  return {
-    x: Math.min(0.99, Math.max(0.01, base.x + Math.cos(angle) * radius)),
-    y: Math.min(0.99, Math.max(0.01, base.y + Math.sin(angle) * radius * ratio)),
-  };
-}
-
-export function buildMapLayout(query: NatureQuery): MapSpriteLayout {
-  const resolved = resolveOnMap(query);
-
-  const candidates: Omit<MapSprite, 'position'>[] = [];
-  for (const item of resolved) {
-    for (const location of item.locations) {
-      candidates.push({
-        key: `${item.occurrence.id}::${location.id}`,
-        resolved: item,
-        location,
-        basePosition: locationPosition(location),
-      });
-    }
-  }
-
-  const totalCount = candidates.length;
-  const visible = candidates.slice(0, MAX_SPRITES);
-
-  const byLocation = new Map<string, typeof visible>();
-  for (const sprite of visible) {
-    const list = byLocation.get(sprite.location.id);
-    if (list) list.push(sprite);
-    else byLocation.set(sprite.location.id, [sprite]);
-  }
-
-  const sprites: MapSprite[] = [];
-  for (const group of byLocation.values()) {
-    group.forEach((sprite, i) => {
-      sprites.push({ ...sprite, position: spread(sprite.basePosition, i, group.length) });
-    });
-  }
-
-  // 위에 있는 것부터 그려 아래쪽 sprite 가 겹쳐 보이도록 정렬
-  sprites.sort((a, b) => a.position.y - b.position.y);
-
-  return { sprites, hiddenCount: Math.max(0, totalCount - visible.length), totalCount };
 }
 
 /* ── 오늘의 자연 / Nature Now ─────────────────────────────── */
@@ -232,8 +169,12 @@ export function toHeadline(item: ResolvedOccurrence): NatureHeadline {
 }
 
 /** 다가오는 것까지 섞어 '오늘의 자연' 을 구성한다 */
-export function getTodayHeadlines(date: DateKey, limit = 4): NatureHeadline[] {
-  const all = resolveAll({ date });
+export function getTodayHeadlines(
+  date: DateKey,
+  limit = 4,
+  excludeCategories?: NatureCategory[],
+): NatureHeadline[] {
+  const all = resolveAll({ date, excludeCategories });
 
   const happening = all.filter((r) => isHappeningNow(r.status));
   const justChanged = all.filter(
@@ -269,7 +210,11 @@ export interface WeekPick {
  * 이번 주(월~일) 안에 볼 수 있는 것들을 지역별로 묶는다.
  * 랭킹: 절정 여부 > weight > 주 중 겹치는 일수
  */
-export function getWeekPicks(date: DateKey, limit = 6): WeekPick[] {
+export function getWeekPicks(
+  date: DateKey,
+  limit = 6,
+  excludeCategories?: NatureCategory[],
+): WeekPick[] {
   const from = startOfWeek(date);
   const to = endOfWeek(date);
 
@@ -279,7 +224,7 @@ export function getWeekPicks(date: DateKey, limit = 6): WeekPick[] {
   const seen = new Set<string>();
   for (let i = 0; i <= 6; i += 1) {
     const day = addDays(from, i);
-    for (const item of resolveOnMap({ date: day })) {
+    for (const item of resolveOnMap({ date: day, excludeCategories })) {
       if (item.occurrence.polarity !== 'observable') continue;
       const key = item.occurrence.id;
       if (seen.has(key)) continue;
@@ -336,8 +281,15 @@ export function resolveBySlug(slug: string, date: DateKey): ResolvedOccurrence |
   return resolveOccurrence(occ, date, ctx());
 }
 
+/**
+ * /event/[slug] 대상.
+ * 해양 어종은 /species/[slug] 가 전담하므로 중복 페이지를 만들지 않는다.
+ */
 export function listOccurrenceSlugs(): string[] {
-  return getNatureIndex().occurrences.map((o) => o.slug);
+  const index = getNatureIndex();
+  return index.occurrences
+    .filter((o) => index.entityById.get(o.entityId)?.category !== 'fishing')
+    .map((o) => o.slug);
 }
 
 /** 한 entity 의 모든 occurrence 를 날짜 기준으로 해석 */

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useReducedMotion } from 'motion/react';
 import type { DateKey } from '@/domain/date';
 import { BASE_MAP_ASPECT, BASE_MAP_SRC } from '@/lib/map-asset';
-import type { MapSpriteLayout, MapSprite } from '@/services/nature-service';
+import type { MapLayout, MapSprite } from '@/services/map-service';
 import { clampViewport, useMapStore } from '@/store/map-store';
 import { DomMapRenderer } from './DomMapRenderer';
 import { MapControls } from './MapControls';
@@ -13,7 +13,7 @@ import { SeasonWash } from './SeasonWash';
 
 interface Props {
   date: DateKey;
-  layout: MapSpriteLayout;
+  layout: MapLayout;
   onSelectSprite: (sprite: MapSprite) => void;
   /** 컨트롤과 안내를 숨긴 미리보기 모드 (홈 화면용) */
   preview?: boolean;
@@ -31,7 +31,7 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
   const reducedMotion = useReducedMotion() ?? false;
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
-  const selectedOccurrenceId = useMapStore((s) => s.selectedOccurrenceId);
+  const selectedId = useMapStore((s) => s.selectedOccurrenceId);
   const selectOccurrence = useMapStore((s) => s.selectOccurrence);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,7 +156,7 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
         <DomMapRenderer
           sprites={layout.sprites}
           viewport={viewport}
-          selectedOccurrenceId={selectedOccurrenceId}
+          selectedId={selectedId}
           onSelect={onSelectSprite}
           reducedMotion={reducedMotion}
           spriteScale={preview ? 0.7 : 1}

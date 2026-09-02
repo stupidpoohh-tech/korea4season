@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
   formatDaysValue,
   formatKoreanDate,
@@ -59,6 +59,9 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   const item = resolveBySlug(slug, today);
   const occurrence = getOccurrenceBySlug(slug);
   if (!item || !occurrence) notFound();
+
+  // 해양 어종은 어종 페이지가 정본이다
+  if (item.entity.category === 'fishing') redirect(`/species/${item.entity.slug}`);
 
   const category = CATEGORY_META[item.entity.category];
   const restricted = occurrence.polarity === 'restricted';
@@ -168,24 +171,6 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             </dd>
           </div>
         )}
-        {item.entity.fishingRule?.minimumSizeCm !== undefined && (
-          <div className="flex gap-3 py-3">
-            <dt className="w-[78px] shrink-0 text-[13px] text-[color:var(--color-faint)]">
-              금지체장
-            </dt>
-            <dd className="flex-1 text-[14px]">
-              {item.entity.fishingRule.minimumSizeCm}cm 이하
-            </dd>
-          </div>
-        )}
-        {item.entity.fishingRule?.minimumWeightG !== undefined && (
-          <div className="flex gap-3 py-3">
-            <dt className="w-[78px] shrink-0 text-[13px] text-[color:var(--color-faint)]">
-              금지체중
-            </dt>
-            <dd className="flex-1 text-[14px]">{item.entity.fishingRule.minimumWeightG}g 이하</dd>
-          </div>
-        )}
         <div className="flex gap-3 py-3">
           <dt className="w-[78px] shrink-0 text-[13px] text-[color:var(--color-faint)]">
             적용 지역
@@ -210,28 +195,6 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
             <dd className="flex-1 space-y-0.5 text-[14px]">
               {occurrence.rules.map((rule) => (
                 <p key={rule}>{rule}</p>
-              ))}
-            </dd>
-          </div>
-        ) : null}
-        {item.entity.fishingRule?.regionRules?.length ? (
-          <div className="flex gap-3 py-3">
-            <dt className="w-[78px] shrink-0 text-[13px] text-[color:var(--color-faint)]">
-              지역 규정
-            </dt>
-            <dd className="flex-1 space-y-1.5 text-[13.5px]">
-              {item.entity.fishingRule.regionRules.map((rule) => (
-                <div key={rule.scope}>
-                  <p className="font-medium">{rule.scope}</p>
-                  {rule.closedSeasonStart && rule.closedSeasonEnd && (
-                    <p className="tabular text-[color:var(--color-muted)]">
-                      {rule.closedSeasonStart} ~ {rule.closedSeasonEnd}
-                    </p>
-                  )}
-                  {rule.note && (
-                    <p className="text-[color:var(--color-muted)]">{rule.note}</p>
-                  )}
-                </div>
               ))}
             </dd>
           </div>

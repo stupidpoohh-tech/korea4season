@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "name": "수산자원 규정 (DEMO — 원문 대조 필요)",
+    "note": "이 파일은 시즌 데이터와 완전히 분리된 법적 레이어다. 두 파일을 하나로 합치지 않는다.",
+    "disclaimer": "개발용 DEMO 규정 데이터입니다. 실제 금어기·금지체장은 수산자원관리법 시행령 개정과 시·도지사 고시에 따라 달라집니다. 조업·낚시 전 반드시 원문과 관할 지자체 고시를 확인하십시오.",
+    "updatedAt": "2026-01-01",
+    "isDemo": true
+  },
+  "sources": [
+    { "id": "src:enforcement-decree", "name": "수산자원관리법 시행령 별표 (금어기·금지체장)", "url": "https://www.law.go.kr/법령/수산자원관리법시행령", "documentType": "enforcement-decree", "note": "원문 대조가 필요한 참고 정리입니다." },
+    { "id": "src:local-notice", "name": "시·도지사 고시 (해역별 조정)", "url": "https://www.mof.go.kr", "documentType": "local-notice", "note": "지역별 고시는 매년 갱신됩니다. 관할 지자체 공고를 확인하십시오." }
+  ],
+  "rules": [
+    { "id": "rule:blue-crab:closed", "species": "blue-crab", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "06-21", "end": "08-20" }],
+      "overrides": [
+        { "id": "ov:blue-crab:west-special", "scope": { "mode": "include", "adminRegions": ["인천"] }, "windows": [{ "start": "06-01", "end": "08-31" }], "reason": "서해 특정해역 고시", "sourceId": "src:local-notice" }
+      ],
+      "exceptions": [{ "id": "ex:blue-crab:local", "description": "시·도지사가 별도로 정한 해역·어업방식은 기간이 다를 수 있습니다" }],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:blue-crab:size", "species": "blue-crab", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "carapace-length", "minimumValue": 6.4, "unit": "cm" }],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:blue-crab:egg", "species": "blue-crab", "kind": "egg-bearing", "scope": { "mode": "include" },
+      "note": "알을 품은 암컷은 별도 규정으로 포획이 제한될 수 있습니다", "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:snow-crab:closed", "species": "snow-crab", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "06-01", "end": "11-30" }], "sourceId": "src:enforcement-decree" },
+    { "id": "rule:snow-crab:size", "species": "snow-crab", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "carapace-length", "minimumValue": 9.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+    { "id": "rule:snow-crab:female", "species": "snow-crab", "kind": "sex-restriction", "scope": { "mode": "include" },
+      "note": "암컷 대게(빵게)는 기간과 무관하게 포획이 금지됩니다", "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:hairtail:closed", "species": "largehead-hairtail", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "07-01", "end": "07-31" }],
+      "exceptions": [{ "id": "ex:hairtail:method", "description": "근해채낚기·연승 등 일부 어업은 적용이 다를 수 있습니다" }],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:hairtail:size", "species": "largehead-hairtail", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "anal-length", "minimumValue": 18.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:croaker:closed", "species": "small-yellow-croaker", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "04-22", "end": "08-10" }], "sourceId": "src:enforcement-decree" },
+    { "id": "rule:croaker:size", "species": "small-yellow-croaker", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 15.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:webfoot-octopus:closed", "species": "webfoot-octopus", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "05-11", "end": "08-31" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:squid:closed", "species": "common-squid", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "04-01", "end": "05-31" }],
+      "exceptions": [{ "id": "ex:squid:method", "description": "근해채낚기·정치망 등 어업 종류에 따라 적용 기간이 다를 수 있습니다" }],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:squid:size", "species": "common-squid", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "mantle-length", "minimumValue": 15.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:black-porgy:closed", "species": "black-porgy", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "05-01", "end": "05-31" }], "sourceId": "src:enforcement-decree" },
+    { "id": "rule:black-porgy:size", "species": "black-porgy", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 25.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:cod:closed", "species": "pacific-cod", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "01-16", "end": "02-15" }],
+      "overrides": [
+        { "id": "ov:cod:south", "scope": { "mode": "include", "adminRegions": ["부산", "경남"] }, "windows": [{ "start": "12-16", "end": "01-31" }], "reason": "부산·경남 시·도지사 고시", "sourceId": "src:local-notice" }
+      ],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:cod:size", "species": "pacific-cod", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 35.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:gizzard-shad:closed", "species": "gizzard-shad", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "05-01", "end": "07-15" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:spanish-mackerel:closed", "species": "spanish-mackerel", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "05-01", "end": "05-31" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:common-octopus:closed", "species": "common-octopus", "kind": "closed-season", "scope": { "mode": "include" },
+      "windows": [{ "start": "05-16", "end": "06-30" }],
+      "exceptions": [{ "id": "ex:common-octopus:local", "description": "지역에 따라 금어기를 적용하지 않는 곳도 있습니다" }],
+      "sourceId": "src:enforcement-decree" },
+    { "id": "rule:common-octopus:size", "species": "common-octopus", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "weight", "minimumValue": 300, "unit": "g" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:long-arm-octopus:closed", "species": "long-arm-octopus", "kind": "closed-season", "scope": { "mode": "include", "description": "시·도지사가 지정하는 기간" },
+      "windows": [{ "start": "06-01", "end": "06-30", "note": "시·도지사 지정 기간" }],
+      "exceptions": [{ "id": "ex:long-arm:local", "description": "지자체 고시에 따라 기간이 다르거나 적용되지 않을 수 있습니다" }],
+      "sourceId": "src:local-notice" },
+
+    { "id": "rule:chub-mackerel:size", "species": "chub-mackerel", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "fork-length", "minimumValue": 21.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:korean-rockfish:size", "species": "korean-rockfish", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 23.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:olive-flounder:size", "species": "olive-flounder", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 35.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" },
+
+    { "id": "rule:marbled-flounder:size", "species": "marbled-flounder", "kind": "size-limit", "scope": { "mode": "include" },
+      "measurements": [{ "kind": "total-length", "minimumValue": 20.0, "unit": "cm" }], "sourceId": "src:enforcement-decree" }
+  ]
+}

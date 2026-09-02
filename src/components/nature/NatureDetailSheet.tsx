@@ -134,7 +134,7 @@ export function NatureDetailSheet({ item, date, onClose, onFocusMap }: Props) {
               </p>
 
               <dl className="divide-y divide-[color:var(--color-line-soft)] border-y border-[color:var(--color-line-soft)]">
-                <Row label={item.occurrence.polarity === 'restricted' ? '금어기' : '기간'}>
+                <Row label="기간">
                   <span className="tabular">
                     {formatKoreanDate(toDateKey(item.window.start))} ~{' '}
                     {formatKoreanDate(toDateKey(item.window.end))}
@@ -148,13 +148,6 @@ export function NatureDetailSheet({ item, date, onClose, onFocusMap }: Props) {
                       {formatKoreanDate(toDateKey(item.peakWindow.end))}
                     </span>
                   </Row>
-                )}
-
-                {item.entity.fishingRule?.minimumSizeCm !== undefined && (
-                  <Row label="금지체장">{item.entity.fishingRule.minimumSizeCm}cm 이하</Row>
-                )}
-                {item.entity.fishingRule?.minimumWeightG !== undefined && (
-                  <Row label="금지체중">{item.entity.fishingRule.minimumWeightG}g 이하</Row>
                 )}
 
                 <Row label="적용 지역">{item.occurrence.regions.join(' · ')}</Row>
@@ -174,27 +167,6 @@ export function NatureDetailSheet({ item, date, onClose, onFocusMap }: Props) {
                   </Row>
                 )}
 
-                {item.entity.fishingRule?.regionRules?.length ? (
-                  <Row label="지역 규정">
-                    <ul className="space-y-1">
-                      {item.entity.fishingRule.regionRules.map((rule) => (
-                        <li key={rule.scope}>
-                          <span className="font-medium text-[color:var(--color-ink)]">
-                            {rule.scope}
-                          </span>
-                          {rule.closedSeasonStart && rule.closedSeasonEnd && (
-                            <span className="tabular"> · {rule.closedSeasonStart} ~ {rule.closedSeasonEnd}</span>
-                          )}
-                          {rule.note && (
-                            <span className="block text-[12.5px] text-[color:var(--color-muted)]">
-                              {rule.note}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </Row>
-                ) : null}
               </dl>
 
               <SubscribeButton item={item} />

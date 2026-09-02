@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { DateKey } from '@/domain/date';
-import { resolveHappeningNow } from '@/services/nature-service';
+import { LAND_ONLY, resolveHappeningNow } from '@/services/nature-service';
 import { CATEGORY_META } from '@/lib/category-meta';
 import { NatureStatusBadge } from '@/components/nature/NatureStatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/common/EmptyState';
  * Nature Now — 지금 한국에서 진행 중인 자연현상만 모은다. (요구사항 #10)
  */
 export function NatureNow({ date, limit = 6 }: { date: DateKey; limit?: number }) {
-  const items = resolveHappeningNow({ date }).slice(0, limit);
-  const total = resolveHappeningNow({ date }).length;
+  const items = resolveHappeningNow({ date, excludeCategories: LAND_ONLY }).slice(0, limit);
+  const total = resolveHappeningNow({ date, excludeCategories: LAND_ONLY }).length;
 
   return (
     <section aria-labelledby="nature-now">

@@ -11,7 +11,7 @@ import type { MapRendererProps } from './renderer-types';
 export function DomMapRenderer({
   sprites,
   viewport,
-  selectedOccurrenceId,
+  selectedId,
   onSelect,
   reducedMotion,
   spriteScale,
@@ -22,7 +22,7 @@ export function DomMapRenderer({
         <NatureSprite
           key={sprite.key}
           sprite={sprite}
-          selected={sprite.resolved.occurrence.id === selectedOccurrenceId}
+          selected={sprite.selectionId === selectedId}
           scale={viewport.scale}
           spriteScale={spriteScale}
           reducedMotion={reducedMotion}

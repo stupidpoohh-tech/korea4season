@@ -1,7 +1,7 @@
 import { birdDataSource } from './bird/adapter';
-import { fishingDataSource } from './fishing/adapter';
 import { flowerDataSource } from './flower/adapter';
 import { foliageDataSource } from './foliage/adapter';
+import { marineDataSource } from './marine';
 import { wildlifeDataSource } from './wildlife/adapter';
 import type { NatureDataSource } from './types';
 
@@ -11,7 +11,7 @@ import type { NatureDataSource } from './types';
  * 지도 · 타임라인 · 도감 · 추천이 전부 따라온다.
  */
 export const dataSources: NatureDataSource[] = [
-  fishingDataSource,
+  marineDataSource,
   flowerDataSource,
   foliageDataSource,
   birdDataSource,

@@ -4,21 +4,28 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
-import { buildMapLayout, locationPosition, resolveAll } from '@/services/nature-service';
-import { getNatureIndex } from '@/repositories/nature-repository';
-import { isOnMap } from '@/domain/occurrence';
+import {
+  buildMapLayout,
+  countByCategory,
+  countByState,
+  type MapSprite,
+} from '@/services/map-service';
+import {
+  getZoneDetail,
+  zonePosition,
+  type MarineMapItem,
+} from '@/services/marine-service';
+import { locationPosition } from '@/services/nature-service';
 import { useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
 import { NatureTimeline } from '@/components/timeline/NatureTimeline';
 import { NatureDetailSheet } from '@/components/nature/NatureDetailSheet';
+import { MarineDetailSheet } from '@/components/marine/MarineDetailSheet';
+import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
-import { LayerFilter, LayerFilterColumn } from './LayerFilter';
+import { LayerFilter, MapModeToggle, StateFilterRow } from './LayerFilter';
 import { MapSideList } from './MapSideList';
 import { NatureMap } from './NatureMap';
-
-const EMPTY_COUNTS = Object.fromEntries(
-  NATURE_CATEGORIES.map((c) => [c, 0]),
-) as Record<NatureCategory, number>;
 
 function parseLayers(value: string | null): NatureCategory[] {
   if (!value) return [];
@@ -28,8 +35,10 @@ function parseLayers(value: string | null): NatureCategory[] {
 }
 
 /**
- * MAP 화면. (요구사항 #16)
- * 지도가 주인공이고 나머지 UI 는 전부 그 위에 얹힌다.
+ * MAP 화면 — 바다의 NOW.
+ *
+ * 사용자가 먼저 묻는 것은 "지금 뭐가 있지?" 이고
+ * "잡아도 되나?" 는 상세를 열었을 때 답한다.
  */
 export function MapScreen() {
   const searchParams = useSearchParams();
@@ -40,13 +49,16 @@ export function MapScreen() {
 
   const categories = useMapStore((s) => s.selectedCategories);
   const setCategories = useMapStore((s) => s.setCategories);
-  const selectedOccurrenceId = useMapStore((s) => s.selectedOccurrenceId);
-  const selectOccurrence = useMapStore((s) => s.selectOccurrence);
+  const stateFilter = useMapStore((s) => s.stateFilter);
+  const mode = useMapStore((s) => s.mode);
+  const selectedId = useMapStore((s) => s.selectedOccurrenceId);
+  const select = useMapStore((s) => s.selectOccurrence);
   const focusOn = useMapStore((s) => s.focusOn);
 
   /* ── URL -> state (최초 1회) ────────────────────────────── */
   const initialised = useRef(false);
   const pendingFocus = useRef<string | null>(null);
+
   useEffect(() => {
     if (initialised.current) return;
     initialised.current = true;
@@ -57,7 +69,6 @@ export function MapScreen() {
     const urlLayers = parseLayers(searchParams.get('layer'));
     if (urlLayers.length) setCategories(urlLayers);
 
-    // 홈/상세 카드에서 넘어온 경우 해당 자연현상으로 카메라를 옮긴다 (요구사항 #9, #17)
     const focusId = searchParams.get('focus');
     if (focusId) pendingFocus.current = focusId;
   }, [searchParams, setDate, setCategories]);
@@ -68,105 +79,129 @@ export function MapScreen() {
     const params = new URLSearchParams();
     params.set('date', date);
     if (categories.length) params.set('layer', categories.join(','));
-    if (selectedOccurrenceId) params.set('focus', selectedOccurrenceId);
+    if (selectedId) params.set('focus', selectedId);
     window.history.replaceState(null, '', `/map?${params.toString()}`);
-  }, [date, categories, isPlaying, selectedOccurrenceId]);
+  }, [date, categories, isPlaying, selectedId]);
 
   /* ── 파생 데이터 ────────────────────────────────────────── */
   const layout = useMemo(
-    () => buildMapLayout({ date, categories }),
-    [date, categories],
+    () => buildMapLayout({ date, categories, state: stateFilter, mode }),
+    [date, categories, stateFilter, mode],
   );
 
-  const allResolved = useMemo(() => resolveAll({ date }), [date]);
+  const categoryCounts = useMemo(() => countByCategory(date), [date]);
+  const stateCounts = useMemo(() => countByState(date), [date]);
 
-  const counts = useMemo(() => {
-    const next = { ...EMPTY_COUNTS };
-    for (const item of allResolved) {
-      if (isOnMap(item.status)) next[item.entity.category] += 1;
-    }
-    return next;
-  }, [allResolved]);
+  const selectedSprite = useMemo(
+    () => layout.sprites.find((s) => s.selectionId === selectedId) ?? null,
+    [layout, selectedId],
+  );
 
-  const selected: ResolvedOccurrence | null = useMemo(() => {
-    if (!selectedOccurrenceId) return null;
-    return allResolved.find((r) => r.occurrence.id === selectedOccurrenceId) ?? null;
-  }, [selectedOccurrenceId, allResolved]);
+  const selectedMarine: MarineMapItem | null =
+    selectedSprite?.subject.kind === 'marine' ? selectedSprite.subject.item : null;
+  const selectedNature: ResolvedOccurrence | null =
+    selectedSprite?.subject.kind === 'nature' ? selectedSprite.subject.resolved : null;
 
-  /**
-   * 카메라 이동은 명시적인 요청에만 쓴다.
-   * 매 선택마다 확대해 버리면 '대한민국 한 장' 이라는 이 앱의 시야를 잃는다.
-   */
-  const focusMap = useCallback(
-    (item: ResolvedOccurrence) => {
-      const first = item.locations[0];
-      if (!first) return;
-      // 데스크톱에서는 상세 카드가 오른쪽을 덮으므로 왼쪽으로 치우쳐 잡는다
+  /* ── 권역 시트 ──────────────────────────────────────────── */
+  const openZoneSlug = useMapStore((s) => s.openZoneSlug);
+  const setOpenZone = useMapStore((s) => s.setOpenZone);
+
+  const zoneDetail = useMemo(
+    () => (openZoneSlug ? getZoneDetail(openZoneSlug, date) : null),
+    [openZoneSlug, date],
+  );
+
+  /* ── 카메라 ─────────────────────────────────────────────── */
+  const focusSprite = useCallback(
+    (sprite: MapSprite) => {
       const wide = typeof window !== 'undefined' && window.innerWidth >= 1024;
-      focusOn(locationPosition(first), { scale: 1.5, anchorX: wide ? 0.36 : 0.5 });
+      focusOn(sprite.basePosition, { scale: 1.5, anchorX: wide ? 0.36 : 0.5 });
     },
     [focusOn],
   );
 
-  /* ── ?focus= 로 들어온 자연현상 열기 ────────────────────── */
   useEffect(() => {
     const id = pendingFocus.current;
     if (!id) return;
-    const target = allResolved.find((r) => r.occurrence.id === id);
+    const target = layout.sprites.find((s) => s.selectionId === id);
     if (!target) return;
     pendingFocus.current = null;
-    selectOccurrence(id);
-    focusMap(target);
-  }, [allResolved, selectOccurrence, focusMap]);
+    select(id);
+    focusSprite(target);
+  }, [layout, select, focusSprite]);
 
-  /** 지도에 올라온 '자연현상' 수 — sprite 수(장소별 중복)와 구분한다 */
-  const onMapItems = useMemo(() => {
-    const seen = new Set<string>();
-    const items: ResolvedOccurrence[] = [];
-    for (const sprite of layout.sprites) {
-      const id = sprite.resolved.occurrence.id;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      items.push(sprite.resolved);
-    }
-    return items;
-  }, [layout]);
-
-  const visible = onMapItems.length;
-  const anyLayerHasData = Object.values(counts).some((n) => n > 0);
-
-  /** 좌측 목록은 지도의 범례에 가깝다 — 선택만 하고 카메라는 건드리지 않는다 */
-  const selectFromList = useCallback(
-    (item: ResolvedOccurrence) => selectOccurrence(item.occurrence.id),
-    [selectOccurrence],
+  const onSelectSprite = useCallback(
+    (sprite: MapSprite) => {
+      if (sprite.subject.kind === 'zone') {
+        setOpenZone(sprite.subject.marker.zone.slug);
+        return;
+      }
+      select(sprite.selectionId);
+    },
+    [select, setOpenZone],
   );
+
+  const openZoneAndFocus = useCallback(
+    (zoneSlug: string) => {
+      setOpenZone(zoneSlug);
+      select(null);
+      const zone = zoneDetail?.zone.slug === zoneSlug ? zoneDetail.zone : null;
+      if (zone) focusOn(zonePosition(zone), { scale: 1.6, anchorX: 0.36 });
+    },
+    [setOpenZone, select, focusOn, zoneDetail],
+  );
+
+  // 칩 개수와 어긋나지 않게 sprite 가 아니라 '대상' 수를 센다
+  const visible = useMemo(
+    () => new Set(layout.sprites.map((s) => s.selectionId)).size,
+    [layout],
+  );
+  const marineActive = categoryCounts.fishing > 0;
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-56px)] max-w-[1180px] flex-col gap-3 px-3 pt-3 lg:px-6 lg:pb-5">
+      <div className="flex items-center gap-2 lg:hidden">
+        <div className="min-w-0 flex-1">
+          <StateFilterRow counts={stateCounts} />
+        </div>
+        <MapModeToggle />
+      </div>
       <div className="lg:hidden">
-        <LayerFilter counts={counts} />
+        <LayerFilter counts={categoryCounts} />
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[248px_minmax(0,1fr)]">
-        <div className="hidden min-h-0 flex-col gap-3 lg:flex">
-          <LayerFilterColumn counts={counts} />
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[252px_minmax(0,1fr)]">
+        <div className="hidden min-h-0 flex-col gap-2.5 lg:flex">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-medium tracking-wide text-[color:var(--color-faint)]">
+              보기
+            </span>
+            <MapModeToggle />
+          </div>
+
+          {/* 좁은 레일에서는 칩이 넘치지 않게 줄바꿈한다 */}
+          <div className="space-y-1.5 [&_[role=group]]:flex-wrap [&_[role=group]]:overflow-visible">
+            <StateFilterRow counts={stateCounts} />
+            <LayerFilter counts={categoryCounts} />
+          </div>
+
           <MapSideList
-            items={onMapItems}
-            selectedId={selectedOccurrenceId}
-            onSelect={selectFromList}
+            sprites={layout.sprites}
+            selectedId={selectedId}
+            openZoneSlug={openZoneSlug}
+            onSelect={onSelectSprite}
           />
         </div>
 
         {/*
-          지도는 1000:1300 비율을 반드시 유지해야 한다 — sprite 위치가 컨테이너
-          크기 대비 비율(0~1)로 찍히기 때문이다. container query 단위로
-          "높이와 너비 중 작은 쪽에 맞춰 contain" 을 CSS 만으로 처리한다.
+          지도는 1000:1300 비율을 반드시 유지해야 한다 — sprite 위치가
+          컨테이너 크기 대비 비율로 찍히기 때문이다.
         */}
         <div className="relative flex min-h-0 items-center justify-center [container-type:size]">
           <NatureMap
             date={date}
             layout={layout}
-            onSelectSprite={(sprite) => selectOccurrence(sprite.resolved.occurrence.id)}
+            onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,130cqw)] w-auto"
           />
 
@@ -176,9 +211,11 @@ export function MapScreen() {
                 <EmptyState
                   title="이 날짜에는 조용합니다"
                   description={
-                    categories.length && anyLayerHasData
-                      ? '선택한 레이어에 해당하는 자연현상이 없습니다. 다른 레이어를 켜거나 날짜를 움직여 보세요.'
-                      : '오늘은 선택한 조건에 해당하는 자연현상이 없습니다. 슬라이더를 움직여 대한민국의 다른 계절을 살펴보세요.'
+                    stateFilter !== 'all'
+                      ? '선택한 조건에 해당하는 것이 없습니다. 필터를 풀거나 날짜를 움직여 보세요.'
+                      : marineActive
+                        ? '선택한 레이어에 해당하는 것이 없습니다. 다른 레이어를 켜 보세요.'
+                        : '지금은 바다가 잠잠합니다. 슬라이더를 움직여 다른 계절의 대한민국을 살펴보세요.'
                   }
                 />
               </div>
@@ -189,17 +226,37 @@ export function MapScreen() {
 
       <NatureTimeline date={date} visibleCount={visible} />
 
-      <NatureDetailSheet
-        item={selected}
+      <MarineDetailSheet
+        item={selectedMarine}
         date={date}
-        onClose={() => selectOccurrence(null)}
-        onFocusMap={focusMap}
+        onClose={() => select(null)}
+        onOpenZone={openZoneAndFocus}
+      />
+
+      <NatureDetailSheet
+        item={selectedNature}
+        date={date}
+        onClose={() => select(null)}
+        onFocusMap={(occurrence) => {
+          const first = occurrence.locations[0];
+          if (first) focusOn(locationPosition(first), { scale: 1.5, anchorX: 0.36 });
+        }}
+      />
+
+      <ZoneSheet
+        detail={zoneDetail}
+        date={date}
+        onClose={() => setOpenZone(null)}
+        onSelectSpecies={(slug) => {
+          const sprite = layout.sprites.find(
+            (s) => s.subject.kind === 'marine' && s.subject.item.species.slug === slug,
+          );
+          if (sprite) {
+            setOpenZone(null);
+            select(sprite.selectionId);
+          }
+        }}
       />
     </div>
   );
-}
-
-/** 도감 총계 등에 쓰는 보조 */
-export function totalEntityCount() {
-  return getNatureIndex().entities.length;
 }

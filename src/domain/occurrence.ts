@@ -11,8 +11,23 @@ import type {
   NatureEntity,
   NatureOccurrence,
   OccurrenceStatus,
+  Recurrence,
   ResolvedOccurrence,
 } from './types';
+
+/**
+ * 기간 해석에 필요한 최소 형태.
+ * NatureOccurrence 도, 해양 FishingOccurrence 도 이 모양을 만족하므로
+ * 시즌 계산 로직을 한 벌만 유지한다. (요구사항 #21 — generic engine)
+ */
+export interface RecurringSpec {
+  recurrence: Recurrence;
+  /** annual: MM-DD / once: YYYY-MM-DD */
+  startDate: string;
+  endDate: string;
+  peakStartDate?: string;
+  peakEndDate?: string;
+}
 
 /** 종료 후 이 기간까지는 'ended' 로 노출한다. 그 뒤로는 다음 주기의 'upcoming'. */
 const RECENT_END_DAYS = 14;
@@ -29,12 +44,12 @@ function normalizeMonthDay(year: number, monthDay: string): DateKey {
 }
 
 /** annual occurrence 가 연말을 넘기는가 (예: 12-15 ~ 01-31) */
-function wrapsYear(occ: NatureOccurrence): boolean {
+function wrapsYear(occ: RecurringSpec): boolean {
   return occ.recurrence === 'annual' && occ.startDate > occ.endDate;
 }
 
 /** 기준 연도 주변의 후보 구간들 */
-function candidateWindows(occ: NatureOccurrence, ref: DateKey): DateWindow[] {
+function candidateWindows(occ: RecurringSpec, ref: DateKey): DateWindow[] {
   if (occ.recurrence === 'once') {
     return [{ start: occ.startDate, end: occ.endDate }];
   }
@@ -53,7 +68,7 @@ function candidateWindows(occ: NatureOccurrence, ref: DateKey): DateWindow[] {
  *  3. 다음에 시작할 구간
  */
 export function resolveWindow(
-  occ: NatureOccurrence,
+  occ: RecurringSpec,
   ref: DateKey,
 ): { window: DateWindow; isCurrent: boolean } {
   const candidates = candidateWindows(occ, ref);
@@ -76,8 +91,8 @@ export function resolveWindow(
 }
 
 /** peak 구간을 본 구간 안쪽으로 정렬해 계산한다 */
-function resolvePeakWindow(
-  occ: NatureOccurrence,
+export function resolvePeakWindow(
+  occ: RecurringSpec,
   window: DateWindow,
 ): DateWindow | undefined {
   if (!occ.peakStartDate || !occ.peakEndDate) return undefined;

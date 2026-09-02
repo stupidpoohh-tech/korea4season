@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import type { DateKey } from '@/domain/date';
-import { buildMapLayout } from '@/services/nature-service';
+import { buildMapLayout } from '@/services/map-service';
 import { NatureMap } from './NatureMap';
 
 /**

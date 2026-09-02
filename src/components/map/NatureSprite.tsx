@@ -2,9 +2,8 @@
 
 import { memo } from 'react';
 import { motion } from 'motion/react';
-import { CATEGORY_META } from '@/lib/category-meta';
-import { statusMeta } from '@/lib/status-meta';
-import type { MapSprite } from '@/services/nature-service';
+import type { MapSprite } from '@/services/map-service';
+import { SpeciesSprite } from '@/components/nature/SpeciesSprite';
 
 interface Props {
   sprite: MapSprite;
@@ -18,24 +17,30 @@ interface Props {
 }
 
 /**
- * 지도 위의 자연현상 하나.
- * 등장할 때 scale .7 / opacity 0 에서 짧게 pop-in 하고,
- * 아주 약하게 떠 있어 살아있는 느낌만 준다. (요구사항 #5)
+ * 지도 위의 생물 하나.
+ *
+ * 이것은 법적 status marker 가 아니라 살아 있는 생물이다.
+ * 그래서 금어기라고 sprite 를 지우지 않고 작은 제한 표시만 덧붙인다.
+ * 시즌이 좋을수록 크고 또렷하게 그려 "지금 뭐가 좋은지" 가 한눈에 보이게 한다.
  */
-function NatureSpriteBase({ sprite, selected, scale, spriteScale = 1, reducedMotion, onSelect }: Props) {
-  const { resolved, location, position } = sprite;
-  const { entity, status, occurrence } = resolved;
-  const meta = statusMeta(status, occurrence.polarity);
-  const category = CATEGORY_META[entity.category];
-  // 링은 '절정' 에만 — 모든 sprite 에 두르면 지도가 과녁처럼 보인다
-  const live = status === 'peak';
+function NatureSpriteBase({
+  sprite,
+  selected,
+  scale,
+  spriteScale = 1,
+  reducedMotion,
+  onSelect,
+}: Props) {
+  const { position, prominence, restricted, accent, entity } = sprite;
+  const peak = prominence >= 1;
+  const size = 30 + prominence * 10; // 36 ~ 40px
 
   return (
     <motion.button
       type="button"
       layout={false}
       initial={{ opacity: 0, scale: 0.7 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{ opacity: 0.55 + prominence * 0.45, scale: 1 }}
       exit={{ opacity: 0, scale: 0.72 }}
       transition={
         reducedMotion
@@ -49,49 +54,68 @@ function NatureSpriteBase({ sprite, selected, scale, spriteScale = 1, reducedMot
       className="no-tap-highlight absolute z-10 origin-center"
       style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}
       /*
-       * motion 이 transform 속성을 직접 관리하므로 style.transform 을 쓰면 덮어쓰인다.
-       * 중심 정렬(-50%)과 확대 보정은 transformTemplate 으로 앞에 붙인다.
-       * 확대해도 sprite 크기는 유지한다 — 정보 가독성을 우선한다.
+       * motion 이 transform 을 직접 관리하므로 style.transform 은 덮어쓰인다.
+       * 중심 정렬과 확대 보정은 transformTemplate 으로 앞에 붙인다.
        */
       transformTemplate={(_latest, generated) =>
         `translate(-50%, -50%) scale(${spriteScale / scale}) ${generated}`
       }
-      aria-label={`${entity.name} · ${location.name} · ${meta.label}`}
+      aria-label={`${sprite.name} · ${sprite.placeLabel}${restricted ? ' · 규정 확인 필요' : ''}`}
       aria-pressed={selected}
     >
-      {/*
-        움직임 억제는 CSS media query 로 처리한다.
-        useReducedMotion() 값으로 마크업을 갈라 놓으면 서버/클라이언트 렌더가
-        어긋나 hydration 이 깨진다.
-      */}
       <span className="sprite-float block">
-        {live && (
+        {peak && (
           <span
             aria-hidden
             className="sprite-ripple pointer-events-none absolute inset-0 rounded-full"
-            style={{ border: `2px solid ${meta.ring}` }}
+            style={{ border: `2px solid ${accent}` }}
           />
         )}
         <span
-          className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[17px] leading-none transition-[box-shadow,transform] duration-200"
+          className="relative flex items-center justify-center rounded-full bg-white/95 transition-[box-shadow] duration-200"
           style={{
+            width: size,
+            height: size,
             boxShadow: selected
-              ? `0 0 0 3px ${meta.ring}, 0 6px 18px -6px rgb(0 10 20 / .35)`
-              : `0 0 0 2px ${meta.ring}, 0 3px 10px -4px rgb(0 10 20 / .28)`,
+              ? `0 0 0 3px ${accent}, 0 6px 18px -6px rgb(0 10 20 / .35)`
+              : `0 0 0 2px ${accent}, 0 3px 10px -4px rgb(0 10 20 / .28)`,
           }}
         >
-          <span aria-hidden>{entity.icon}</span>
-          <span
-            aria-hidden
-            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white"
-            style={{ background: category.color }}
-          />
+          {entity ? (
+            <SpeciesSprite entity={entity} size={size * 0.5} />
+          ) : (
+            <span aria-hidden className="text-[13px] font-semibold text-[color:var(--color-ink)]">
+              {sprite.placeLabel}
+            </span>
+          )}
+
+          {sprite.subject.kind === 'zone' && (
+            // 권역 마커는 '이 바다에 몇 종이 있는가' 가 핵심 정보다
+            <span
+              aria-hidden
+              className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-white bg-[color:var(--color-ink)] px-1.5 text-[9px] font-semibold leading-[14px] text-white"
+            >
+              {sprite.placeLabel}
+            </span>
+          )}
+
+          {restricted && (
+            // 있지만 잡으면 안 된다 — 존재와 규정을 구분해 보여주는 표시
+            <span
+              aria-hidden
+              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white text-[8px] leading-none text-white"
+              style={{ background: 'var(--color-restricted)' }}
+              title="규정 확인 필요"
+            >
+              !
+            </span>
+          )}
         </span>
       </span>
 
       {selected && (
         <span className="pointer-events-none absolute left-1/2 top-full mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-[color:var(--color-ink)]/88 px-2 py-1 text-[11px] font-medium text-white">
-          {entity.name}
+          {sprite.name}
         </span>
       )}
     </motion.button>

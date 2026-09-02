@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "name": "현장 관측 시드 (DEMO)",
+    "note": "관측은 '실제 지금' 을 다루므로 절대 날짜가 아니라 오늘 기준 daysAgo 로 저장한다. 실제 제보가 쌓이면 이 파일은 비워진다.",
+    "disclaimer": "개발용 DEMO 관측입니다. 실제 사용자 제보가 아닙니다.",
+    "isDemo": true,
+    "windowDays": 7
+  },
+  "observations": [
+    { "species": "japanese-sillago", "zone": "chungnam-taean", "spot": "kkotji-beach", "daysAgo": 0, "quantityLevel": "many", "method": "shore-cast", "verificationCount": 4 },
+    { "species": "japanese-sillago", "zone": "chungnam-taean", "daysAgo": 1, "quantityLevel": "some", "method": "shore-cast", "verificationCount": 2 },
+    { "species": "japanese-sillago", "zone": "incheon-ongjin", "daysAgo": 2, "quantityLevel": "some", "method": "breakwater", "verificationCount": 1 },
+    { "species": "japanese-sillago", "zone": "chungnam-boryeong", "spot": "daecheon-beach", "daysAgo": 2, "quantityLevel": "many", "method": "shore-cast", "verificationCount": 6 },
+    { "species": "japanese-sillago", "zone": "gyeonggi-sihwa", "daysAgo": 4, "quantityLevel": "few", "method": "shore-cast", "verificationCount": 0 },
+    { "species": "japanese-sillago", "zone": "chungnam-taean", "daysAgo": 5, "quantityLevel": "some", "method": "shore-cast", "verificationCount": 3 },
+    { "species": "japanese-sillago", "zone": "chungnam-taean", "daysAgo": 9, "quantityLevel": "few", "method": "shore-cast", "verificationCount": 1 },
+    { "species": "japanese-sillago", "zone": "incheon-ongjin", "daysAgo": 11, "quantityLevel": "few", "method": "breakwater", "verificationCount": 0 },
+
+    { "species": "yellowfin-goby", "zone": "incheon-ganghwa", "spot": "sorae-port", "daysAgo": 0, "quantityLevel": "many", "method": "bottom", "verificationCount": 5 },
+    { "species": "yellowfin-goby", "zone": "gyeonggi-sihwa", "spot": "oido-pier", "daysAgo": 1, "quantityLevel": "many", "method": "bottom", "verificationCount": 3 },
+    { "species": "yellowfin-goby", "zone": "chungnam-boryeong", "daysAgo": 3, "quantityLevel": "some", "method": "shore-cast", "verificationCount": 1 },
+    { "species": "yellowfin-goby", "zone": "incheon-ganghwa", "daysAgo": 6, "quantityLevel": "some", "method": "bottom", "verificationCount": 2 },
+    { "species": "yellowfin-goby", "zone": "incheon-ganghwa", "daysAgo": 12, "quantityLevel": "few", "method": "bottom", "verificationCount": 0 },
+
+    { "species": "gizzard-shad", "zone": "jeonnam-yeosu", "daysAgo": 1, "quantityLevel": "some", "method": "float", "verificationCount": 2 },
+    { "species": "gizzard-shad", "zone": "chungnam-boryeong", "daysAgo": 3, "quantityLevel": "some", "method": "breakwater", "verificationCount": 1 },
+    { "species": "gizzard-shad", "zone": "jeonbuk-gunsan", "spot": "gyeokpo-breakwater", "daysAgo": 4, "quantityLevel": "few", "method": "breakwater", "verificationCount": 0 },
+
+    { "species": "chub-mackerel", "zone": "busan-gijang", "spot": "daebyeon-port", "daysAgo": 0, "quantityLevel": "many", "method": "breakwater", "verificationCount": 7 },
+    { "species": "chub-mackerel", "zone": "busan-gijang", "daysAgo": 2, "quantityLevel": "some", "method": "lure", "verificationCount": 2 },
+    { "species": "chub-mackerel", "zone": "ulsan-gyeongju", "daysAgo": 3, "quantityLevel": "some", "method": "breakwater", "verificationCount": 1 },
+    { "species": "chub-mackerel", "zone": "jeju-north", "daysAgo": 5, "quantityLevel": "few", "method": "breakwater", "verificationCount": 0 },
+    { "species": "chub-mackerel", "zone": "busan-gijang", "daysAgo": 10, "quantityLevel": "some", "method": "breakwater", "verificationCount": 1 },
+
+    { "species": "common-squid", "zone": "pohang-yeongdeok", "spot": "yeongilman-breakwater", "daysAgo": 1, "quantityLevel": "some", "method": "jigging", "verificationCount": 3 },
+    { "species": "common-squid", "zone": "gangneung-yangyang", "daysAgo": 4, "quantityLevel": "few", "method": "jigging", "verificationCount": 1 },
+
+    { "species": "olive-flounder", "zone": "chungnam-taean", "daysAgo": 2, "quantityLevel": "few", "catchSizeCm": 42, "method": "lure", "verificationCount": 2 },
+    { "species": "korean-rockfish", "zone": "incheon-ongjin", "daysAgo": 6, "quantityLevel": "few", "catchSizeCm": 26, "method": "boat", "verificationCount": 1 },
+    { "species": "blue-crab", "zone": "chungnam-taean", "daysAgo": 1, "quantityLevel": "some", "method": "net-free", "verificationCount": 4 },
+    { "species": "blue-crab", "zone": "incheon-ongjin", "daysAgo": 3, "quantityLevel": "some", "method": "net-free", "verificationCount": 2 }
+  ]
+}

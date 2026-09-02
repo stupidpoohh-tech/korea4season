@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { DateKey } from '@/domain/date';
 import { formatKoreanDate } from '@/domain/date';
-import { getTodayHeadlines } from '@/services/nature-service';
+import { getTodayHeadlines, LAND_ONLY } from '@/services/nature-service';
 import { CATEGORY_META } from '@/lib/category-meta';
 import { EmptyState } from '@/components/common/EmptyState';
 
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/common/EmptyState';
  * 카드를 누르면 지도에서 해당 자연현상으로 이동한다.
  */
 export function TodayNature({ date }: { date: DateKey }) {
-  const headlines = getTodayHeadlines(date, 4);
+  const headlines = getTodayHeadlines(date, 4, LAND_ONLY);
 
   return (
     <section aria-labelledby="today-nature">

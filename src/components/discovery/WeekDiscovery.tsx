@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { DateKey } from '@/domain/date';
 import { formatKoreanDate } from '@/domain/date';
-import { getWeekPicks, getWeekRange } from '@/services/nature-service';
+import { getWeekPicks, getWeekRange, LAND_ONLY } from '@/services/nature-service';
 import { NatureEventCard } from '@/components/nature/NatureEventCard';
 import { EmptyState } from '@/components/common/EmptyState';
 
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/common/EmptyState';
  * 질문은 '어디' 가 아니라 '이번 주 무엇을 볼 수 있을까' 다.
  */
 export function WeekDiscovery({ date, limit = 6 }: { date: DateKey; limit?: number }) {
-  const picks = getWeekPicks(date, limit);
+  const picks = getWeekPicks(date, limit, LAND_ONLY);
   const { from, to } = getWeekRange(date);
 
   if (picks.length === 0) {

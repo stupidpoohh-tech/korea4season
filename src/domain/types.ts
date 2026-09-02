@@ -77,35 +77,15 @@ export interface NatureEntity {
   tags?: string[];
   /** category 별 확장 필드. subtype 테이블로 승격 가능. */
   metadata?: Record<string, unknown>;
-  /** category === 'fishing' 인 entity 의 수산자원 규정 */
-  fishingRule?: FishingRule;
 }
 
-/** 금어기·금지체장 규정. NatureEntity 의 subtype. (요구사항 #20) */
-export interface FishingRule {
-  /** MM-DD. 연말을 넘기는 구간(예: 12-15 ~ 01-31)도 허용한다. */
-  closedSeasonStart?: string;
-  closedSeasonEnd?: string;
-  /** 금지체장 (cm) */
-  minimumSizeCm?: number;
-  /** 금지체중 (g) */
-  minimumWeightG?: number;
-  /** 지역·어업방식별로 규정이 갈리는 경우 */
-  regionRules?: RegionRule[];
-  /** 예외 (특정 어법, 시도지사 고시 등) */
-  exceptions?: string[];
-  notes?: string[];
-  lawSource?: SourceRef;
-}
-
-export interface RegionRule {
-  /** 적용 지역/어업 방식 설명 */
-  scope: string;
-  closedSeasonStart?: string;
-  closedSeasonEnd?: string;
-  minimumSizeCm?: number;
-  note?: string;
-}
+/*
+ * 금어기·금지체장은 여기 있지 않다.
+ *
+ * 규정은 '있는가' 가 아니라 '잡아도 되는가' 를 답하는 별도 레이어이므로
+ * domain/regulation.ts 의 LegalRule 로 옮겼다.
+ * NatureEntity 에 규정을 매달면 sprite 가 다시 법적 마커가 된다.
+ */
 
 /* ── Where ────────────────────────────────────────────────── */
 
