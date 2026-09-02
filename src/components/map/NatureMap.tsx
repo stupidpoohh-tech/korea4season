@@ -3,17 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useReducedMotion } from 'motion/react';
-import type { DateKey } from '@/domain/date';
 import { BASE_MAP_ASPECT, BASE_MAP_SRC } from '@/lib/map-asset';
 import type { MapLayout, MapSprite } from '@/services/map-service';
 import { clampViewport, useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
 import { DomMapRenderer } from './DomMapRenderer';
 import { MapControls } from './MapControls';
-import { SeasonWash } from './SeasonWash';
 
 interface Props {
-  date: DateKey;
   layout: MapLayout;
   onSelectSprite: (sprite: MapSprite) => void;
   /** 컨트롤과 안내를 숨긴 미리보기 모드 (홈 화면용) */
@@ -28,7 +25,7 @@ interface Props {
  * 이 컴포넌트가 화면의 주인공이다. 정보 패널이 지도를 밀어내지 않도록
  * 주변 UI 는 전부 floating 으로 띄운다. (요구사항 #3, #34)
  */
-export function NatureMap({ date, layout, onSelectSprite, preview = false, className }: Props) {
+export function NatureMap({ layout, onSelectSprite, preview = false, className }: Props) {
   const reducedMotion = useReducedMotion() ?? false;
   // 1년 재생 중에는 스프링을 기다릴 시간이 없다
   const isPlaying = useTimeStore((s) => s.isPlaying);
@@ -185,8 +182,6 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
           className="pointer-events-none object-contain"
           draggable={false}
         />
-
-        <SeasonWash date={date} />
 
         <DomMapRenderer
           sprites={layout.sprites}

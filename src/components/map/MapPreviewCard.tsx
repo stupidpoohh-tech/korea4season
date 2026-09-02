@@ -31,7 +31,6 @@ export function MapPreviewCard({ date }: { date: DateKey }) {
       >
         <div className="pointer-events-none mx-auto w-full max-w-[286px] px-4 pb-14 pt-4">
           <NatureMap
-            date={date}
             layout={layout}
             onSelectSprite={() => {}}
             preview

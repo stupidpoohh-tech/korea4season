@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const B = JSON.parse(readFileSync(resolve(root, 'src/domain/map-bounds.json'), 'utf8'));
+/* 실제 해안선. scripts/extract-coastline.mjs 가 굽는다 (npm run map:coastline) */
+const COAST = JSON.parse(readFileSync(resolve(here, 'korea-coastline.json'), 'utf8'));
 const W = B.viewWidth;
 const H = B.viewHeight;
 
@@ -42,21 +44,22 @@ function rng(seed) {
 
 const n1 = (r) => r() * 2 - 1;
 
-/* ── 해안선 (lng, lat) 시계방향 ───────────────────────────── */
-const MAINLAND = [
-  [126.28, 37.86], [126.62, 37.98], [127.05, 38.28], [127.50, 38.30],
-  [127.95, 38.32], [128.36, 38.62],
-  [128.60, 38.20], [129.00, 37.75], [129.15, 37.15], [129.40, 36.60],
-  [129.57, 36.08], [129.42, 35.68], [129.36, 35.48], [129.10, 35.10],
-  [128.85, 35.05], [128.62, 34.86], [128.35, 34.83], [128.05, 34.92],
-  [127.92, 34.72], [127.75, 34.90], [127.72, 34.60], [127.50, 34.78],
-  [127.30, 34.58], [127.10, 34.72], [126.90, 34.46], [126.62, 34.30],
-  [126.40, 34.55], [126.38, 34.79], [126.30, 35.02], [126.40, 35.35],
-  [126.48, 35.62], [126.60, 35.98], [126.72, 36.10], [126.50, 36.30],
-  [126.32, 36.55], [126.15, 36.75], [126.45, 36.85], [126.68, 36.96],
-  [126.85, 36.98], [126.72, 37.16], [126.55, 37.45], [126.56, 37.66],
-  [126.44, 37.76],
-];
+/* ── 해안선 ───────────────────────────────────────────────
+ * 실제 위경도다. Natural Earth 1:10m 을 단순화해 쓴다 —
+ * GIS 지도는 아니지만, 실루엣만은 진짜 대한민국이어야 한다.
+ */
+const MAINLAND = COAST.mainland;
+const JEJU = COAST.jeju;
+
+/*
+ * 실제 위경도가 지도 밖에 있는 섬은 정규 좌표로 직접 앉힌다.
+ * base map 의 서쪽 끝은 125.37°E, 동쪽 끝은 130.3°E 다.
+ * src/data-sources/shared/locations.json 의 mapX/mapY 와 같은 값을 써야
+ * 그림과 마커가 어긋나지 않는다.
+ */
+const ULLEUNG_CENTER = [0.9235, 0.205];   // 130.87°E — 우측 압축
+const DOKDO_CENTER = [0.9671, 0.262];     // 131.87°E — 우측 압축
+const BAENGNYEONG_CENTER = [0.045, 0.1285]; // 124.71°E — 좌측 압축
 
 function ellipse(cx, cy, rx, ry, steps, wob = 0, seed = 1) {
   const r = rng(seed);
@@ -68,18 +71,6 @@ function ellipse(cx, cy, rx, ry, steps, wob = 0, seed = 1) {
   }
   return pts;
 }
-
-const JEJU = ellipse(126.55, 33.36, 0.52, 0.195, 22, 0.07, 77);
-
-/*
- * 실제 위경도가 지도 밖에 있는 섬은 정규 좌표로 직접 앉힌다.
- * base map 의 서쪽 끝은 125.37°E, 동쪽 끝은 130.3°E 다.
- * src/data-sources/shared/locations.json 의 mapX/mapY 와 같은 값을 써야
- * 그림과 마커가 어긋나지 않는다.
- */
-const ULLEUNG_CENTER = [0.9235, 0.205];   // 130.87°E — 우측 압축
-const DOKDO_CENTER = [0.9671, 0.262];     // 131.87°E — 우측 압축
-const BAENGNYEONG_CENTER = [0.045, 0.1285]; // 124.71°E — 좌측 압축
 
 /* ── Catmull-Rom -> 부드러운 닫힌 path ────────────────────── */
 function smoothClosedPath(points, tension = 1) {
@@ -137,38 +128,24 @@ function distToPolygon([x, y], poly) {
 }
 
 /* ── 색 ───────────────────────────────────────────────────── */
-/*
- * 화이트 테마.
- *
- * 바다는 칠하지 않는다 — SVG 바탕이 비어 있어 페이지의 흰색이 그대로 비친다.
- * 그래서 육지와 바다를 가르는 것은 색이 아니라 해안을 둘러싼 옅은 회색 띠다.
- * 바깥으로 갈수록 옅어지는 세 겹(seaFar > seaMid > seaNear 순으로 넓게)이
- * 등고선처럼 해안선을 만든다.
- *
- * 지형은 흰색에서 아주 조금씩만 내려온다. 이 지도에서 색을 갖는 것은
- * 그 위에 놓이는 생물 sprite 하나뿐이어야 한다.
- */
 const C = {
-  seaFar: '#f3f6f8',
-  seaMid: '#e6ebef',
-  seaNear: '#d5dde4',
-  /** 해안선 — 이 지도에서 육지와 바다를 가르는 유일한 선 */
-  coast: '#b9c4cc',
-  sand: '#f2f4f6',
-  sandEdge: '#e3e7ea',
-  grass: '#ffffff',
-  grassDeep: '#f4f6f7',
-  forest: '#e7ebee',
-  forestDark: '#d3d9de',
-  treeTop: '#f1f4f6',
-  mtnLight: '#f0f2f4',
-  mtnDark: '#dfe4e8',
-  mtnEdge: '#cfd6db',
-  snow: '#ffffff',
-  river: '#e2e8ee',
-  lake: '#e2e8ee',
-  /** 지형 그림자 — 색이 아니라 농도로만 얹는다 */
-  shade: '#b9c2c9',
+  seaFar: '#c3e9ff',
+  seaMid: '#6ec8f4',
+  seaNear: '#2fa6e8',
+  seaLine: '#e8f7ff',
+  sand: '#f4e5ad',
+  sandEdge: '#e0c98a',
+  grass: '#bbe264',
+  grassDeep: '#9ed14f',
+  forest: '#3f9e46',
+  forestDark: '#2c7a37',
+  treeTop: '#5cb84f',
+  mtnLight: '#5cb968',
+  mtnDark: '#3b9349',
+  mtnEdge: '#256733',
+  snow: '#f4fbff',
+  river: '#57c2f0',
+  lake: '#59c4f2',
 };
 
 /* ── 산 ───────────────────────────────────────────────────── */
@@ -178,7 +155,7 @@ function mountain(x, y, w, h, snow) {
   const left = `${(x - half).toFixed(1)} ${y.toFixed(1)}`;
   const right = `${(x + half).toFixed(1)} ${y.toFixed(1)}`;
   const parts = [
-    `<ellipse cx="${x.toFixed(1)}" cy="${(y + 2).toFixed(1)}" rx="${(half * 0.95).toFixed(1)}" ry="${(h * 0.09 + 2).toFixed(1)}" fill="${C.shade}" opacity=".18"/>`,
+    `<ellipse cx="${x.toFixed(1)}" cy="${(y + 2).toFixed(1)}" rx="${(half * 0.95).toFixed(1)}" ry="${(h * 0.09 + 2).toFixed(1)}" fill="#2c7a37" opacity=".18"/>`,
     `<path d="M ${left} L ${apex} L ${right} Z" fill="${C.mtnLight}"/>`,
     `<path d="M ${apex} L ${right} L ${x.toFixed(1)} ${y.toFixed(1)} Z" fill="${C.mtnDark}"/>`,
   ];
@@ -239,43 +216,44 @@ const LAKES = [
 ];
 
 /* ── 조립 ─────────────────────────────────────────────────── */
-const mainlandPath = smoothClosedPath(MAINLAND, 1);
-const jejuPath = smoothClosedPath(JEJU, 1);
+/*
+ * 실제 해안선은 점이 촘촘해서 tension 1 이면 급한 모퉁이에서 곡선이 튀어나간다.
+ * 모서리만 살짝 둥글릴 만큼만 준다 — 일러스트의 인상은 남기고 실루엣은 지킨다.
+ */
+const mainlandPath = smoothClosedPath(MAINLAND, 0.35);
+const jejuPath = smoothClosedPath(JEJU, 0.35);
 
 const rand = rng(20260902);
 
-/* 작은 섬들: 서해 · 남해에 흩뿌린다 */
-const islands = [];
-{
-  /*
-   * x 하한은 섬 반지름(최대 15)에 바다 테두리(약 10)를 더한 값보다 커야 한다.
-   * 그렇지 않으면 지도 왼쪽 끝에서 섬이 잘린 채 그려진다.
-   */
-  const bands = [
-    { x: [0.042, 0.176], y: [0.18, 0.60], n: 13, near: 150 },
-    { x: [0.042, 0.224], y: [0.56, 0.84], n: 17, near: 175 },
-    { x: [0.153, 0.694], y: [0.70, 0.88], n: 18, near: 150 },
-    { x: [0.20, 0.60], y: [0.86, 0.95], n: 4, near: 190 },
-  ];
-  for (const band of bands) {
-    let placed = 0; let guard = 0;
-    while (placed < band.n && guard < band.n * 60) {
-      guard += 1;
-      const x = (band.x[0] + rand() * (band.x[1] - band.x[0])) * W;
-      const y = (band.y[0] + rand() * (band.y[1] - band.y[0])) * H;
-      if (inPolygon([x, y], MAINLAND_PX) || inPolygon([x, y], JEJU_PX)) continue;
-      const dm = distToPolygon([x, y], MAINLAND_PX);
-      const dj = distToPolygon([x, y], JEJU_PX);
-      if (dm < 30 || dj < 30) continue;
-      if (Math.min(dm, dj) > band.near) continue;
-      if (islands.some((i) => Math.hypot(i.x - x, i.y - y) < 44)) continue;
-      islands.push({ x, y, r: 6 + rand() * 9, seed: Math.floor(rand() * 1e6) });
-      placed += 1;
-    }
-  }
+/* ── 섬 ───────────────────────────────────────────────────
+ * 예전에는 서해·남해에 결정론적 난수로 흩뿌렸다. 지금은 실제 위치를 쓴다 —
+ * 다도해가 실제로 있는 자리에 있어야 지도가 대한민국으로 읽힌다.
+ */
+const islandShapes = [];
+
+for (const ring of COAST.islands) {
+  const pts = ring.map(P);
+  const xs = pts.map((q) => q[0]);
+  const ys = pts.map((q) => q[1]);
+  const x = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const y = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const r = Math.max(Math.max(...xs) - x, Math.max(...ys) - y);
+
+  // 화면에서 점 하나로 뭉개질 섬은 그리지 않는다
+  if (r < 2.5) continue;
+  // 지도 밖으로 밀려난 섬(백령도·가거도 등)은 아래에서 따로 앉힌다
+  if (x < 8 || x > W - 8 || y < 8 || y > H - 8) continue;
+
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let k = 1; k < pts.length; k += 1) d += ` L ${pts[k][0].toFixed(1)} ${pts[k][1].toFixed(1)}`;
+  islandShapes.push({ d: `${d} Z`, x, y, r });
 }
 
-/* 데이터에서 참조하는 유인도는 반드시 실제 지형으로 그린다 */
+/*
+ * 데이터가 참조하는데 실제 좌표로는 그릴 수 없는 섬.
+ * 백령도는 지도 서쪽 끝 밖이라 압축해 앉히고,
+ * 가파도는 1:10m 원본에서 걸러질 만큼 작아 직접 그린다.
+ */
 const NAMED_ISLETS = [
   { at: BAENGNYEONG_CENTER, r: 15, seed: 51 },   // 백령도 (좌측 압축 배치)
   { lng: 126.271, lat: 33.168, r: 8, seed: 52 }, // 가파도
@@ -283,25 +261,23 @@ const NAMED_ISLETS = [
 for (const isl of NAMED_ISLETS) {
   const x = isl.at ? isl.at[0] * W : px(isl.lng);
   const y = isl.at ? isl.at[1] * H : py(isl.lat);
-  for (let i = islands.length - 1; i >= 0; i -= 1) {
-    if (Math.hypot(islands[i].x - x, islands[i].y - y) < isl.r + 34) islands.splice(i, 1);
+  for (let k = islandShapes.length - 1; k >= 0; k -= 1) {
+    if (Math.hypot(islandShapes[k].x - x, islandShapes[k].y - y) < isl.r + 20) {
+      islandShapes.splice(k, 1);
+    }
   }
-  islands.push({ x, y, r: isl.r, seed: isl.seed });
-}
-
-const islandShapes = islands.map(({ x, y, r, seed }) => {
-  const rr = rng(seed);
+  const rr = rng(isl.seed);
   const pts = [];
   const steps = 9;
-  for (let i = 0; i < steps; i += 1) {
-    const a = (Math.PI * 2 * i) / steps;
-    const k = 1 + n1(rr) * 0.28;
-    pts.push([x + Math.cos(a) * r * k, y + Math.sin(a) * r * 0.78 * k]);
+  for (let k = 0; k < steps; k += 1) {
+    const a = (Math.PI * 2 * k) / steps;
+    const wob = 1 + n1(rr) * 0.28;
+    pts.push([x + Math.cos(a) * isl.r * wob, y + Math.sin(a) * isl.r * 0.78 * wob]);
   }
   let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 1; i < pts.length; i += 1) d += ` L ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
-  return { d: `${d} Z`, x, y, r };
-});
+  for (let k = 1; k < pts.length; k += 1) d += ` L ${pts[k][0].toFixed(1)} ${pts[k][1].toFixed(1)}`;
+  islandShapes.push({ d: `${d} Z`, x, y, r: isl.r });
+}
 
 /* 울릉도 · 독도 (base map 우측 압축 배치) */
 const ulleung = { x: ULLEUNG_CENTER[0] * W, y: ULLEUNG_CENTER[1] * H, r: 26 };
@@ -382,7 +358,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     <clipPath id="land-clip"><path d="${mainlandPath}"/></clipPath>
     <clipPath id="jeju-clip"><path d="${jejuPath}"/></clipPath>
     <linearGradient id="land-shade" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="${C.grassDeep}" stop-opacity=".9"/>
+      <stop offset="0" stop-color="#d6ee86" stop-opacity=".9"/>
       <stop offset=".55" stop-color="${C.grass}" stop-opacity="0"/>
       <stop offset="1" stop-color="${C.grassDeep}" stop-opacity=".55"/>
     </linearGradient>
@@ -392,14 +368,26 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     </radialGradient>
   </defs>
 
+  <!--
+    바다 테두리와 모래 띠.
+
+    폭은 지도 축척에 매여 있다 — 20px 은 실제로 10km 쯤이다.
+    해안선이 실제 지형이 된 뒤로는 이 폭이 리아스식 만을 통째로 메워서
+    내륙까지 모래가 뻗어 들어간다. 그래서 예전 일러스트 해안선 때보다
+    얇게 두른다.
+  -->
   <g id="ocean">
-    ${[[C.seaFar, 54], [C.seaMid, 30], [C.seaNear, 13]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>`).join('\n    ')}
-    ${[[C.seaFar, 19], [C.seaMid, 11], [C.seaNear, 5]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>`).join('\n    ')}
+    ${[[C.seaFar, 34], [C.seaMid, 19], [C.seaNear, 8]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>`).join('\n    ')}
+    ${[[C.seaFar, 13], [C.seaMid, 8], [C.seaNear, 4]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>`).join('\n    ')}
+  </g>
+
+  <g id="shoreline-glow" fill="none" stroke="${C.seaLine}" stroke-width="2" opacity=".7">
+    <path d="${mainlandPath}"/><path d="${jejuPath}"/>
   </g>
 
   <g id="sand" stroke-linejoin="round" fill="${C.sand}">
-    <g stroke="${C.sand}" stroke-width="20"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>
-    <g stroke="${C.sand}" stroke-width="4"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
+    <g stroke="${C.sand}" stroke-width="9"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>
+    <g stroke="${C.sand}" stroke-width="3"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
   </g>
 
   <g id="land" fill="${C.grass}">
@@ -410,16 +398,6 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
   <g id="land-shading">
     <path d="${mainlandPath}" fill="url(#land-shade)"/>
     <path d="${jejuPath}" fill="url(#land-shade)"/>
-  </g>
-
-  <!--
-    해안선. 육지를 칠한 뒤에 그어야 보인다 —
-    모래 띠(폭 20)가 경로를 덮으므로 그 앞에 그으면 가려진다.
-  -->
-  <g id="coastline" fill="none" stroke="${C.coast}" stroke-linejoin="round">
-    <g stroke-width="2.2"><path d="${mainlandPath}"/><path d="${jejuPath}"/></g>
-    <g stroke-width="1.6"><path d="${ulleungPath}"/><path d="${dokdoPath}"/></g>
-    <g stroke-width="1.2" opacity=".8">${islandShapes.map((i) => `<path d="${i.d}" transform="translate(${i.x} ${i.y}) scale(.9) translate(${-i.x} ${-i.y})"/>`).join('')}</g>
   </g>
 
   <g id="water-inland" clip-path="url(#land-clip)" fill="none" stroke="${C.river}" stroke-linecap="round">
@@ -484,8 +462,8 @@ function inflate(poly, margin) {
   });
 }
 
-/** 판정선을 그림 밖으로 밀어내는 여유 (원본 좌표 px) */
-const LAND_MARGIN = 16;
+/** 판정선을 그림 밖으로 밀어내는 여유 (원본 좌표 px). 모래 띠 절반 + sprite 여유 */
+const LAND_MARGIN = 11;
 
 const ULLEUNG_PX = ellipse(0, 0, 1, 1, 16).map(([x, y]) => [
   ulleung.x + x * ulleung.r,
@@ -495,10 +473,17 @@ const ULLEUNG_PX = ellipse(0, 0, 1, 1, 16).map(([x, y]) => [
 const norm = (poly) =>
   poly.map(([x, y]) => [Number((x / W).toFixed(4)), Number((y / H).toFixed(4))]);
 
+/*
+ * 판정선은 그림선보다 굵게 일반화한 링을 쓴다 (korea-coastline.json 의 mask).
+ * 실제 해안선을 그대로 부풀리면 좁은 만마다 법선이 겹쳐 스파이크가 생기고,
+ * 그런 만은 어차피 sprite 하나 들어갈 넓이도 아니다.
+ * 만을 메우는 방향은 육지를 넓게 보는 쪽이라 안전하다 —
+ * 바다 생물이 뭍에 걸치는 것보다 만 안쪽을 비우는 편이 낫다.
+ */
 const landMask = {
   note: 'scripts/generate-base-map.mjs 가 생성합니다. 직접 수정하지 마십시오.',
-  mainland: norm(inflate(MAINLAND_PX, LAND_MARGIN)),
-  jeju: norm(inflate(JEJU_PX, LAND_MARGIN)),
+  mainland: norm(inflate(COAST.mask.mainland.map(P), LAND_MARGIN)),
+  jeju: norm(inflate(COAST.mask.jeju.map(P), LAND_MARGIN)),
   ulleung: norm(inflate(ULLEUNG_PX, LAND_MARGIN)),
 };
 writeFileSync(
@@ -511,5 +496,5 @@ mkdirSync(resolve(root, 'public/map'), { recursive: true });
 writeFileSync(resolve(root, 'public/map/korea-base.svg'), svg, 'utf8');
 console.log(
   `korea-base.svg  ${(svg.length / 1024).toFixed(0)}KB  land-mask.json  ` +
-  `islands=${islands.length} mountains=${mountains.length} groves=${groves.length}`,
+  `섬=${islandShapes.length} 산=${mountains.length} 숲=${groves.length}`,
 );

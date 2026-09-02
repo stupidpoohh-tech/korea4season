@@ -279,7 +279,6 @@ export function MapScreen() {
           style={{ '--map-max-h': `${BASE_MAP_HEIGHT_CQW.toFixed(2)}cqw` } as CSSProperties}
         >
           <NatureMap
-            date={date}
             layout={layout}
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
