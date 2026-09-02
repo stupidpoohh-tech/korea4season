@@ -159,7 +159,7 @@ export function MapScreen() {
   const marineActive = categoryCounts.fishing > 0;
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-56px)] max-w-[1180px] flex-col gap-3 px-3 pt-3 lg:px-6 lg:pb-5">
+    <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-56px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
       <div className="flex items-center gap-2 lg:hidden">
         <div className="min-w-0 flex-1">
           <StateFilterRow counts={stateCounts} />

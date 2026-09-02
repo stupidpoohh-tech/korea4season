@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body className="min-h-dvh">
         <Header demo={hasDemoData()} />
-        <div className="pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
+        <div className="pb-[env(safe-area-inset-bottom)] lg:pb-0">{children}</div>
         <BottomNavigation />
         <DiscoveryToast />
       </body>

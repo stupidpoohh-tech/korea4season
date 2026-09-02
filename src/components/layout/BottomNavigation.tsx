@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS } from './nav-items';
+import { SHOW_NAVIGATION, VISIBLE_NAV_ITEMS } from './nav-items';
 
 export function BottomNavigation() {
   const pathname = usePathname();
+
+  // 지도 한 화면만 노출하는 동안에는 탭 바가 세로 공간만 차지한다
+  if (!SHOW_NAVIGATION) return null;
 
   return (
     <nav
@@ -13,8 +16,8 @@ export function BottomNavigation() {
       className="fixed inset-x-0 bottom-0 z-30 border-t border-[color:var(--color-line)] bg-[color:var(--color-surface)]/94 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <ul className="mx-auto flex max-w-[560px]">
-        {NAV_ITEMS.map((item) => {
-          const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+        {VISIBLE_NAV_ITEMS.map((item) => {
+          const active = pathname.startsWith(item.href);
           return (
             <li key={item.href} className="flex-1">
               <Link
