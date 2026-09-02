@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
@@ -13,6 +13,7 @@ import {
   type MarineMapItem,
 } from '@/services/marine-service';
 import { locationPosition } from '@/services/nature-service';
+import { BASE_MAP_HEIGHT_CQW } from '@/lib/map-asset';
 import { useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
 import { NatureTimeline } from '@/components/timeline/NatureTimeline';
@@ -239,15 +240,20 @@ export function MapScreen() {
         </div>
 
         {/*
-          지도는 1000:1300 비율을 반드시 유지해야 한다 — sprite 위치가
-          컨테이너 크기 대비 비율로 찍히기 때문이다.
+          지도는 map-bounds.json 의 viewWidth : viewHeight 비율을 반드시
+          유지해야 한다 — sprite 위치가 컨테이너 크기 대비 비율로 찍히기 때문이다.
+          높이 상한도 같은 출처에서 계산한다. 여기에 숫자를 직접 적으면
+          base map 을 다시 자를 때 이 한 줄만 뒤처진다.
         */}
-        <div className="relative flex min-h-0 items-center justify-center [container-type:size]">
+        <div
+          className="relative flex min-h-0 items-center justify-center [container-type:size]"
+          style={{ '--map-max-h': `${BASE_MAP_HEIGHT_CQW.toFixed(2)}cqw` } as CSSProperties}
+        >
           <NatureMap
             date={date}
             layout={layout}
             onSelectSprite={onSelectSprite}
-            className="h-[min(100cqh,130cqw)] w-auto"
+            className="h-[min(100cqh,var(--map-max-h))] w-auto"
           />
 
           {visible === 0 && (

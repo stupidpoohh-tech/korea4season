@@ -6,7 +6,7 @@
   },
   "locations": [
     { "slug": "west-sea", "name": "서해", "region": "서해", "type": "sea", "lat": 36.2, "lng": 125.6, "description": "인천 앞바다부터 전남 서부 해역까지" },
-    { "slug": "west-sea-north", "name": "서해 북부", "region": "서해", "type": "sea", "lat": 37.3, "lng": 125.3 },
+    { "slug": "west-sea-north", "name": "서해 북부", "region": "서해", "type": "sea", "lat": 37.3, "lng": 125.3, "mapX": 0.03, "mapY": 0.2358, "description": "base map 좌측 끝에 압축 배치" },
     { "slug": "west-sea-south", "name": "서해 남부", "region": "서해", "type": "sea", "lat": 35.3, "lng": 125.9 },
     { "slug": "south-sea", "name": "남해", "region": "남해", "type": "sea", "lat": 34.25, "lng": 127.6 },
     { "slug": "south-sea-east", "name": "남해 동부", "region": "남해", "type": "sea", "lat": 34.7, "lng": 128.7 },
@@ -15,9 +15,9 @@
     { "slug": "east-sea-north", "name": "동해 북부", "region": "동해", "type": "sea", "lat": 38.1, "lng": 129.0 },
     { "slug": "east-sea-south", "name": "동해 남부", "region": "동해", "type": "sea", "lat": 35.7, "lng": 129.75 },
     { "slug": "jeju-sea", "name": "제주 해역", "region": "제주", "type": "sea", "lat": 33.1, "lng": 126.4 },
-    { "slug": "ulleungdo", "name": "울릉도", "region": "경북", "type": "island", "lat": 37.5, "lng": 130.87, "mapX": 0.935, "mapY": 0.205, "description": "base map 우측에 압축 배치" },
-    { "slug": "dokdo", "name": "독도", "region": "경북", "type": "island", "lat": 37.24, "lng": 131.87, "mapX": 0.985, "mapY": 0.262, "description": "base map 우측에 압축 배치" },
-    { "slug": "baengnyeongdo", "name": "백령도", "region": "인천", "type": "island", "lat": 37.96, "lng": 124.71 },
+    { "slug": "ulleungdo", "name": "울릉도", "region": "경북", "type": "island", "lat": 37.5, "lng": 130.87, "mapX": 0.9235, "mapY": 0.205, "description": "base map 우측에 압축 배치" },
+    { "slug": "dokdo", "name": "독도", "region": "경북", "type": "island", "lat": 37.24, "lng": 131.87, "mapX": 0.9824, "mapY": 0.262, "description": "base map 우측에 압축 배치" },
+    { "slug": "baengnyeongdo", "name": "백령도", "region": "인천", "type": "island", "lat": 37.96, "lng": 124.71, "mapX": 0.045, "mapY": 0.1285, "description": "base map 좌측에 압축 배치" },
 
     { "slug": "seoul", "name": "서울", "region": "서울", "type": "city", "lat": 37.57, "lng": 126.98 },
     { "slug": "yeouido", "name": "여의도 윤중로", "region": "서울", "subregion": "영등포구", "type": "park", "lat": 37.529, "lng": 126.933 },

@@ -1,5 +1,5 @@
 import mask from './land-mask.json';
-import type { MapPosition } from './projection';
+import { MAP_BOUNDS, type MapPosition } from './projection';
 
 /**
  * 육지 판정.
@@ -11,7 +11,7 @@ import type { MapPosition } from './projection';
  */
 
 /** 지도 원본 비율. y 거리를 x 단위로 환산할 때 쓴다. */
-export const MAP_ASPECT = 1300 / 1000;
+export const MAP_ASPECT = MAP_BOUNDS.viewHeight / MAP_BOUNDS.viewWidth;
 
 type Ring = readonly (readonly [number, number])[];
 

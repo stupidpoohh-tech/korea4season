@@ -70,8 +70,16 @@ function ellipse(cx, cy, rx, ry, steps, wob = 0, seed = 1) {
 }
 
 const JEJU = ellipse(126.55, 33.36, 0.52, 0.195, 22, 0.07, 77);
-const ULLEUNG_CENTER = [0.935, 0.205];
-const DOKDO_CENTER = [0.972, 0.262];
+
+/*
+ * 실제 위경도가 지도 밖에 있는 섬은 정규 좌표로 직접 앉힌다.
+ * base map 의 서쪽 끝은 125.37°E, 동쪽 끝은 130.3°E 다.
+ * src/data-sources/shared/locations.json 의 mapX/mapY 와 같은 값을 써야
+ * 그림과 마커가 어긋나지 않는다.
+ */
+const ULLEUNG_CENTER = [0.9235, 0.205];   // 130.87°E — 우측 압축
+const DOKDO_CENTER = [0.9671, 0.262];     // 131.87°E — 우측 압축
+const BAENGNYEONG_CENTER = [0.045, 0.1285]; // 124.71°E — 좌측 압축
 
 /* ── Catmull-Rom -> 부드러운 닫힌 path ────────────────────── */
 function smoothClosedPath(points, tension = 1) {
@@ -225,11 +233,15 @@ const rand = rng(20260902);
 /* 작은 섬들: 서해 · 남해에 흩뿌린다 */
 const islands = [];
 {
+  /*
+   * x 하한은 섬 반지름(최대 15)에 바다 테두리(약 10)를 더한 값보다 커야 한다.
+   * 그렇지 않으면 지도 왼쪽 끝에서 섬이 잘린 채 그려진다.
+   */
   const bands = [
-    { x: [0.03, 0.30], y: [0.18, 0.60], n: 16, near: 150 },
-    { x: [0.02, 0.34], y: [0.56, 0.84], n: 20, near: 175 },
-    { x: [0.28, 0.74], y: [0.70, 0.88], n: 18, near: 150 },
-    { x: [0.32, 0.66], y: [0.86, 0.95], n: 4, near: 190 },
+    { x: [0.042, 0.176], y: [0.18, 0.60], n: 13, near: 150 },
+    { x: [0.042, 0.224], y: [0.56, 0.84], n: 17, near: 175 },
+    { x: [0.153, 0.694], y: [0.70, 0.88], n: 18, near: 150 },
+    { x: [0.20, 0.60], y: [0.86, 0.95], n: 4, near: 190 },
   ];
   for (const band of bands) {
     let placed = 0; let guard = 0;
@@ -251,12 +263,12 @@ const islands = [];
 
 /* 데이터에서 참조하는 유인도는 반드시 실제 지형으로 그린다 */
 const NAMED_ISLETS = [
-  { lng: 124.71, lat: 37.96, r: 15, seed: 51 },  // 백령도
+  { at: BAENGNYEONG_CENTER, r: 15, seed: 51 },   // 백령도 (좌측 압축 배치)
   { lng: 126.271, lat: 33.168, r: 8, seed: 52 }, // 가파도
 ];
 for (const isl of NAMED_ISLETS) {
-  const x = px(isl.lng);
-  const y = py(isl.lat);
+  const x = isl.at ? isl.at[0] * W : px(isl.lng);
+  const y = isl.at ? isl.at[1] * H : py(isl.lat);
   for (let i = islands.length - 1; i >= 0; i -= 1) {
     if (Math.hypot(islands[i].x - x, islands[i].y - y) < isl.r + 34) islands.splice(i, 1);
   }

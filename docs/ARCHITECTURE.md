@@ -189,10 +189,13 @@ base map 은 GIS 타일이 아니라 한 장의 일러스트입니다.
 mapPosition = location.mapPosition ?? projectGeo(location.geo)
 ```
 
-`Location` 은 실제 `lat/lng` 를 항상 갖고, base map 에서 위치를 압축해 그린
-울릉도·독도만 `mapPosition` 으로 override 합니다.
-지도 컨테이너는 container query 단위로 **항상 1000:1300 비율을 유지**합니다 —
-비율이 깨지면 정규 좌표가 어긋나 sprite 가 엉뚱한 곳에 찍힙니다.
+`Location` 은 실제 `lat/lng` 를 항상 갖고, base map 이 담는 경도 범위
+(`src/domain/map-bounds.json` 의 `west`~`east`) 밖에 있는 울릉도·독도·백령도만
+`mapPosition` 으로 override 합니다.
+지도 컨테이너는 container query 단위로 **항상 `viewWidth : viewHeight` 비율을
+유지**합니다 — 비율이 깨지면 정규 좌표가 어긋나 sprite 가 엉뚱한 곳에 찍힙니다.
+이 비율과 높이 상한은 `src/lib/map-asset.ts` 가 `map-bounds.json` 에서 계산하므로
+화면 코드에 숫자를 다시 적지 않습니다.
 
 같은 장소에 여러 개가 겹치면 `buildMapLayout()` 이 작은 원형으로 흩어 놓고,
 전체 sprite 는 `MAX_SPRITES`(30)로 잘라 레이어를 다 켜도 화면이 무너지지 않게 합니다.

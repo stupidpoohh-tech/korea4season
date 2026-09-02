@@ -18,7 +18,7 @@ interface Props {
   onSelectSprite: (sprite: MapSprite) => void;
   /** 컨트롤과 안내를 숨긴 미리보기 모드 (홈 화면용) */
   preview?: boolean;
-  /** 크기는 호출자가 정한다. 지도 비율(1000:1300)은 내부에서 유지한다. */
+  /** 크기는 호출자가 정한다. 지도 비율(map-bounds.json)은 내부에서 유지한다. */
   className?: string;
 }
 
