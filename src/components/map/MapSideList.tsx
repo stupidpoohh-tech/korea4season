@@ -27,10 +27,14 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
 
       {sprites.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[color:var(--color-line)] px-3 py-4 text-[12.5px] leading-relaxed text-[color:var(--color-muted)]">
-          이 조건에 해당하는 것이 없습니다. 필터를 풀거나 아래 슬라이더를 움직여 보세요.
+조건에 맞는 것이 없습니다. 필터를 풀거나 날짜를 옮겨 보세요.
         </p>
       ) : (
-        <ul className="scrollbar-none min-h-0 flex-1 space-y-1 overflow-y-auto pr-0.5">
+        /*
+         * 목록은 지도에 올라간 것 전부라 화면보다 길다.
+         * 스크롤바를 감추면 잘린 채 끝난 것처럼 보이므로 그대로 둔다.
+         */
+        <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,black_calc(100%-24px),transparent)]">
           {sprites.map((sprite) => {
             const active =
               sprite.subject.kind === 'zone'

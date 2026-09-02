@@ -101,6 +101,8 @@ export interface MapQuery {
   startingOnly?: boolean;
   /** 규정이 걸린 대상만 본다 — 시즌 필터와 독립적으로 걸린다 */
   legalOnly?: boolean;
+  /** 이 어종 하나만 지도에 남긴다 (slug). 조건이 아니라 대상을 고르는 축이다. */
+  speciesSlug?: string;
   mode?: MapMode;
   /**
    * 0 = 기본, 1 = 확대. 확대하면 접어 두었던 sprite 를 더 펼친다.
@@ -333,6 +335,7 @@ function marineSprites(query: MapQuery): MapSprite[] {
 
   return buildMarineMapItems(query.date)
     .filter((item) => {
+      if (query.speciesSlug && item.species.slug !== query.speciesSlug) return false;
       if (query.legalOnly && !isLegallyBlocked(item.legal.overallStatus)) return false;
       if (query.startingOnly && item.season.status !== 'starting') return false;
       return passesSeason(season, item.state);
@@ -366,6 +369,7 @@ function marineSprites(query: MapQuery): MapSprite[] {
 function natureSprites(query: MapQuery): MapSprite[] {
   // 시즌·규정 필터는 해양 개념이라 다른 레이어에는 아무 필터도 없을 때만 그린다
   if ((query.season ?? 'all') !== 'all' || query.startingOnly || query.legalOnly) return [];
+  if (query.speciesSlug) return [];
 
   const out: MapSprite[] = [];
 

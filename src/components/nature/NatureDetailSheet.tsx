@@ -8,6 +8,7 @@ import { CATEGORY_META } from '@/lib/category-meta';
 import type { ResolvedOccurrence } from '@/domain/types';
 import { DemoBadge } from '@/components/common/DemoBadge';
 import { useDexStore } from '@/store/dex-store';
+import { DEX_VISIBLE } from '@/components/layout/nav-items';
 import { NatureStatusBadge } from './NatureStatusBadge';
 import { SourceBlock } from './SourceBlock';
 import { SubscribeButton } from './SubscribeButton';
@@ -41,7 +42,8 @@ export function NatureDetailSheet({ item, date, onClose, onFocusMap }: Props) {
 
   // 상세를 처음 연 자연은 도감에 기록된다. (요구사항 #11)
   useEffect(() => {
-    if (item) discover(item.entity.id, date);
+    // 도감이 닫혀 있는 동안에는 기록하지 않는다 (nav-items 의 DEX_VISIBLE)
+    if (DEX_VISIBLE && item) discover(item.entity.id, date);
   }, [item, date, discover]);
 
   useEffect(() => {

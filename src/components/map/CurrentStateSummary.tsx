@@ -24,9 +24,11 @@ interface Props {
   filtered: boolean;
   counts: MapCounts;
   /**
-   * 모바일에서는 내역 줄을 접는다.
-   * 이 화면에서 세로 한 줄은 곧 지도 크기다 — 분할은 필터 시트가,
-   * 지금 걸린 조건은 아래 칩이 이미 말한다.
+   * 모바일에서는 내역 줄을 접고 제목을 서비스명으로 쓴다.
+   *
+   * 모바일에는 전역 헤더가 없어서(lg 이상에서만 그린다) 이 줄이 화면의
+   * 좌측 최상단이다. 서비스가 무엇인지 여기서 한 번은 말해야 한다.
+   * 세로 한 줄은 곧 지도 크기이므로 상태는 아랫줄로 내린다.
    */
   compact?: boolean;
 }
@@ -36,19 +38,30 @@ export function CurrentStateSummary({ mode, count, filtered, counts, compact = f
 
   return (
     <div className="min-w-0">
-      <p className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
-        <span className="text-[15px] font-semibold tracking-tight sm:text-[16px]">지금, 바다</span>
-        <span className="text-[13px] text-[color:var(--color-ink-soft)] sm:text-[13.5px]">
-          <span className="tabular font-semibold text-[color:var(--color-ink)]">{count}</span>
-          {unit}
-          {mode === 'zone' ? '에서 만날 수 있어요' : ' 활동 중'}
-        </span>
-      </p>
-
-      {!compact && (
-        <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
-          <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
-        </p>
+      {compact ? (
+        <>
+          <p className="text-[15px] font-semibold leading-[19px] tracking-tight">지금日지도</p>
+          <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
+            지금 바다에{' '}
+            <span className="tabular font-semibold text-[color:var(--color-ink-soft)]">{count}</span>
+            {unit}
+            {filtered && ` · 전체 ${counts.season.all}${unit} 가운데`}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
+            <span className="text-[16px] font-semibold tracking-tight">지금, 바다</span>
+            <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
+              <span className="tabular font-semibold text-[color:var(--color-ink)]">{count}</span>
+              {unit}
+              {mode === 'zone' ? '에서 만날 수 있어요' : ' 활동 중'}
+            </span>
+          </p>
+          <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
+            <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
+          </p>
+        </>
       )}
     </div>
   );

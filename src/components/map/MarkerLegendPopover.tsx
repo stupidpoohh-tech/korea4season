@@ -12,16 +12,15 @@ import type { MapMode } from '@/services/map-service';
  * ──────────────────────────────────────────────────────────── */
 
 const MEANING: Record<MapMode, string> = {
-  species:
-    '지도 표시는 선택한 날짜에 그 어종을 노리기 좋은 대표 권역을 나타냅니다. 정확한 서식지나 최근 조황 위치, 개인 포인트가 아닙니다.',
-  zone: '숫자는 선택한 날짜에 그 권역에서 시즌인 어종 수입니다. 그림은 그중 시즌이 가장 강한 대표 어종입니다.',
+  species: '그림이 놓인 자리는 그 날짜에 그 어종을 노리기 좋은 권역입니다. 서식지나 조황 위치가 아닙니다.',
+  zone: '숫자는 그 권역에서 지금 시즌인 어종 수, 그림은 그중 시즌이 가장 강한 어종입니다.',
 };
 
 /** 상태 어휘는 꽃·단풍·철새까지 그대로 쓸 수 있게 한곳에서만 정한다 */
 const ITEMS: { swatch: string; label: string; hint: string }[] = [
-  { swatch: 'var(--color-peak)', label: '절정', hint: '가장 크고 또렷하게' },
-  { swatch: 'var(--color-accent)', label: '좋음', hint: '노릴 만함' },
-  { swatch: 'var(--color-sea)', label: '보통 · 시작 중', hint: '작고 옅게' },
+  { swatch: 'var(--color-peak)', label: '절정', hint: '지금이 가장 좋을 때' },
+  { swatch: 'var(--color-accent)', label: '좋음', hint: '노릴 만할 때' },
+  { swatch: 'var(--color-sea)', label: '보통', hint: '있긴 있을 때' },
 ];
 
 export function LegendTrigger({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -109,7 +108,7 @@ export function MarkerLegendPopover({
             !
           </span>
           <span className="font-medium text-[color:var(--color-ink-soft)]">규정 있음</span>
-          <span className="text-[color:var(--color-faint)]">있지만 잡으면 안 됩니다</span>
+          <span className="text-[color:var(--color-faint)]">지금은 잡을 수 없어요</span>
         </li>
       </ul>
 
@@ -118,10 +117,10 @@ export function MarkerLegendPopover({
       </p>
 
       <p className="text-[color:var(--color-faint)]">
-        그림 크기는 시즌 강도입니다. 규정은 그림 색을 바꾸지 않고 모서리 표시로만 알립니다 —
-        <span className="text-[color:var(--color-ink-soft)]"> 지금 없는 것</span>과
-        <span className="text-[color:var(--color-ink-soft)]"> 있지만 잡으면 안 되는 것</span>은
-        다릅니다. 체장·성별 같은 조건부 규정은 어종을 눌러 상세에서 확인하세요.
+        그림이 클수록 시즌이 좋다는 뜻입니다. 금어기라도 그림은 지우지 않습니다 —
+        <span className="text-[color:var(--color-ink-soft)]">지금 없는 것</span>과
+        <span className="text-[color:var(--color-ink-soft)]">있지만 잡으면 안 되는 것</span>은
+        다르기 때문입니다. 체장 같은 조건은 어종을 눌러 확인하세요.
       </p>
     </div>
   );

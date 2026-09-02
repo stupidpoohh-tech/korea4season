@@ -205,7 +205,7 @@ export function NatureMap({ layout, onSelectSprite, preview = false, className }
           <span className="font-semibold text-[color:var(--color-ink-soft)]">
             +{layout.hiddenCount}
           </span>{' '}
-          {layout.mode === 'zone' ? '권역' : '어종'} · 확대하거나 필터를 좁히면 나타납니다
+          {layout.mode === 'zone' ? '권역' : '어종'} 더 있어요 · 확대하면 보입니다
         </p>
       )}
     </div>

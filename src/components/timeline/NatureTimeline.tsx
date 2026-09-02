@@ -55,14 +55,12 @@ export function NatureTimeline({ date, visibleCount, mode }: Props) {
           </div>
 
           {/*
-            상단 필터의 개수는 '조건에 맞는 수' 이고 여기는 '지금 지도에 그려진 수' 다.
-            같은 숫자를 두 번 말하지 않도록 문구로 뜻을 구분한다.
+            위쪽 요약은 '조건에 맞는 수' 이고 여기는 '지금 지도에 그려진 수' 다.
+            과밀로 접힌 것이 있으면 두 수가 다르므로 문구로 뜻을 구분한다.
           */}
           <p className="mt-0.5 truncate text-[11.5px] text-[color:var(--color-muted)]">
-            {date.slice(0, 4)}년 ·{' '}
-            {mode === 'zone'
-              ? `현재 활성 권역 ${visibleCount}곳`
-              : `현재 표시 어종 ${visibleCount}종`}
+            {date.slice(0, 4)}년 · 지도에{' '}
+            {mode === 'zone' ? `${visibleCount}곳 표시 중` : `${visibleCount}종 표시 중`}
           </p>
         </div>
 

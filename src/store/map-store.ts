@@ -25,6 +25,13 @@ interface MapState {
   startingOnly: boolean;
   /** 규정이 걸린 대상만 본다 — '잡아도 되는가'. 시즌 필터와 독립이다. */
   legalOnly: boolean;
+  /**
+   * 어종 하나만 지도에 남긴다.
+   *
+   * "넙치만 놓고 1년을 돌려 보고 싶다" 를 위한 것이다. 시즌 강도·시점·규정과
+   * 달리 조건이 아니라 대상 자체를 고르는 축이라 따로 둔다.
+   */
+  focusedSpecies: { slug: string; name: string } | null;
   /** 어종 중심 / 권역 중심 */
   mode: MapMode;
   selectedOccurrenceId: string | null;
@@ -34,6 +41,8 @@ interface MapState {
   setSeasonFilter: (filter: SeasonFilter) => void;
   toggleStartingOnly: () => void;
   toggleLegalOnly: () => void;
+  /** 어종 하나만 남긴다. null 이면 해제 */
+  focusSpecies: (species: { slug: string; name: string } | null) => void;
   /** 필터를 전부 기본값으로 — 칩의 ✕ 와 시트의 '초기화' 가 같이 쓴다 */
   resetFilters: () => void;
   setMode: (mode: MapMode) => void;
@@ -81,6 +90,7 @@ export const useMapStore = create<MapState>((set) => ({
   seasonFilter: 'all',
   startingOnly: false,
   legalOnly: false,
+  focusedSpecies: null,
   mode: 'species',
   selectedOccurrenceId: null,
   openZoneSlug: null,
@@ -91,8 +101,16 @@ export const useMapStore = create<MapState>((set) => ({
     set((state) => ({ startingOnly: !state.startingOnly, selectedOccurrenceId: null })),
   toggleLegalOnly: () =>
     set((state) => ({ legalOnly: !state.legalOnly, selectedOccurrenceId: null })),
+  focusSpecies: (species) => set({ focusedSpecies: species, selectedOccurrenceId: null }),
+
   resetFilters: () =>
-    set({ seasonFilter: 'all', startingOnly: false, legalOnly: false, selectedOccurrenceId: null }),
+    set({
+      seasonFilter: 'all',
+      startingOnly: false,
+      legalOnly: false,
+      focusedSpecies: null,
+      selectedOccurrenceId: null,
+    }),
 
   /*
    * 모드를 바꾸면 열린 것을 닫고, 뜻이 달라지는 필터만 되돌린다.
@@ -108,6 +126,7 @@ export const useMapStore = create<MapState>((set) => ({
       openZoneSlug: null,
       seasonFilter: 'all',
       startingOnly: false,
+      focusedSpecies: null,
     }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),
 

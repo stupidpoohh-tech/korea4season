@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { getNatureIndex } from '@/repositories/nature-repository';
 import { useDexStore } from '@/store/dex-store';
+import { DEX_VISIBLE } from '@/components/layout/nav-items';
 
 /**
  * 처음 만난 자연을 도감에 넣었다는 짧은 확인. (요구사항 #30)
@@ -20,7 +21,8 @@ export function DiscoveryToast() {
     return () => clearTimeout(timer);
   }, [lastDiscovered, clear]);
 
-  const entity = lastDiscovered ? getNatureIndex().entityById.get(lastDiscovered) : null;
+  // 도감이 닫혀 있으면 '도감에 기록했다' 고 말할 자리가 없다
+  const entity = DEX_VISIBLE && lastDiscovered ? getNatureIndex().entityById.get(lastDiscovered) : null;
 
   return (
     <AnimatePresence>

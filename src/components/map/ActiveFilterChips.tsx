@@ -30,10 +30,20 @@ export function ActiveFilterChips({
   const toggleStarting = useMapStore((s) => s.toggleStartingOnly);
   const legalOnly = useMapStore((s) => s.legalOnly);
   const toggleLegal = useMapStore((s) => s.toggleLegalOnly);
+  const focusedSpecies = useMapStore((s) => s.focusedSpecies);
+  const focusSpecies = useMapStore((s) => s.focusSpecies);
 
   const chips: { key: string; label: string; tone: 'season' | 'legal'; clear: () => void }[] = [];
 
   if (mode === 'species') {
+    if (focusedSpecies) {
+      chips.push({
+        key: 'species',
+        label: `${focusedSpecies.name}만`,
+        tone: 'season',
+        clear: () => focusSpecies(null),
+      });
+    }
     if (seasonFilter !== 'all') {
       chips.push({
         key: 'season',

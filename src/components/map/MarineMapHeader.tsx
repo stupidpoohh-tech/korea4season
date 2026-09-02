@@ -72,13 +72,21 @@ export function MarineMapHeader({
         </div>
       </div>
 
-      <div
-        className={stacked ? 'mt-2 space-y-1.5' : 'mt-1 flex items-center gap-2'}
-      >
-        <ViewModeToggle full={stacked} />
-        <div className={stacked ? '' : 'ml-auto'}>
-          <FilterTrigger onOpen={openFilter} full={stacked} />
-        </div>
+      {/* 모바일에서는 필터가 왼쪽, 보기 방식이 오른쪽 */}
+      <div className={stacked ? 'mt-2 space-y-1.5' : 'mt-1 flex items-center gap-2'}>
+        {stacked ? (
+          <>
+            <ViewModeToggle full />
+            <FilterTrigger onOpen={openFilter} full />
+          </>
+        ) : (
+          <>
+            <FilterTrigger onOpen={openFilter} />
+            <div className="ml-auto">
+              <ViewModeToggle />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="mt-1 empty:mt-0">

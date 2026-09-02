@@ -16,10 +16,16 @@ export function useActiveFilterCount(): number {
   const seasonFilter = useMapStore((s) => s.seasonFilter);
   const startingOnly = useMapStore((s) => s.startingOnly);
   const legalOnly = useMapStore((s) => s.legalOnly);
+  const focusedSpecies = useMapStore((s) => s.focusedSpecies);
 
   // 권역 모드에는 시즌 축 필터가 없다 (map-service 의 zoneSprites 주석 참고)
   if (mode === 'zone') return legalOnly ? 1 : 0;
-  return (seasonFilter !== 'all' ? 1 : 0) + (startingOnly ? 1 : 0) + (legalOnly ? 1 : 0);
+  return (
+    (seasonFilter !== 'all' ? 1 : 0) +
+    (startingOnly ? 1 : 0) +
+    (legalOnly ? 1 : 0) +
+    (focusedSpecies ? 1 : 0)
+  );
 }
 
 export function FilterTrigger({ onOpen, full = false }: { onOpen: () => void; full?: boolean }) {

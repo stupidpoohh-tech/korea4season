@@ -62,16 +62,20 @@ export function MapScreen() {
   const date = useTimeStore((s) => s.selectedDate);
   const setDate = useTimeStore((s) => s.setDate);
   const isPlaying = useTimeStore((s) => s.isPlaying);
+  const play = useTimeStore((s) => s.play);
 
   const categories = useMapStore((s) => s.selectedCategories);
   const setCategories = useMapStore((s) => s.setCategories);
   const seasonFilter = useMapStore((s) => s.seasonFilter);
   const startingOnly = useMapStore((s) => s.startingOnly);
   const legalOnly = useMapStore((s) => s.legalOnly);
+  const focusedSpecies = useMapStore((s) => s.focusedSpecies);
+  const focusSpecies = useMapStore((s) => s.focusSpecies);
   const mode = useMapStore((s) => s.mode);
   const selectedId = useMapStore((s) => s.selectedOccurrenceId);
   const select = useMapStore((s) => s.selectOccurrence);
   const focusOn = useMapStore((s) => s.focusOn);
+  const resetViewport = useMapStore((s) => s.resetViewport);
 
   // 핀치 중 매 프레임 재배치가 일어나지 않게 배율을 두 단계로 눌러 쓴다
   const detail = useMapStore((s) => (s.viewport.scale >= DETAIL_SCALE ? 1 : 0)) as 0 | 1;
@@ -107,8 +111,17 @@ export function MapScreen() {
   /* ── 파생 데이터 ────────────────────────────────────────── */
   const layout = useMemo(
     () =>
-      buildMapLayout({ date, categories, season: seasonFilter, startingOnly, legalOnly, mode, detail }),
-    [date, categories, seasonFilter, startingOnly, legalOnly, mode, detail],
+      buildMapLayout({
+        date,
+        categories,
+        season: seasonFilter,
+        startingOnly,
+        legalOnly,
+        speciesSlug: focusedSpecies?.slug,
+        mode,
+        detail,
+      }),
+    [date, categories, seasonFilter, startingOnly, legalOnly, focusedSpecies, mode, detail],
   );
 
   const categoryCounts = useMemo(() => countByCategory(date), [date]);
@@ -211,9 +224,27 @@ export function MapScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [picksOpen, setPicksOpen] = useState(false);
 
-  const filtered = mode === 'zone' ? legalOnly : seasonFilter !== 'all' || startingOnly || legalOnly;
+  const filtered =
+    mode === 'zone'
+      ? legalOnly
+      : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
 
   const openFilter = useCallback(() => setFilterOpen(true), []);
+
+  /**
+   * 이 어종만 남기고 1년을 재생한다.
+   * 상세 시트를 닫고 지도를 비워 주지 않으면 정작 볼 것이 시트에 가린다.
+   */
+  const playSpeciesYear = useCallback(
+    (item: MarineMapItem) => {
+      focusSpecies({ slug: item.species.slug, name: item.species.name });
+      select(null);
+      setOpenZone(null);
+      resetViewport();
+      play();
+    },
+    [focusSpecies, select, setOpenZone, resetViewport, play],
+  );
 
   /** 추천에서 고른 어종을 지도에서 집어 준다. 지금 지도에 없으면 아무것도 하지 않는다. */
   const showSpeciesOnMap = useCallback(
@@ -242,7 +273,8 @@ export function MapScreen() {
   );
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-56px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
+    /* 헤더는 56px + 아래 테두리 1px 다. 57 을 빼지 않으면 문서가 1px 넘쳐 스크롤바가 생긴다. */
+    <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-57px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
       {/* 모바일 — 상태 → 보기 방식 → (필요할 때) 필터 순으로 한 묶음 */}
       <div className="lg:hidden">{header(false)}</div>
 
@@ -289,10 +321,14 @@ export function MapScreen() {
             <WeeklyRecommendationCTA onOpen={() => setPicksOpen(true)} />
           </div>
 
-          {visible === 0 && (
+          {/*
+            재생 중에는 띄우지 않는다. 1년을 돌려 보는 동안 시즌이 비는 구간마다
+            안내 카드가 깜빡이면 정작 지도의 변화를 못 본다.
+          */}
+          {visible === 0 && !isPlaying && (
             <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
               <div className="pointer-events-auto">
-                <QuietState date={date} filtered={filtered} />
+                <QuietState date={date} filtered={filtered} species={focusedSpecies?.name} />
               </div>
             </div>
           )}
@@ -320,6 +356,7 @@ export function MapScreen() {
         date={date}
         onClose={() => select(null)}
         onOpenZone={openZoneAndFocus}
+        onPlayYear={playSpeciesYear}
       />
 
       <NatureDetailSheet
@@ -354,17 +391,34 @@ export function MapScreen() {
  * 비어 보이는 날짜에도 탐험을 잇는다.
  * "없습니다" 로 끝내지 않고 언제 가면 되는지까지 말해 준다.
  */
-function QuietState({ date, filtered }: { date: string; filtered: boolean }) {
+function QuietState({
+  date,
+  filtered,
+  species,
+}: {
+  date: string;
+  filtered: boolean;
+  /** 어종 하나만 보고 있다면 그 이름 — 안내를 그 어종의 말로 한다 */
+  species?: string;
+}) {
   const setDate = useTimeStore((s) => s.setDate);
   const next = useMemo(() => (filtered ? null : findNextLivelyDate(date)), [date, filtered]);
 
+  const title = species
+    ? `지금은 ${species} 시즌이 아니에요`
+    : filtered
+      ? '조건에 맞는 어종이 없어요'
+      : '이 시기에는 볼 것이 적어요';
+
   return (
     <EmptyState
-      title="이 시기에는 표시할 주요 어종이 적어요"
+      title={title}
       description={
-        filtered
-          ? '선택한 조건에 해당하는 것이 없습니다. 필터를 풀거나 날짜를 움직여 보세요.'
-          : '날짜를 움직여 다른 바다의 계절을 살펴보세요.'
+        species
+          ? '▶ 1년 재생을 누르면 언제 시즌인지 보입니다.'
+          : filtered
+            ? '필터를 풀거나 날짜를 옮겨 보세요.'
+            : '아래 슬라이더로 날짜를 옮기면 다른 계절의 바다가 보입니다.'
       }
       action={
         next ? (

@@ -58,7 +58,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
       {mode === 'species' && (
         <fieldset>
           <legend className="mb-1.5 text-[12px] font-medium text-[color:var(--color-faint)]">
-            시즌 강도 — 세 값을 더하면 전체가 됩니다
+            시즌 강도
           </legend>
 
           <div className="space-y-0.5">
@@ -100,7 +100,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
       {(showStarting || showLegal) && (
         <div className="space-y-0.5 border-t border-[color:var(--color-line-soft)] pt-3">
           <p className="mb-1 text-[12px] font-medium text-[color:var(--color-faint)]">
-            {mode === 'zone' ? '따로 보기' : '시즌 강도와는 다른 축입니다'}
+            함께 좁히기
           </p>
 
           {showStarting && (
@@ -108,7 +108,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
               checked={startingOnly}
               onChange={toggleStarting}
               label="이제 막 시작한 시즌만"
-              hint="강도와 겹칩니다 — 좋음이면서 시작 중일 수 있어요"
+              hint="곧 좋아질 어종"
               count={counts.starting}
             />
           )}
@@ -118,7 +118,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
               checked={legalOnly}
               onChange={toggleLegal}
               label={`규정 있는 ${unit}만`}
-              hint="지금 잡을 수 없는 것 — 지도에서 지우지 않고 표시만 붙습니다"
+              hint="금어기 등 지금 잡을 수 없는 어종"
               count={counts.restricted}
             />
           )}
@@ -127,10 +127,9 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
 
       {mode === 'zone' && (
         <p className="rounded-xl bg-[color:var(--color-line-soft)] px-3 py-2.5 text-[12px] leading-relaxed text-[color:var(--color-muted)]">
-          {!showLegal && '지금은 좁힐 조건이 없습니다. '}
-          권역은 어종 묶음이라 시즌 강도로 거르지 않습니다. &lsquo;절정인 권역&rsquo;은
-          절정인 어종을 하나라도 가진 권역이 되어, 칩의 숫자와 지도가 서로 다른 것을
-          가리키게 되기 때문입니다. 강도로 좁히려면 어종별 보기로 바꾸세요.
+          {!showLegal && '지금 이 날짜에는 좁힐 조건이 없습니다. '}
+          권역은 여러 어종을 묶어 보여 주기 때문에 시즌 강도로 좁히지 않습니다.
+          강도로 보려면 어종별 보기로 바꿔 주세요.
         </p>
       )}
 

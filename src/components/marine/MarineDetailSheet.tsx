@@ -11,6 +11,7 @@ import { Sheet } from '@/components/common/Sheet';
 import { SpeciesSprite } from '@/components/nature/SpeciesSprite';
 import { DemoBadge } from '@/components/common/DemoBadge';
 import { useDexHydrated, useDexStore } from '@/store/dex-store';
+import { DEX_VISIBLE } from '@/components/layout/nav-items';
 import { SeasonStrengthMeter } from './SeasonStrengthMeter';
 import { LegalNotice } from './LegalNotice';
 import { ObservationSummaryLine } from './ObservationList';
@@ -20,6 +21,8 @@ interface Props {
   date: DateKey;
   onClose: () => void;
   onOpenZone?: (zoneSlug: string) => void;
+  /** 이 어종만 지도에 남기고 1년을 재생한다 */
+  onPlayYear?: (item: MarineMapItem) => void;
 }
 
 /** "6월 — 10월". 정확한 날짜보다 시기의 폭이 먼저 읽혀야 한다. */
@@ -43,11 +46,12 @@ function exactRange(window: DateWindow): string {
  * 다만 맨 위 요약에서는 시즌과 규정을 나란히 두되 서로 다른 축으로 보이게 한다 —
  * "시즌은 좋은데 지금은 규정을 확인해야 하네" 가 한눈에 읽혀야 하기 때문이다.
  */
-export function MarineDetailSheet({ item, date, onClose, onOpenZone }: Props) {
+export function MarineDetailSheet({ item, date, onClose, onOpenZone, onPlayYear }: Props) {
   const discover = useDexStore((s) => s.discover);
 
   useEffect(() => {
-    if (item) discover(item.species.id, date);
+    // 도감이 닫혀 있는 동안에는 기록하지 않는다 (nav-items 의 DEX_VISIBLE)
+    if (DEX_VISIBLE && item) discover(item.species.id, date);
   }, [item, date, discover]);
 
   return (
@@ -147,12 +151,12 @@ export function MarineDetailSheet({ item, date, onClose, onOpenZone }: Props) {
             {item.observation ? (
               <>
                 <ObservationSummaryLine summary={item.observation} />
-                <p className="mt-1 text-[11.5px] text-[color:var(--color-faint)]">최근 관측 기반</p>
+                <p className="mt-1 text-[11.5px] text-[color:var(--color-faint)]">최근 7일 조황 기준</p>
               </>
             ) : (
               <p className="text-[12.5px] leading-relaxed text-[color:var(--color-muted)]">
-                최근 관측 데이터 준비 중입니다. 관측은 실제 오늘 기준이라 다른 날짜를 보고 있을
-                때는 적용되지 않습니다.
+                최근 확인된 조황이 없습니다. 조황은 실제 오늘 기준이라, 다른 날짜를 보고 있을
+                때는 표시되지 않습니다.
               </p>
             )}
           </section>
@@ -167,7 +171,7 @@ export function MarineDetailSheet({ item, date, onClose, onOpenZone }: Props) {
           </section>
 
           {/* 7. 행동 */}
-          <SpeciesActions item={item} onOpenZone={onOpenZone} />
+          <SpeciesActions item={item} onOpenZone={onOpenZone} onPlayYear={onPlayYear} />
 
           <p className="text-[11px] leading-relaxed text-[color:var(--color-faint)]">
             시즌 데이터는 개발용 DEMO 이며 근거를 대조하지 않았습니다. 실제 어황은 해마다 수온과
@@ -274,9 +278,11 @@ function MethodList({ item }: { item: MarineMapItem }) {
 function SpeciesActions({
   item,
   onOpenZone,
+  onPlayYear,
 }: {
   item: MarineMapItem;
   onOpenZone?: (zoneSlug: string) => void;
+  onPlayYear?: (item: MarineMapItem) => void;
 }) {
   const hydrated = useDexHydrated();
   const subscriptions = useDexStore((s) => s.subscriptions);
@@ -316,16 +322,35 @@ function SpeciesActions({
         </button>
       </div>
 
-      <div className="flex gap-1.5">
-        <span
-          className={`${btn} ${
-            saved
-              ? 'border-transparent bg-[color:var(--color-line-soft)] text-[color:var(--color-muted)]'
-              : 'border-dashed border-[color:var(--color-line)] text-[color:var(--color-faint)]'
-          }`}
+      {onPlayYear && (
+        /*
+         * "이 어종 하나만 놓고 1년을 돌려 보고 싶다" 는 이 화면에서 가장 자연스러운
+         * 다음 행동이다. 지도를 이 어종만 남기고 그대로 재생으로 넘긴다.
+         */
+        <button
+          type="button"
+          onClick={() => onPlayYear(item)}
+          className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-[color:var(--color-ink)] text-[13px] font-semibold text-white"
         >
-          {saved ? '도감에 저장됨' : '도감에 저장 중'}
-        </span>
+          <span aria-hidden className="text-[11px]">
+            ▶
+          </span>
+          {item.species.name}만 지도에서 1년 재생
+        </button>
+      )}
+
+      <div className="flex gap-1.5">
+        {DEX_VISIBLE && (
+          <span
+            className={`${btn} ${
+              saved
+                ? 'border-transparent bg-[color:var(--color-line-soft)] text-[color:var(--color-muted)]'
+                : 'border-dashed border-[color:var(--color-line)] text-[color:var(--color-faint)]'
+            }`}
+          >
+            {saved ? '도감에 저장됨' : '도감에 저장 중'}
+          </span>
+        )}
         <Link href={`/species/${item.species.slug}`} className={`${btn} ${idle}`}>
           어종 자세히 보기
         </Link>

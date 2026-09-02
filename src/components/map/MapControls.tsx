@@ -21,8 +21,12 @@ export function MapControls() {
     'flex h-7 w-7 items-center justify-center rounded-md text-[14px] leading-none text-[color:var(--color-ink-soft)] transition-colors hover:bg-[color:var(--color-line-soft)] disabled:opacity-30 disabled:hover:bg-transparent';
 
   return (
-    /* 바탕이 흰색이라 흰 상자만으로는 보이지 않는다 — 테두리로 존재를 알린다 */
-    <div className="absolute bottom-2.5 right-2.5 z-20 flex flex-col gap-0.5 rounded-lg border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/85 p-0.5 backdrop-blur-sm">
+    /*
+     * 지도 오른쪽 세로 가운데. 아래쪽 가운데는 추천 CTA 가, 왼쪽 위는
+     * 접힌 수 안내가 쓰고 있어서 아래 모서리에 두면 자리가 애매해진다.
+     * 바탕이 흰색이라 흰 상자만으로는 보이지 않으므로 테두리로 존재를 알린다.
+     */
+    <div className="absolute right-2.5 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-0.5 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)]/88 p-0.5 shadow-[var(--shadow-soft)] backdrop-blur-sm">
       <button
         type="button"
         className={btn}
