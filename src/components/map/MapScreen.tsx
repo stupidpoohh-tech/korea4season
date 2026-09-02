@@ -5,7 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
 import { buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
-import { countFoliage, type FoliageSpot } from '@/services/foliage-service';
+import {
+  buildFoliageRegions,
+  countFoliage,
+  summarizeFoliage,
+  type FoliageSpot,
+} from '@/services/foliage-service';
 import {
   findNextLivelyDate,
   getZoneDetail,
@@ -23,8 +28,8 @@ import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FoliageOverlay } from './FoliageOverlay';
 import { FoliagePicksSheet } from './FoliagePicksSheet';
+import { FoliageRegionList } from './FoliageRegionList';
 import { FoliageDetailSheet } from '@/components/nature/FoliageDetailSheet';
-import { buildFoliageSpots } from '@/services/foliage-service';
 import { MarineFilterSheet } from './MarineFilterSheet';
 import { MarineMapHeader } from './MarineMapHeader';
 import { MapControls } from './MapControls';
@@ -145,9 +150,12 @@ export function MapScreen() {
 
   const counts = useMemo(() => countMap(date, mode), [date, mode]);
   const foliage = useMemo(() => countFoliage(date), [date]);
-  /* 산 색은 sprite 가 아니라 명소 전체(아직 초록인 곳 포함)로 정한다 */
-  const foliageSpots = useMemo(
-    () => (layer === 'foliage' ? buildFoliageSpots(date) : []),
+  /*
+   * 지도의 색은 sprite 가 아니라 권역이 정한다.
+   * 아직 초록인 곳도 함께 와야 지도 전체가 하나의 띠로 읽힌다.
+   */
+  const foliageRegions = useMemo(
+    () => (layer === 'foliage' ? buildFoliageRegions(date) : []),
     [layer, date],
   );
 
@@ -160,8 +168,20 @@ export function MapScreen() {
     selectedSprite?.subject.kind === 'marine' ? selectedSprite.subject.item : null;
   const selectedNature: ResolvedOccurrence | null =
     selectedSprite?.subject.kind === 'nature' ? selectedSprite.subject.resolved : null;
-  const selectedFoliage: FoliageSpot | null =
-    selectedSprite?.subject.kind === 'foliage' ? selectedSprite.subject.spot : null;
+  /*
+   * 단풍 상세는 sprite 가 아니라 명소 자체에서 찾는다.
+   *
+   * 지역별 보기에는 지도에 sprite 가 없다. sprite 에서만 찾으면
+   * 추천 시트의 '지도에서 보기' 와 좌측 권역 목록이 아무것도 열지 못한다.
+   */
+  const selectedFoliage: FoliageSpot | null = useMemo(() => {
+    if (layer !== 'foliage' || !selectedId) return null;
+    for (const region of foliageRegions) {
+      const hit = region.spots.find((spot) => `foliage:${spot.location.slug}` === selectedId);
+      if (hit) return hit;
+    }
+    return null;
+  }, [layer, selectedId, foliageRegions]);
 
   /* ── 권역 시트 ──────────────────────────────────────────── */
   const openZoneSlug = useMapStore((s) => s.openZoneSlug);
@@ -252,7 +272,7 @@ export function MapScreen() {
 
   const filtered =
     layer === 'foliage'
-      ? foliageState !== 'all'
+      ? mode === 'species' && foliageState !== 'all'
       : mode === 'zone'
         ? legalOnly
         : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
@@ -330,12 +350,21 @@ export function MapScreen() {
           {/* 자연 카테고리는 제목 자체(CategorySelector)가 고르므로 별도 칩 줄을 두지 않는다 */}
           {header(true)}
 
-          <MapSideList
-            sprites={layout.sprites}
-            selectedId={selectedId}
-            openZoneSlug={openZoneSlug}
-            onSelect={onSelectSprite}
-          />
+          {/* 지역별 단풍에는 지도에 그림이 없다 — 목록이 지도의 색을 읽는 통로가 된다 */}
+          {layer === 'foliage' && layout.mode === 'zone' ? (
+            <FoliageRegionList
+              regions={foliageRegions}
+              selectedId={selectedId}
+              onSelect={showFoliageOnMap}
+            />
+          ) : (
+            <MapSideList
+              sprites={layout.sprites}
+              selectedId={selectedId}
+              openZoneSlug={openZoneSlug}
+              onSelect={onSelectSprite}
+            />
+          )}
         </div>
 
         {/*
@@ -356,7 +385,7 @@ export function MapScreen() {
             layout={layout}
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
-            overlay={layer === 'foliage' ? <FoliageOverlay spots={foliageSpots} /> : null}
+            overlay={layer === 'foliage' ? <FoliageOverlay regions={foliageRegions} /> : null}
           />
 
           {/*
@@ -379,7 +408,7 @@ export function MapScreen() {
             재생 중에는 띄우지 않는다. 1년을 돌려 보는 동안 시즌이 비는 구간마다
             안내 카드가 깜빡이면 정작 지도의 변화를 못 본다.
           */}
-          {visible === 0 && !isPlaying && (
+          {visible === 0 && !isPlaying && !(layer === 'foliage' && layout.mode === 'zone') && (
             <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
               <div className="pointer-events-auto">
                 <QuietState
@@ -396,8 +425,15 @@ export function MapScreen() {
 
       <NatureTimeline
         date={date}
-        visibleCount={visible}
-        unit={layer === 'foliage' ? '곳' : layout.mode === 'zone' ? '곳' : '종'}
+        /*
+         * 단풍에서 세어야 할 것은 마커 수가 아니라 지금 어떤 상태가 몇 곳인가다.
+         * 지역별 보기에는 애초에 지도에 그림이 없어서 '표시 중' 이 뜻을 갖지 않는다.
+         */
+        caption={
+          layer === 'foliage'
+            ? summarizeFoliage(foliage)
+            : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
+        }
       />
 
       <MarineFilterSheet

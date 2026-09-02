@@ -73,7 +73,8 @@ export function MarineFilterSheet({ open, onClose, layer, mode, counts, foliage 
         </div>
       }
     >
-      {layer === 'foliage' && (
+      {/* 지역별 단풍에는 지도에 그림이 없다 — 좁힐 대상 자체가 없으므로 내보내지 않는다 */}
+      {layer === 'foliage' && mode === 'species' && (
         <fieldset>
           <legend className="mb-1.5 text-[12px] font-medium text-[color:var(--color-faint)]">
             단풍 상태

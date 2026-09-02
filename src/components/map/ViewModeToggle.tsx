@@ -24,9 +24,14 @@ const OPTIONS: Record<MapLayerId, Option[]> = {
     { id: 'species', label: '어종별', hint: '지금 시즌인 어종을 지도에서 봅니다' },
     { id: 'zone', label: '권역별', hint: '지금 볼 것이 많은 낚시 권역을 봅니다' },
   ],
+  /*
+   * 단풍의 기본은 지역별이다. 지도의 산과 숲이 그 지역의 상태색으로 물들고,
+   * 그림은 하나도 놓이지 않는다 — 단풍은 마커가 아니라 지형에서 일어난다.
+   * 명소별은 "그래서 어디로 가면 되나" 를 묻는 다음 단계다.
+   */
   foliage: [
-    { id: 'species', label: '명소별', hint: '지금 물드는 산을 지도에서 봅니다' },
-    { id: 'zone', label: '지역별', hint: '준비 중입니다', disabled: true },
+    { id: 'zone', label: '지역별', hint: '산과 숲이 물드는 것을 지도에서 봅니다' },
+    { id: 'species', label: '명소별', hint: '대표 명소를 지도에 표시합니다' },
   ],
   // 아직 지도에 올리지 않는 카테고리. 여기 값이 쓰이는 일은 없다.
   flower: [{ id: 'species', label: '명소별', hint: '준비 중입니다', disabled: true }],

@@ -10,10 +10,13 @@ import { usePlayback } from './use-playback';
 
 interface Props {
   date: DateKey;
-  /** 지금 지도에 실제로 그려진 수 */
-  visibleCount: number;
-  /** 세는 단위 — 카테고리마다 다르다 (어종 / 권역 / 명소) */
-  unit: string;
+  /**
+   * 날짜 아래 한 줄.
+   *
+   * 카테고리마다 말할 것이 다르다 — 바다는 지금 그려진 수,
+   * 단풍은 어떤 상태가 몇 곳인지다. 무엇을 셀지는 호출자가 정한다.
+   */
+  caption: string;
 }
 
 /**
@@ -23,7 +26,7 @@ interface Props {
  * 접힌 상태에도 날짜 · 슬라이더 · 오늘 · 재생은 남는다 — 여기까지가
  * "시간을 움직이면 지도가 바뀐다" 를 이해하는 데 필요한 최소한이다.
  */
-export function NatureTimeline({ date, visibleCount, unit }: Props) {
+export function NatureTimeline({ date, caption }: Props) {
   usePlayback();
 
   const [expanded, setExpanded] = useState(false);
@@ -55,12 +58,11 @@ export function NatureTimeline({ date, visibleCount, unit }: Props) {
           </div>
 
           {/*
-            위쪽 요약은 '조건에 맞는 수' 이고 여기는 '지금 지도에 그려진 수' 다.
+            위쪽 요약은 '조건에 맞는 수' 이고 여기는 '지금 지도가 말하는 것' 이다.
             과밀로 접힌 것이 있으면 두 수가 다르므로 문구로 뜻을 구분한다.
           */}
           <p className="mt-0.5 truncate text-[11.5px] text-[color:var(--color-muted)]">
-            {date.slice(0, 4)}년 · 지도에 {visibleCount}
-            {unit} 표시 중
+            {date.slice(0, 4)}년 · {caption}
           </p>
         </div>
 

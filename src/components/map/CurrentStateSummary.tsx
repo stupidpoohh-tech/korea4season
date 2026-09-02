@@ -1,7 +1,7 @@
 'use client';
 
 import { CategorySelector } from './CategorySelector';
-import { FOLIAGE_STATE_LABEL, type FoliageCounts } from '@/services/foliage-service';
+import { foliageHeadline, summarizeFoliage, type FoliageCounts } from '@/services/foliage-service';
 import type { MapLayerId } from '@/domain/nature-categories';
 import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-service';
 
@@ -60,13 +60,15 @@ export function CurrentStateSummary({
           </div>
           <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
             {layer === 'foliage' ? (
+              /*
+               * 단풍은 마커 수를 세지 않는다.
+               * 지도에서 바뀌는 것은 표시의 개수가 아니라 색이 어디까지 왔는가다.
+               */
               <>
-                지금{' '}
-                <span className="tabular font-semibold text-[color:var(--color-ink-soft)]">
-                  {count}
+                <span className="font-semibold text-[color:var(--color-ink-soft)]">
+                  {foliageHeadline(foliage)}
                 </span>
-                곳이 물드는 중
-                {filtered && ` · 전체 ${foliage.coloring}곳 가운데`}
+                {filtered ? ` · 지도에 ${count}곳` : ' · 북쪽부터 물듭니다'}
               </>
             ) : (
               <>
@@ -85,15 +87,17 @@ export function CurrentStateSummary({
           {/* CategorySelector 가 div 를 그리므로 p 로 감싸면 안 된다 (HTML 위반 → hydration 오류) */}
           <div className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
             <CategorySelector />
-            <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
-              <span className="tabular font-semibold text-[color:var(--color-ink)]">{count}</span>
-              {unit}
-              {layer === 'foliage'
-                ? '이 물드는 중'
-                : mode === 'zone'
-                  ? '에서 만날 수 있어요'
-                  : ' 활동 중'}
-            </span>
+            {layer === 'foliage' ? (
+              <span className="text-[13.5px] font-semibold text-[color:var(--color-ink)]">
+                {foliageHeadline(foliage)}
+              </span>
+            ) : (
+              <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
+                <span className="tabular font-semibold text-[color:var(--color-ink)]">{count}</span>
+                {unit}
+                {mode === 'zone' ? '에서 만날 수 있어요' : ' 활동 중'}
+              </span>
+            )}
           </div>
           <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
             {layer === 'foliage' ? (
@@ -154,10 +158,5 @@ function FoliageBreakdown({ foliage, filtered }: { foliage: FoliageCounts; filte
     );
   }
 
-  const parts = (['peak', 'good', 'starting', 'ending'] as const)
-    .filter((state) => foliage.byState[state] > 0)
-    .map((state) => `${FOLIAGE_STATE_LABEL[state]} ${foliage.byState[state]}`);
-
-  if (parts.length === 0) return <>아직 물든 곳이 없습니다</>;
-  return <>{parts.join(' · ')}</>;
+  return <>{summarizeFoliage(foliage)}</>;
 }

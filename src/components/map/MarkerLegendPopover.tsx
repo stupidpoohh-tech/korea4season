@@ -1,6 +1,12 @@
 'use client';
 
 import { useEffect, type RefObject } from 'react';
+import type { MapLayerId } from '@/domain/nature-categories';
+import {
+  FOLIAGE_STATE_COLOR,
+  FOLIAGE_STATE_LABEL,
+  FOLIAGE_STATES,
+} from '@/services/foliage-service';
 import type { MapMode } from '@/services/map-service';
 
 /* ────────────────────────────────────────────────────────────
@@ -22,6 +28,22 @@ const ITEMS: { swatch: string; label: string; hint: string }[] = [
   { swatch: 'var(--color-accent)', label: '좋음', hint: '노릴 만할 때' },
   { swatch: 'var(--color-sea)', label: '보통', hint: '있긴 있을 때' },
 ];
+
+/*
+ * 단풍은 마커가 아니라 지형의 색으로 말한다. 그래서 범례도 다르다 —
+ * 무슨 그림인지가 아니라 무슨 색인지를 설명한다.
+ *
+ * 색 조각 옆에 반드시 상태 이름을 적는다. 색만으로 뜻을 전하면
+ * 색을 구분하기 어려운 사람에게는 지도가 아무 말도 하지 않는 셈이 된다.
+ */
+const FOLIAGE_HINT: Record<(typeof FOLIAGE_STATES)[number], string> = {
+  pre: '아직 초록입니다',
+  starting: '물들기 시작했어요',
+  good: '지금 가도 좋아요',
+  peak: '가장 좋을 때',
+  ending: '잎이 지고 있어요',
+  ended: '올해는 끝났어요',
+};
 
 export function LegendTrigger({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
@@ -48,11 +70,13 @@ export function LegendTrigger({ open, onToggle }: { open: boolean; onToggle: () 
 export function MarkerLegendPopover({
   open,
   onClose,
+  layer,
   mode,
   anchorRef,
 }: {
   open: boolean;
   onClose: () => void;
+  layer: MapLayerId;
   mode: MapMode;
   /**
    * 트리거까지 포함하는 바깥 상자.
@@ -78,6 +102,45 @@ export function MarkerLegendPopover({
   }, [open, onClose, anchorRef]);
 
   if (!open) return null;
+
+  if (layer === 'foliage') {
+    return (
+      <div
+        role="dialog"
+        aria-label="지도 보는 법"
+        className="absolute inset-x-0 top-full z-30 mt-1.5 space-y-2 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-3 text-[11.5px] leading-relaxed shadow-[var(--shadow-soft)]"
+      >
+        <p className="text-[13px] font-semibold tracking-tight">지도 보는 법</p>
+
+        <ul className="space-y-1">
+          {FOLIAGE_STATES.map((state) => (
+            <li key={state} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+                style={{ background: FOLIAGE_STATE_COLOR[state].face }}
+              />
+              <span className="font-medium text-[color:var(--color-ink-soft)]">
+                {FOLIAGE_STATE_LABEL[state]}
+              </span>
+              <span className="text-[color:var(--color-faint)]">{FOLIAGE_HINT[state]}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
+          지도의 산과 숲 색이 그 지역의 단풍 상태입니다. 날짜를 넘기면 색이 북쪽에서
+          남쪽으로 내려갑니다.
+        </p>
+
+        <p className="text-[color:var(--color-faint)]">
+          지역별 보기에는 지도에 그림을 놓지 않습니다 — 단풍은 표시가 늘어나는 일이 아니라
+          <span className="text-[color:var(--color-ink-soft)]"> 산이 물드는 일</span>이기 때문입니다.
+          어느 산인지 짚어 보려면 명소별로 바꾸세요.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

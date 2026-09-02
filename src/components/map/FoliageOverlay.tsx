@@ -1,24 +1,23 @@
 'use client';
 
 import { useMemo } from 'react';
-import mountainData from '@/domain/mountains.json';
-import { MAP_ASPECT } from '@/domain/land';
-import {
-  FOLIAGE_STATE_INTENSITY,
-  type FoliageSpot,
-} from '@/services/foliage-service';
+import terrainData from '@/domain/terrain.json';
+import { FOLIAGE_STATE_COLOR, type FoliageRegion } from '@/services/foliage-service';
 
 /* ────────────────────────────────────────────────────────────
- * 산이 물든다.
+ * 산과 숲이 물든다.
  *
- * 지도를 계절마다 다른 이미지로 갈아 끼우지 않는다. base map 이 그린 산과
- * **같은 자리에 같은 크기로** 가을색 산을 덧그려 그 산만 색이 바뀌게 한다.
- * (좌표는 scripts/generate-base-map.mjs 가 mountains.json 으로 함께 내보낸다)
+ * 단풍은 지도 위에 찍히는 마커가 아니라 지형 자체에서 일어나는 일이다.
+ * 그래서 계절마다 지도를 다시 굽지 않고, base map 이 그린 **바로 그 산과
+ * 그 나무** 위에 같은 좌표·같은 크기로 가을색을 덧그린다.
+ * (좌표는 scripts/generate-base-map.mjs 가 terrain.json 으로 함께 내보낸다)
  *
- * 산 하나하나에 데이터가 있는 것은 아니다. 명소 12곳의 상태를 거리로 섞어
- * 각 산의 물든 정도를 정한다 — 그래서 설악산이 절정일 때 그 둘레의 산부터
- * 붉어지고, 시간이 흐르면 그 띠가 남쪽으로 내려간다.
- * 지도 위에 핀을 찍는 것이 아니라 산맥이 물드는 것으로 보여야 하기 때문이다.
+ * 색을 정하는 단위는 명소가 아니라 권역이다. 지도의 산과 숲은 저마다
+ * 가장 가까운 권역에 붙고, 그 권역의 상태색을 입는다. 그래서 날짜를 넘기면
+ * 마커가 늘어나는 것이 아니라 **색의 띠가 북에서 남으로 내려간다.**
+ *
+ * 그리는 순서는 base map 과 같다 — 숲 덩어리 → 나무 → 산.
+ * 어긋나면 원래 초록이 가장자리로 삐져나온다.
  * ──────────────────────────────────────────────────────────── */
 
 interface Mountain {
@@ -28,97 +27,192 @@ interface Mountain {
   h: number;
   snow: boolean;
 }
-
-const MOUNTAINS = mountainData.mountains as Mountain[];
-
-/** 물든 정도(0~1) → 산 앞면 · 옆면 색 */
-function autumnFace(t: number): { light: string; dark: string } {
-  // 초록(연두) → 노랑 → 주황 → 붉은빛. 아래 절반은 그늘이라 한 단계 더 짙다.
-  const stops: [number, string, string][] = [
-    [0, '#8fce5a', '#5da345'],
-    [0.35, '#d9c94e', '#b09a34'],
-    [0.7, '#e39b3d', '#bb6f28'],
-    [1, '#d4552f', '#a13620'],
-  ];
-  for (let i = 1; i < stops.length; i += 1) {
-    const [p1, l1, d1] = stops[i - 1]!;
-    const [p2, l2, d2] = stops[i]!;
-    if (t <= p2) {
-      const k = (t - p1) / (p2 - p1 || 1);
-      return { light: mix(l1, l2, k), dark: mix(d1, d2, k) };
-    }
-  }
-  const last = stops[stops.length - 1]!;
-  return { light: last[1], dark: last[2] };
+interface Tree {
+  x: number;
+  y: number;
+  s: number;
+}
+interface Grove {
+  x: number;
+  y: number;
+  mass: string;
+  trees: Tree[];
 }
 
-function mix(a: string, b: string, k: number): string {
-  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
-  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-  const out = pa.map((v, i) => Math.round(v + (pb[i]! - v) * Math.min(1, Math.max(0, k))));
-  return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+const VIEW = terrainData.view;
+const MOUNTAINS = terrainData.mountains as Mountain[];
+const GROVES = terrainData.groves as Grove[];
+
+/** 색이 바뀌는 데 걸리는 시간. 슬라이더를 끌 때 지도가 끌려오는 느낌이 나면 안 된다. */
+const COLOR_TRANSITION = 'fill 320ms ease-out';
+
+const n = (v: number) => v.toFixed(1);
+
+/* 원과 타원을 path 로 그린다 — 색이 같은 것들을 한 요소로 합치기 위해서다.
+   나무 399그루를 각각 <circle> 로 두면 DOM 이 1000개를 넘는다. */
+function circlePath(cx: number, cy: number, r: number): string {
+  return `M ${n(cx - r)} ${n(cy)} a ${n(r)} ${n(r)} 0 1 0 ${n(r * 2)} 0 a ${n(r)} ${n(r)} 0 1 0 ${n(-r * 2)} 0`;
+}
+
+function ellipsePath(cx: number, cy: number, rx: number, ry: number): string {
+  return `M ${n(cx - rx)} ${n(cy)} a ${n(rx)} ${n(ry)} 0 1 0 ${n(rx * 2)} 0 a ${n(rx)} ${n(ry)} 0 1 0 ${n(-rx * 2)} 0`;
+}
+
+/** base map 의 mountain() 이 그리는 눈 덮개와 같은 도형 */
+function snowPath(m: Mountain): string {
+  const s = m.h * 0.3;
+  const sw = (m.w * s) / m.h / 2;
+  const top = m.y - m.h;
+  return (
+    `M ${n(m.x)} ${n(top)} L ${n(m.x + sw)} ${n(top + s)} ` +
+    `L ${n(m.x + sw * 0.35)} ${n(top + s * 0.72)} L ${n(m.x)} ${n(top + s * 1.05)} ` +
+    `L ${n(m.x - sw * 0.4)} ${n(top + s * 0.7)} L ${n(m.x - sw)} ${n(top + s)} Z`
+  );
+}
+
+interface RegionShapes {
+  id: string;
+  /** 숲 덩어리 */
+  mass: string;
+  /** 나무 그림자 · 산 밑동 그림자 */
+  shadow: string;
+  /** 나무 몸통 */
+  tree: string;
+  /** 나무 윗면 */
+  treeTop: string;
+  /** 산 앞면 */
+  face: string;
+  /** 산 그늘면 */
+  faceDark: string;
 }
 
 /**
- * 명소 상태를 거리로 섞어 이 산이 얼마나 물들었는지 정한다.
- * 가까운 명소가 세게 끌어당기되, 멀면 영향이 0 으로 떨어진다.
+ * 지형을 권역에 나눠 붙이고, 권역마다 하나의 path 로 합친다.
+ *
+ * 권역 경계를 부드럽게 섞지 않는다. 산과 나무는 이어진 면이 아니라
+ * 떨어진 형태들이라 경계에 이음매가 생기지 않고,
+ * 대신 산 하나가 정확히 한 색을 가져서 색의 위치가 또렷하게 읽힌다.
  */
-function intensityAt(x: number, y: number, spots: FoliageSpot[]): number {
-  const REACH = 0.34; // 지도 가로폭 대비. 이보다 먼 명소는 이 산을 물들이지 못한다
-  let weightSum = 0;
-  let valueSum = 0;
+function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
+  const anchors = regions.map((r) => ({ x: r.anchor.x * VIEW.width, y: r.anchor.y * VIEW.height }));
 
-  for (const spot of spots) {
-    const dx = spot.position.x - x;
-    const dy = (spot.position.y - y) * MAP_ASPECT;
-    const d = Math.hypot(dx, dy);
-    if (d > REACH) continue;
-    const w = (1 - d / REACH) ** 2;
-    weightSum += w;
-    valueSum += w * FOLIAGE_STATE_INTENSITY[spot.state];
+  const nearest = (x: number, y: number): number => {
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < anchors.length; i += 1) {
+      const d = (anchors[i]!.x - x) ** 2 + (anchors[i]!.y - y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    return best;
+  };
+
+  const parts = regions.map((region) => ({
+    id: region.id,
+    mass: [] as string[],
+    shadow: [] as string[],
+    tree: [] as string[],
+    treeTop: [] as string[],
+    face: [] as string[],
+    faceDark: [] as string[],
+  }));
+
+  for (const m of MOUNTAINS) {
+    const bucket = parts[nearest(m.x, m.y)];
+    if (!bucket) continue;
+    const half = m.w / 2;
+    bucket.shadow.push(ellipsePath(m.x, m.y + 2, half * 0.95, m.h * 0.09 + 2));
+    bucket.face.push(
+      `M ${n(m.x - half)} ${n(m.y)} L ${n(m.x)} ${n(m.y - m.h)} L ${n(m.x + half)} ${n(m.y)} Z`,
+    );
+    bucket.faceDark.push(
+      `M ${n(m.x)} ${n(m.y - m.h)} L ${n(m.x + half)} ${n(m.y)} L ${n(m.x)} ${n(m.y)} Z`,
+    );
   }
 
-  return weightSum > 0 ? valueSum / weightSum : 0;
+  for (const g of GROVES) {
+    const bucket = parts[nearest(g.x, g.y)];
+    if (!bucket) continue;
+    bucket.mass.push(g.mass);
+    for (const t of g.trees) {
+      bucket.shadow.push(ellipsePath(t.x, t.y + t.s * 0.15, t.s * 0.85, t.s * 0.32));
+      bucket.tree.push(circlePath(t.x, t.y, t.s));
+      bucket.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
+    }
+  }
+
+  return parts.map((p) => ({
+    id: p.id,
+    mass: p.mass.join(' '),
+    shadow: p.shadow.join(' '),
+    tree: p.tree.join(' '),
+    treeTop: p.treeTop.join(' '),
+    face: p.face.join(' '),
+    faceDark: p.faceDark.join(' '),
+  }));
 }
 
-export function FoliageOverlay({ spots }: { spots: FoliageSpot[] }) {
-  const painted = useMemo(
-    () =>
-      MOUNTAINS.map((m, i) => ({ ...m, key: i, t: intensityAt(m.x, m.y, spots) })).filter(
-        // 아직 초록인 산은 그리지 않는다 — base map 이 이미 초록으로 그려 두었다
-        (m) => m.t > 0.04,
-      ),
-    [spots],
-  );
+/** 눈 덮인 봉우리는 계절과 무관하다 — 한 번 그려 두고 색을 바꾸지 않는다 */
+const SNOW_D = MOUNTAINS.filter((m) => m.snow)
+  .map(snowPath)
+  .join(' ');
 
-  if (painted.length === 0) return null;
+export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
+  // 권역 구성은 날짜가 바뀌어도 그대로다. 다시 나눠 붙일 이유가 없다.
+  const key = regions.map((r) => r.id).join('|');
+  const shapes = useMemo(() => buildShapes(regions), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const colors = regions.map((r) => FOLIAGE_STATE_COLOR[r.state]);
+
+  if (shapes.length === 0) return null;
 
   return (
     <svg
       aria-hidden
-      viewBox="0 0 1000 1000"
-      preserveAspectRatio="none"
+      viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
       className="pointer-events-none absolute inset-0 h-full w-full"
     >
-      {painted.map((m) => {
-        const { light, dark } = autumnFace(m.t);
-        const x = m.x * 1000;
-        const y = m.y * 1000;
-        const half = (m.w * 1000) / 2;
-        const h = m.h * 1000;
-        return (
-          <g key={m.key} style={{ transition: 'opacity 420ms ease-out' }}>
-            <path d={`M ${x - half} ${y} L ${x} ${y - h} L ${x + half} ${y} Z`} fill={light} />
-            <path d={`M ${x} ${y - h} L ${x + half} ${y} L ${x} ${y} Z`} fill={dark} />
-            {m.snow && (
-              <path
-                d={`M ${x} ${y - h} L ${x + half * 0.3} ${y - h * 0.7} L ${x} ${y - h * 0.62} L ${x - half * 0.3} ${y - h * 0.7} Z`}
-                fill="#fbfdff"
-              />
-            )}
-          </g>
-        );
-      })}
+      <defs>
+        <clipPath id="foliage-land">
+          <path d={terrainData.clip.mainland} />
+          <path d={terrainData.clip.jeju} />
+        </clipPath>
+      </defs>
+
+      <g clipPath="url(#foliage-land)" opacity={0.22}>
+        {shapes.map((s, i) => (
+          <path key={s.id} d={s.mass} fill={colors[i]!.mass} style={{ transition: COLOR_TRANSITION }} />
+        ))}
+      </g>
+
+      <g opacity={0.2}>
+        {shapes.map((s, i) => (
+          <path
+            key={s.id}
+            d={s.shadow}
+            fill={colors[i]!.faceDark}
+            style={{ transition: COLOR_TRANSITION }}
+          />
+        ))}
+      </g>
+
+      {shapes.map((s, i) => (
+        <g key={s.id}>
+          <path d={s.tree} fill={colors[i]!.tree} style={{ transition: COLOR_TRANSITION }} />
+          <path d={s.treeTop} fill={colors[i]!.treeTop} style={{ transition: COLOR_TRANSITION }} />
+        </g>
+      ))}
+
+      {shapes.map((s, i) => (
+        <g key={s.id}>
+          <path d={s.face} fill={colors[i]!.face} style={{ transition: COLOR_TRANSITION }} />
+          <path d={s.faceDark} fill={colors[i]!.faceDark} style={{ transition: COLOR_TRANSITION }} />
+        </g>
+      ))}
+
+      <path d={SNOW_D} fill="#f4fbff" />
     </svg>
   );
 }

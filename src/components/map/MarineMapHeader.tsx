@@ -63,6 +63,12 @@ export function MarineMapHeader({
     onOpenFilter();
   }, [onOpenFilter]);
 
+  /*
+   * 지역별 단풍에는 좁힐 대상이 없다 (지도에 그림을 놓지 않는다).
+   * 눌러도 빈 시트가 열리는 버튼은 두지 않는다.
+   */
+  const showFilter = !(layer === 'foliage' && mode === 'zone');
+
   return (
     <div ref={boxRef} className="relative">
       <div className="flex items-start gap-2">
@@ -85,11 +91,11 @@ export function MarineMapHeader({
         {stacked ? (
           <>
             <ViewModeToggle layer={layer} full />
-            <FilterTrigger onOpen={openFilter} full />
+            {showFilter && <FilterTrigger onOpen={openFilter} full />}
           </>
         ) : (
           <>
-            <FilterTrigger onOpen={openFilter} />
+            {showFilter && <FilterTrigger onOpen={openFilter} />}
             <div className="ml-auto">
               <ViewModeToggle layer={layer} />
             </div>
@@ -110,6 +116,7 @@ export function MarineMapHeader({
       <MarkerLegendPopover
         open={legendOpen}
         onClose={closeLegend}
+        layer={layer}
         mode={mode}
         anchorRef={boxRef}
       />

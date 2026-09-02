@@ -126,7 +126,11 @@ export const useMapStore = create<MapState>((set) => ({
       layer,
       selectedOccurrenceId: null,
       openZoneSlug: null,
-      mode: 'species',
+      /*
+       * 카테고리마다 먼저 보여야 할 것이 다르다.
+       * 바다는 어종이 주인공이고, 단풍은 지형의 색이 주인공이다.
+       */
+      mode: layer === 'foliage' ? 'zone' : 'species',
       seasonFilter: 'all',
       startingOnly: false,
       legalOnly: false,
@@ -160,6 +164,8 @@ export const useMapStore = create<MapState>((set) => ({
       seasonFilter: 'all',
       startingOnly: false,
       focusedSpecies: null,
+      /* 지역별 단풍에는 걸 곳이 없다 — 남겨 두면 칩만 떠 있고 지도는 그대로다 */
+      foliageState: 'all',
     }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),
 

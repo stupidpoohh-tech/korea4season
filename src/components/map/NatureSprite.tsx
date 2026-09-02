@@ -67,7 +67,13 @@ function NatureSpriteBase({
   const peak = prominence >= 1;
   // 같은 키에서 뽑으므로 리렌더나 재생 중에도 흔들리지 않는다
   const variation = variationTransform(spriteVariation(sprite.key));
-  const size = 30 + prominence * 18;
+  /*
+   * 작은 표시(compact)는 지형이 주인공인 레이어에서 쓴다.
+   * 평소에는 보통 크기의 40% 안팎으로 두어 색을 가리지 않게 하고,
+   * 고른 것만 크게 키워 무엇을 짚었는지 분명히 한다.
+   */
+  const size = sprite.compact ? 12 + prominence * 7 : 30 + prominence * 18;
+  const selectedScale = sprite.compact ? 1.6 : 1.14;
   const tint = LEGAL_TINT[sprite.legalStatus];
 
   const baseOpacity = 0.62 + prominence * 0.38;
@@ -78,7 +84,7 @@ function NatureSpriteBase({
       type="button"
       layout={false}
       initial={{ opacity: 0, scale: 0.78 }}
-      animate={{ opacity, scale: selected ? 1.14 : 1 }}
+      animate={{ opacity, scale: selected ? selectedScale : 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={
         // 슬라이더를 빠르게 움직일 때 스프링이 밀리면 지도가 굼떠 보인다

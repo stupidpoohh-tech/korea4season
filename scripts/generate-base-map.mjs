@@ -182,15 +182,25 @@ function groveMass(cx, cy, r, seed) {
   return `<path d="${blobPath(cx, cy, r * 1.15, seed, 0.62)}" fill="${C.forest}" opacity=".22"/>`;
 }
 
-function grove(cx, cy, r, count, rand) {
+/**
+ * 숲 하나에 심을 나무의 자리를 먼저 값으로 만든다.
+ *
+ * 그리면서 난수를 뽑지 않는 이유는 하나다 — 단풍 레이어가 이 나무들 위에
+ * 정확히 같은 자리로 가을색 나무를 덧그려야 하기 때문이다.
+ * 그림과 좌표가 같은 배열에서 나와야 어긋나지 않는다.
+ */
+function groveTrees(cx, cy, r, count, rand) {
   const out = [];
   for (let i = 0; i < count; i += 1) {
     const a = rand() * Math.PI * 2;
     const d = Math.sqrt(rand()) * r;
-    const s = 7 + rand() * 4;
-    out.push(tree(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.7, s));
+    out.push({
+      x: cx + Math.cos(a) * d,
+      y: cy + Math.sin(a) * d * 0.7,
+      s: 7 + rand() * 4,
+    });
   }
-  return out.join('');
+  return out;
 }
 
 /* ── 산맥 정의 ────────────────────────────────────────────── */
@@ -352,6 +362,8 @@ const groves = [];
   }
 }
 groves.sort((a, b) => a.y - b.y);
+/* 나무 자리는 배치가 끝난 뒤 한 번에 뽑는다 (정렬 순서에 난수가 끌려다니지 않게) */
+for (const g of groves) g.trees = groveTrees(g.x, g.y, g.r, g.n, rand);
 
 const riverPaths = RIVERS.map((r) => ({ d: smoothOpenPath(r.pts), w: r.w }));
 
@@ -421,7 +433,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
   </g>
 
   <g id="forest">
-    ${groves.map((g) => grove(g.x, g.y, g.r, g.n, rand)).join('\n    ')}
+    ${groves.map((g) => g.trees.map((t) => tree(t.x, t.y, t.s)).join('')).join('\n    ')}
   </g>
 
   <g id="mountains">
@@ -501,31 +513,36 @@ writeFileSync(
 );
 
 /*
- * 산 위치를 함께 내보낸다.
+ * 산과 숲의 자리를 함께 내보낸다.
  *
- * 단풍 레이어가 이 좌표 위에 같은 산을 가을색으로 덧그려 '산이 물드는' 것을
- * 만든다. 지도 이미지를 계절마다 따로 굽지 않고 한 장 위에 얹기 위해서다.
- * 그림과 같은 배치를 써야 색이 산에서 벗어나지 않는다.
+ * 단풍 레이어가 이 좌표 위에 **같은 산 · 같은 나무**를 가을색으로 덧그려
+ * '산이 물드는' 것을 만든다. 지도 이미지를 계절마다 따로 굽지 않고
+ * 한 장 위에 얹기 위해서다. 그림과 같은 배치를 써야 색이 형태에서 벗어나지 않는다.
+ *
+ * 좌표는 전부 0~1 정규값이다 (지도 크기와 무관하게 쓰기 위해).
  */
-const mountainList = {
+const r1 = (v) => Number(v.toFixed(1));
+const terrain = {
   note: 'scripts/generate-base-map.mjs 가 생성합니다. 직접 수정하지 마십시오.',
+  /* base map 과 같은 좌표계(viewBox 0 0 W H). 정규화하지 않는다 —
+     가로세로 비율이 다른 공간으로 옮기면 산과 숲의 모양이 찌그러진다. */
+  view: { width: W, height: H },
+  clip: { mainland: mainlandPath, jeju: jejuPath },
   mountains: mountains.map((m) => ({
-    x: Number((m.x / W).toFixed(4)),
-    y: Number((m.y / H).toFixed(4)),
-    w: Number((m.w / W).toFixed(4)),
-    h: Number((m.h / H).toFixed(4)),
-    snow: Boolean(m.snow),
+    x: r1(m.x), y: r1(m.y), w: r1(m.w), h: r1(m.h), snow: Boolean(m.snow),
+  })),
+  groves: groves.map((g, i) => ({
+    x: r1(g.x),
+    y: r1(g.y),
+    mass: blobPath(g.x, g.y, g.r * 1.15, 900 + i, 0.62),
+    trees: g.trees.map((t) => ({ x: r1(t.x), y: r1(t.y), s: r1(t.s) })),
   })),
 };
-writeFileSync(
-  resolve(root, 'src/domain/mountains.json'),
-  `${JSON.stringify(mountainList)}\n`,
-  'utf8',
-);
+writeFileSync(resolve(root, 'src/domain/terrain.json'), `${JSON.stringify(terrain)}\n`, 'utf8');
 
 mkdirSync(resolve(root, 'public/map'), { recursive: true });
 writeFileSync(resolve(root, 'public/map/korea-base.svg'), svg, 'utf8');
 console.log(
   `korea-base.svg  ${(svg.length / 1024).toFixed(0)}KB  land-mask.json  ` +
-  `섬=${islandShapes.length} 산=${mountains.length} 숲=${groves.length}  mountains.json`,
+  `섬=${islandShapes.length} 산=${mountains.length} 숲=${groves.length}  terrain.json`,
 );

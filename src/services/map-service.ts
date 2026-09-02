@@ -89,6 +89,14 @@ export interface MapSprite {
   accent: string;
   /** 권역 마커에 붙는 어종 수 배지. 어종 모드에서는 없다. */
   badgeCount?: number;
+  /**
+   * 그림을 작게 그린다.
+   *
+   * 단풍처럼 '지형이 주인공'인 레이어에서 쓴다. 큰 그림을 놓으면
+   * 산이 물드는 것보다 그림이 먼저 읽혀서, 사용자가 색이 아니라
+   * 마커 수를 세게 된다.
+   */
+  compact?: boolean;
   subject: MapSubject;
 }
 
@@ -470,6 +478,15 @@ function zoneSprites(query: MapQuery): MapSprite[] {
 function foliageSprites(query: MapQuery): MapSprite[] {
   const filter = query.foliageState ?? 'all';
 
+  /*
+   * 지역별 보기에서는 지도에 그림을 하나도 놓지 않는다.
+   *
+   * 단풍에서 일어나는 일은 산과 숲의 색이 바뀌는 것이지 명소가 늘어나는 것이
+   * 아니다. 큰 단풍잎을 12개 뿌려 두면 사용자는 색의 위치가 아니라
+   * 잎의 개수를 읽는다. 대표 명소를 짚어 보고 싶을 때만 명소별로 바꾼다.
+   */
+  if ((query.mode ?? 'zone') === 'zone') return [];
+
   return buildFoliageSpots(query.date)
     .filter((spot) => isColoring(spot.state))
     .filter((spot) => filter === 'all' || spot.state === filter)
@@ -489,13 +506,16 @@ function foliageSprites(query: MapQuery): MapSprite[] {
         restricted: false,
         legalStatus: 'open',
         accent: spot.state === 'peak' ? ACCENT.peak : ACCENT.nature,
+        // 지형이 주인공이므로 명소 표시는 작게. 고른 것만 커진다.
+        compact: true,
         subject: { kind: 'foliage', spot },
       } satisfies MapSprite;
     });
 }
 
 export function buildMapLayout(query: MapQuery): MapLayout {
-  const mode = query.mode ?? 'species';
+  // 단풍은 지역별이 기본이다 — 지도의 색이 먼저고 명소는 그다음이다
+  const mode = query.mode ?? (query.layer === 'foliage' ? 'zone' : 'species');
   const detail = query.detail ?? 0;
 
   const candidates =
