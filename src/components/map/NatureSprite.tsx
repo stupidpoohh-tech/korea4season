@@ -23,21 +23,22 @@ interface Props {
 }
 
 /**
- * 규정 배지.
+ * 규정 색조.
  *
- * 생물 자체의 시각적 존재감은 자연에서의 occurrence 를 뜻한다.
- * 규정은 그 위에 얹히는 다른 축이므로 그림 색을 바꾸지 않고
- * 모서리의 작은 표시로만 말한다.
+ * 지금 잡을 수 없는 어종은 그림 위에 붉은빛을 얹는다.
+ * 모서리에 붙이던 작은 `!` 은 sprite 가 작을 때 눈에 띄지 않았고,
+ * 무엇에 붙은 표시인지도 읽히지 않았다. 색조는 그림 전체를 덮으므로
+ * 훑어보는 중에도 "이건 지금 안 된다" 가 먼저 읽힌다.
+ *
+ * 그래도 존재는 지우지 않는다 — 반투명이라 어떤 물고기인지는 그대로 보인다.
  *
  * 지도에 올리는 것은 '지금 잡을 수 없다' 뿐이다.
  * 체장 같은 조건부 규정은 대부분의 어종에 붙어 있어서 지도에 그리면
- * 배지가 배경이 되고, 정작 금어기가 눈에 띄지 않는다. 그것은 상세에서 말한다.
+ * 색조가 배경이 되고, 정작 금어기가 눈에 띄지 않는다. 그것은 상세에서 말한다.
  */
-const LEGAL_BADGE: Partial<
-  Record<LegalStatusCode, { mark: string; color: string; title: string }>
-> = {
-  'closed-season': { mark: '!', color: 'var(--color-restricted)', title: '금어기' },
-  prohibited: { mark: '!', color: 'var(--color-restricted)', title: '연중 금지' },
+const LEGAL_TINT: Partial<Record<LegalStatusCode, { color: string; title: string }>> = {
+  'closed-season': { color: 'rgba(200, 68, 60, 0.52)', title: '금어기' },
+  prohibited: { color: 'rgba(200, 68, 60, 0.52)', title: '연중 금지' },
 };
 
 /**
@@ -67,7 +68,7 @@ function NatureSpriteBase({
   // 같은 키에서 뽑으므로 리렌더나 재생 중에도 흔들리지 않는다
   const variation = variationTransform(spriteVariation(sprite.key));
   const size = 30 + prominence * 18;
-  const badge = LEGAL_BADGE[sprite.legalStatus];
+  const tint = LEGAL_TINT[sprite.legalStatus];
 
   const baseOpacity = 0.62 + prominence * 0.38;
   const opacity = dimmed ? baseOpacity * 0.45 : baseOpacity;
@@ -102,7 +103,7 @@ function NatureSpriteBase({
       transformTemplate={(_latest, generated) =>
         `translate(-50%, -50%) scale(${spriteScale / scale}) ${generated}`
       }
-      aria-label={`${sprite.name} · ${sprite.placeLabel}${badge ? ` · ${badge.title}` : ''}`}
+      aria-label={`${sprite.name} · ${sprite.placeLabel}${tint ? ` · ${tint.title}` : ''}`}
       aria-pressed={selected}
     >
       <span className="sprite-float relative block">
@@ -139,6 +140,7 @@ function NatureSpriteBase({
               entity={entity}
               size={size}
               transform={variation}
+              tint={tint?.color}
               style={{
                 // 오려낸 그림이 바다·육지 어디에 놓여도 떠 보이게 한다
                 filter: selected
@@ -157,17 +159,6 @@ function NatureSpriteBase({
               </span>
             )}
 
-            {badge && (
-              // 있지만 잡으면 안 된다 — 존재와 규정을 구분해 보여주는 표시
-              <span
-                aria-hidden
-                title={badge.title}
-                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white text-[8px] font-bold leading-none text-white"
-                style={{ background: badge.color }}
-              >
-                {badge.mark}
-              </span>
-            )}
           </span>
         ) : (
           <span

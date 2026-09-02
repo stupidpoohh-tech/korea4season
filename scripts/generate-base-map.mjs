@@ -130,12 +130,12 @@ function distToPolygon([x, y], poly) {
 /* ── 색 ───────────────────────────────────────────────────── */
 const C = {
   /*
-   * 바다는 해안 둘레만 옅게 두른다.
+   * 바다는 해안 둘레만 두른다.
    * 배경 전체를 칠하면 지도가 페이지에서 떠 보이므로, 바깥으로 갈수록
    * 옅어지는 띠 두 겹으로 "여기서부터 바다" 만 알린다.
+   * 색은 지도 안의 강과 같다 — 한 지도 안의 물은 같은 물이어야 한다.
    */
-  seaFar: '#e4f3fb',
-  seaNear: '#c2e4f6',
+  sea: '#57c2f0',
   seaLine: '#ffffff',
   sand: '#f4e5ad',
   sandEdge: '#e0c98a',
@@ -389,8 +389,8 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     지도 배경은 페이지 배경(흰색)과 구분되지 않아야 한다.
   -->
   <g id="ocean" stroke-linejoin="round" fill="none">
-    <g stroke="${C.seaFar}" stroke-width="30" opacity=".55"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
-    <g stroke="${C.seaNear}" stroke-width="13" opacity=".75"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
+    <g stroke="${C.sea}" stroke-width="30" opacity=".28"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
+    <g stroke="${C.sea}" stroke-width="13" opacity=".5"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
   </g>
 
   <g id="sand" stroke-linejoin="round" fill="${C.sand}">

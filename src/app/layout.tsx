@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Header } from '@/components/layout/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { DiscoveryToast } from '@/components/common/DiscoveryToast';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { hasDemoData } from '@/services/nature-service';
 import './globals.css';
 
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <Header demo={hasDemoData()} />
         <div className="pb-[env(safe-area-inset-bottom)] lg:pb-0">{children}</div>
+        <SiteFooter />
         <BottomNavigation />
         <DiscoveryToast />
       </body>

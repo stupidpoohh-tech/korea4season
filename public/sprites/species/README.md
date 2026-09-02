@@ -28,7 +28,7 @@ public/sprites/species/<slug>.webp
 
 ## 현재 상태
 
-시트에서 잘라 넣은 18종이 들어와 있습니다.
+**22종 전부 들어와 있습니다.** 이모지 폴백은 남아 있지 않습니다.
 
 ```
 korean-rockfish  olive-flounder  japanese-sillago  japanese-seabass
@@ -36,18 +36,16 @@ red-seabream  japanese-horse-mackerel  blue-crab  webfoot-octopus
 common-octopus  long-arm-octopus  black-porgy  spanish-mackerel
 largehead-hairtail  chub-mackerel  pacific-cod  snow-crab
 common-squid  small-yellow-croaker
-```
-
-아직 이모지로 남아 있는 종은 셋입니다.
-
-```
-marbled-flounder      문치가자미(도다리)
-dark-banded-rockfish  볼락
-yellowfin-goby        망둥어
+dark-banded-rockfish  gizzard-shad  marbled-flounder  yellowfin-goby
 ```
 
 ## 원본에서 다시 만들기
 
-시트에서 잘라내는 스크립트는 `scratch/build-sprites.py` 에 있습니다.
-셀 격자로 나눈 뒤 연결 성분 마스크로 옆 칸 조각을 걸러내고,
+시트에서 잘라내는 스크립트는 `scripts/build-species-sprites.py` 입니다.
+격자로 나눈 뒤 **알파 연결 성분**으로 옆 칸 조각을 걸러내고,
 긴 변 128px WebP 로 저장합니다.
+
+> 셀 bbox 로만 자르면 이웃 sprite 의 지느러미가 묻어 들어옵니다.
+> 실제로 보리멸에는 옆 그림의 붉은 지느러미가, 삼치에는 작은 조각이
+> 붙은 채로 들어와 있었습니다. 잘라낸 뒤에는 **연결 성분이 하나인지**
+> 반드시 확인하십시오 — 가장 큰 덩어리만 남기면 됩니다.

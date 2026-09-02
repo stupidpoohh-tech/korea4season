@@ -312,8 +312,11 @@ export function MapScreen() {
   );
 
   return (
-    /* 헤더는 56px + 아래 테두리 1px 다. 57 을 빼지 않으면 문서가 1px 넘쳐 스크롤바가 생긴다. */
-    <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-57px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
+    /*
+     * 헤더 56px + 아래 테두리 1px, 그리고 푸터 32px(SITE_FOOTER_HEIGHT)을 뺀다.
+     * 하나라도 빠뜨리면 그만큼 문서가 넘쳐 스크롤바가 생긴다.
+     */
+    <div className="mx-auto flex h-[calc(100dvh-32px-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-57px-32px)] lg:gap-3 lg:px-6 lg:pb-3 lg:pt-3">
       {/* 모바일 — 상태 → 보기 방식 → (필요할 때) 필터 순으로 한 묶음 */}
       <div className="lg:hidden">{header(false)}</div>
 

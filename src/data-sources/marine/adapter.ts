@@ -64,6 +64,10 @@ const AVAILABLE_SPRITES = new Set<string>([
   'snow-crab',
   'common-squid',
   'small-yellow-croaker',
+  'dark-banded-rockfish',
+  'gizzard-shad',
+  'marbled-flounder',
+  'yellowfin-goby',
 ]);
 
 /* ── 어종 ─────────────────────────────────────────────────── */
