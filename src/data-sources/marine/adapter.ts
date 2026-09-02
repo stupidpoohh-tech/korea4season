@@ -40,9 +40,30 @@ import zonesRaw from './zones.json';
 
 const SPRITE_DIR = speciesRaw.meta.spriteDir;
 
-/** 에셋이 들어오면 자동으로 이모지를 대체한다. 아직 목록에 없으면 undefined. */
+/**
+ * 실제로 들어와 있는 sprite 에셋.
+ * public/sprites/species/<slug>.webp 를 추가한 뒤 여기에 slug 를 넣으면
+ * 지도와 상세의 이모지가 그 그림으로 바뀐다. 목록에 없으면 이모지로 폴백한다.
+ */
 const AVAILABLE_SPRITES = new Set<string>([
-  // public/sprites/species/<slug>.svg 를 추가한 뒤 여기에 slug 를 넣는다.
+  'korean-rockfish',
+  'olive-flounder',
+  'japanese-sillago',
+  'japanese-seabass',
+  'red-seabream',
+  'japanese-horse-mackerel',
+  'blue-crab',
+  'webfoot-octopus',
+  'common-octopus',
+  'long-arm-octopus',
+  'black-porgy',
+  'spanish-mackerel',
+  'largehead-hairtail',
+  'chub-mackerel',
+  'pacific-cod',
+  'snow-crab',
+  'common-squid',
+  'small-yellow-croaker',
 ]);
 
 /* ── 어종 ─────────────────────────────────────────────────── */
@@ -70,7 +91,7 @@ export function loadSpecies(): MarineSpecies[] {
     aliases: row.aliases,
     speciesName: row.speciesName,
     icon: row.icon,
-    illustration: AVAILABLE_SPRITES.has(row.code) ? `${SPRITE_DIR}/${row.code}.svg` : undefined,
+    illustration: AVAILABLE_SPRITES.has(row.code) ? `${SPRITE_DIR}/${row.code}.webp` : undefined,
     summary: row.summary,
     description: row.description,
     rarity: (row.rarity as MarineSpecies['rarity']) ?? 2,

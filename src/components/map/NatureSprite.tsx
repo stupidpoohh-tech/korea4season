@@ -82,7 +82,7 @@ function NatureSpriteBase({
           }}
         >
           {entity ? (
-            <SpeciesSprite entity={entity} size={size * 0.5} />
+            <SpeciesSprite entity={entity} size={size * 0.78} />
           ) : (
             <span aria-hidden className="text-[13px] font-semibold text-[color:var(--color-ink)]">
               {sprite.placeLabel}

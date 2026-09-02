@@ -1,37 +1,53 @@
 # 어종 sprite 에셋
 
-이 디렉터리에 파일을 넣으면 지도와 상세 화면의 이모지가 자동으로 교체됩니다.
-파일이 없으면 `NatureEntity.icon`(이모지)으로 조용히 폴백합니다.
+이 디렉터리의 파일이 지도와 상세 화면의 이모지를 대체합니다.
+파일이 없거나 `AVAILABLE_SPRITES` 에 등록되지 않은 종은
+`NatureEntity.icon`(이모지)으로 조용히 폴백합니다.
 
 ## 파일 규칙
 
 ```
-public/sprites/species/<slug>.svg      ← 권장
-public/sprites/species/<slug>.png      ← 사용 시 data-sources 의 illustration 확장자만 변경
+public/sprites/species/<slug>.webp
 ```
 
-`<slug>` 는 `src/data-sources/marine/species.json` 의 `code` 와 정확히 같아야 합니다.
-어떤 slug 가 필요한지는 아래 "필요 목록" 참고.
+`<slug>` 는 `src/data-sources/marine/species.json` 의 `code` 와 정확히 같아야 하고,
+`src/data-sources/marine/adapter.ts` 의 `AVAILABLE_SPRITES` 에 등록해야 켜집니다.
 
-## 에셋 규격
+## 규격
 
 | 항목 | 값 |
 |---|---|
-| 종횡비 | 가로가 긴 형태 권장 (약 16:10) |
-| 표시 크기 | 지도 sprite 안에서 약 28×18px, 상세에서 약 56×36px |
-| 방향 | **오른쪽을 향하도록** 통일 (지도에서 방향이 섞이면 어수선해집니다) |
-| 여백 | 상하좌우 여백 최소화. 컨테이너가 원형이라 꽉 채우면 잘립니다 |
-| 배경 | 투명 |
-| 색 | base map(플랫, 저채도 자연색)과 같은 결 권장 |
-| PNG일 경우 | 2x (약 112×72) 이상 |
+| 형식 | WebP (투명 배경) |
+| 크기 | 긴 변 128px 안팎 |
+| 방향 | **왼쪽을 향하도록** 통일 (지도에서 방향이 섞이면 어수선합니다) |
+| 여백 | 상하좌우 4px 정도. 정사각 박스에 contain 으로 담깁니다 |
+| 표시 | 지도 sprite 안에서 약 30px, 상세에서 약 22~28px |
 
-SVG는 `width`/`height` 없이 `viewBox`만 두면 어느 크기에서도 깨지지 않습니다.
+세로로 긴 오징어·문어와 가로로 긴 물고기가 섞여 있어도
+정사각 박스에 맞춰 담기므로 잘리지 않습니다.
 
-## 필요 목록
+## 현재 상태
 
-`src/data-sources/marine/species.json` 의 `code` 값 전체가 대상입니다.
-현재 필요한 slug 목록은 다음 명령으로 확인할 수 있습니다.
+시트에서 잘라 넣은 18종이 들어와 있습니다.
 
-```bash
-node -e "console.log(require('./src/data-sources/marine/species.json').species.map(s=>s.code).join('\n'))"
 ```
+korean-rockfish  olive-flounder  japanese-sillago  japanese-seabass
+red-seabream  japanese-horse-mackerel  blue-crab  webfoot-octopus
+common-octopus  long-arm-octopus  black-porgy  spanish-mackerel
+largehead-hairtail  chub-mackerel  pacific-cod  snow-crab
+common-squid  small-yellow-croaker
+```
+
+아직 이모지로 남아 있는 종은 셋입니다.
+
+```
+marbled-flounder      문치가자미(도다리)
+dark-banded-rockfish  볼락
+yellowfin-goby        망둥어
+```
+
+## 원본에서 다시 만들기
+
+시트에서 잘라내는 스크립트는 `scratch/build-sprites.py` 에 있습니다.
+셀 격자로 나눈 뒤 연결 성분 마스크로 옆 칸 조각을 걸러내고,
+긴 변 128px WebP 로 저장합니다.

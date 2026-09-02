@@ -141,6 +141,86 @@
       ]
     },
     {
+      "species": "japanese-seabass",
+      "windows": [
+        {
+          "zones": [
+            "incheon-ganghwa",
+            "gyeonggi-sihwa",
+            "chungnam-taean",
+            "chungnam-boryeong",
+            "jeonbuk-gunsan"
+          ],
+          "start": "05-15",
+          "end": "10-31",
+          "peakStart": "07-01",
+          "peakEnd": "09-20",
+          "strength": "good",
+          "methods": [
+            "lure",
+            "shore-cast",
+            "breakwater"
+          ]
+        },
+        {
+          "zones": [
+            "jeonnam-yeosu",
+            "gyeongnam-namhae",
+            "busan-gijang"
+          ],
+          "start": "05-01",
+          "end": "11-15",
+          "peakStart": "06-15",
+          "peakEnd": "09-30",
+          "strength": "fair",
+          "methods": [
+            "lure",
+            "rock",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
+      "species": "japanese-horse-mackerel",
+      "windows": [
+        {
+          "zones": [
+            "busan-gijang",
+            "ulsan-gyeongju",
+            "gyeongnam-geoje",
+            "gyeongnam-namhae"
+          ],
+          "start": "06-01",
+          "end": "11-30",
+          "peakStart": "08-15",
+          "peakEnd": "10-31",
+          "strength": "good",
+          "methods": [
+            "breakwater",
+            "float",
+            "lure"
+          ]
+        },
+        {
+          "zones": [
+            "jeju-north",
+            "jeju-south",
+            "pohang-yeongdeok"
+          ],
+          "start": "06-15",
+          "end": "12-15",
+          "peakStart": "09-01",
+          "peakEnd": "11-15",
+          "strength": "fair",
+          "methods": [
+            "breakwater",
+            "boat"
+          ]
+        }
+      ]
+    },
+    {
       "species": "black-porgy",
       "windows": [
         {
