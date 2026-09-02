@@ -15,8 +15,9 @@
     "enabled": true
   },
 
-  // ISR 증분 캐시. 배포 전에 네임스페이스를 만들고 id 를 채워야 한다:
-  //   npx wrangler kv namespace create NEXT_INC_CACHE_KV
+  // ISR 증분 캐시.
+  // 이 캐시가 없으면 빌드 시점의 "오늘" 이 그대로 굳는다 —
+  // 모든 라우트가 revalidate = 900 인 이유가 날짜 갱신 하나이기 때문이다.
   "kv_namespaces": [
     {
       "binding": "NEXT_INC_CACHE_KV",
