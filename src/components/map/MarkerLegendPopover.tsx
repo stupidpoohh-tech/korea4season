@@ -3,9 +3,10 @@
 import { useEffect, type RefObject } from 'react';
 import type { MapLayerId } from '@/domain/nature-categories';
 import {
-  FOLIAGE_STATE_COLOR,
   FOLIAGE_STATE_LABEL,
   FOLIAGE_STATES,
+  STATE_PROGRESS,
+  mountainColorAt,
 } from '@/services/foliage-service';
 import type { MapMode } from '@/services/map-service';
 
@@ -42,7 +43,7 @@ const FOLIAGE_HINT: Record<(typeof FOLIAGE_STATES)[number], string> = {
   good: '지금 가도 좋아요',
   peak: '가장 좋을 때',
   ending: '잎이 지고 있어요',
-  ended: '올해는 끝났어요',
+  ended: '겨울 산으로 넘어갑니다',
 };
 
 export function LegendTrigger({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -118,7 +119,7 @@ export function MarkerLegendPopover({
               <span
                 aria-hidden
                 className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                style={{ background: FOLIAGE_STATE_COLOR[state].face }}
+                style={{ background: mountainColorAt(STATE_PROGRESS[state]).face }}
               />
               <span className="font-medium text-[color:var(--color-ink-soft)]">
                 {FOLIAGE_STATE_LABEL[state]}

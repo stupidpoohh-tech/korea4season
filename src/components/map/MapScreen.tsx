@@ -9,6 +9,7 @@ import {
   buildFoliageRegions,
   countFoliage,
   summarizeFoliage,
+  waveSummary,
   type FoliageSpot,
 } from '@/services/foliage-service';
 import {
@@ -158,6 +159,9 @@ export function MapScreen() {
     () => (layer === 'foliage' ? buildFoliageRegions(date) : []),
     [layer, date],
   );
+
+  /* 헤더 한 줄 — "강원 북부 절정 · 수도권 시작". 개수가 아니라 전선의 위치다. */
+  const foliageWave = useMemo(() => waveSummary(foliageRegions), [foliageRegions]);
 
   const selectedSprite = useMemo(
     () => layout.sprites.find((s) => s.selectionId === selectedId) ?? null,
@@ -321,6 +325,7 @@ export function MapScreen() {
     <MarineMapHeader
       layer={layer}
       foliage={foliage}
+      foliageWave={foliageWave}
       mode={layout.mode}
       counts={counts}
       /* 조건에 맞는 대상 수. 과밀로 접힌 것을 뺀 '지금 그려진 수' 는 타임라인이 말한다. */

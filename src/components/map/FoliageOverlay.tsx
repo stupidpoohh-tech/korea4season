@@ -2,7 +2,11 @@
 
 import { useMemo } from 'react';
 import terrainData from '@/domain/terrain.json';
-import { FOLIAGE_STATE_COLOR, type FoliageRegion } from '@/services/foliage-service';
+import {
+  forestColorAt,
+  mountainColorAt,
+  type FoliageRegion,
+} from '@/services/foliage-service';
 
 /* ────────────────────────────────────────────────────────────
  * 산과 숲이 물든다.
@@ -13,8 +17,12 @@ import { FOLIAGE_STATE_COLOR, type FoliageRegion } from '@/services/foliage-serv
  * (좌표는 scripts/generate-base-map.mjs 가 terrain.json 으로 함께 내보낸다)
  *
  * 색을 정하는 단위는 명소가 아니라 권역이다. 지도의 산과 숲은 저마다
- * 가장 가까운 권역에 붙고, 그 권역의 상태색을 입는다. 그래서 날짜를 넘기면
+ * 가장 가까운 권역에 붙고, 그 권역의 색을 입는다. 그래서 날짜를 넘기면
  * 마커가 늘어나는 것이 아니라 **색의 띠가 북에서 남으로 내려간다.**
+ *
+ * 한 권역 안에서도 산마다 하루이틀씩 어긋나게 둔다. 전부 같은 날 같은 색이면
+ * 지역이 통째로 칠해진 것처럼 보인다. 다만 이 편차(±2일 이내)는 권역 사이
+ * 간격(5~32일)보다 훨씬 작아야 한다 — 크면 북→남 흐름이 잡음에 묻힌다.
  *
  * 그리는 순서는 base map 과 같다 — 숲 덩어리 → 나무 → 산.
  * 어긋나면 원래 초록이 가장자리로 삐져나온다.
@@ -70,8 +78,15 @@ function snowPath(m: Mountain): string {
   );
 }
 
+/** 한 권역 안에서 산·숲을 흩는 폭 (일). 권역 간격보다 훨씬 작게 둔다. */
+const MICRO_DAYS = [-1.5, 0, 1.5];
+
 interface RegionShapes {
   id: string;
+  /** 색을 가져올 권역 */
+  regionIndex: number;
+  /** 이 묶음이 며칠 앞서거나 뒤처지는가 */
+  shiftDays: number;
   /** 숲 덩어리 */
   mass: string;
   /** 나무 그림자 · 산 밑동 그림자 */
@@ -109,18 +124,27 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
     return best;
   };
 
-  const parts = regions.map((region) => ({
-    id: region.id,
-    mass: [] as string[],
-    shadow: [] as string[],
-    tree: [] as string[],
-    treeTop: [] as string[],
-    face: [] as string[],
-    faceDark: [] as string[],
-  }));
+  /* 자리에서 뽑으므로 같은 산은 언제나 같은 편차를 갖는다 (재생 중에도 흔들리지 않는다) */
+  const micro = (x: number, y: number) => Math.abs(Math.round(x * 7 + y * 13)) % MICRO_DAYS.length;
+
+  const parts = regions.flatMap((region, regionIndex) =>
+    MICRO_DAYS.map((shiftDays, bucket) => ({
+      key: `${region.id}:${bucket}`,
+      regionIndex,
+      shiftDays,
+      mass: [] as string[],
+      shadow: [] as string[],
+      tree: [] as string[],
+      treeTop: [] as string[],
+      face: [] as string[],
+      faceDark: [] as string[],
+    })),
+  );
+  const at = (regionIndex: number, bucket: number) =>
+    parts[regionIndex * MICRO_DAYS.length + bucket];
 
   for (const m of MOUNTAINS) {
-    const bucket = parts[nearest(m.x, m.y)];
+    const bucket = at(nearest(m.x, m.y), micro(m.x, m.y));
     if (!bucket) continue;
     const half = m.w / 2;
     bucket.shadow.push(ellipsePath(m.x, m.y + 2, half * 0.95, m.h * 0.09 + 2));
@@ -133,7 +157,7 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
   }
 
   for (const g of GROVES) {
-    const bucket = parts[nearest(g.x, g.y)];
+    const bucket = at(nearest(g.x, g.y), micro(g.x, g.y));
     if (!bucket) continue;
     bucket.mass.push(g.mass);
     for (const t of g.trees) {
@@ -144,7 +168,9 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
   }
 
   return parts.map((p) => ({
-    id: p.id,
+    id: p.key,
+    regionIndex: p.regionIndex,
+    shiftDays: p.shiftDays,
     mass: p.mass.join(' '),
     shadow: p.shadow.join(' '),
     tree: p.tree.join(' '),
@@ -164,7 +190,11 @@ export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
   const key = regions.map((r) => r.id).join('|');
   const shapes = useMemo(() => buildShapes(regions), [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const colors = regions.map((r) => FOLIAGE_STATE_COLOR[r.state]);
+  const paint = shapes.map((s) => {
+    const region = regions[s.regionIndex]!;
+    const wave = Math.min(1, Math.max(0, region.wave + region.wavePerDay * s.shiftDays));
+    return { mountain: mountainColorAt(wave), forest: forestColorAt(wave) };
+  });
 
   if (shapes.length === 0) return null;
 
@@ -183,7 +213,12 @@ export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
 
       <g clipPath="url(#foliage-land)" opacity={0.22}>
         {shapes.map((s, i) => (
-          <path key={s.id} d={s.mass} fill={colors[i]!.mass} style={{ transition: COLOR_TRANSITION }} />
+          <path
+            key={s.id}
+            d={s.mass}
+            fill={paint[i]!.forest.tree}
+            style={{ transition: COLOR_TRANSITION }}
+          />
         ))}
       </g>
 
@@ -192,7 +227,7 @@ export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
           <path
             key={s.id}
             d={s.shadow}
-            fill={colors[i]!.faceDark}
+            fill={paint[i]!.mountain.faceDark}
             style={{ transition: COLOR_TRANSITION }}
           />
         ))}
@@ -200,15 +235,31 @@ export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
 
       {shapes.map((s, i) => (
         <g key={s.id}>
-          <path d={s.tree} fill={colors[i]!.tree} style={{ transition: COLOR_TRANSITION }} />
-          <path d={s.treeTop} fill={colors[i]!.treeTop} style={{ transition: COLOR_TRANSITION }} />
+          <path
+            d={s.tree}
+            fill={paint[i]!.forest.tree}
+            style={{ transition: COLOR_TRANSITION }}
+          />
+          <path
+            d={s.treeTop}
+            fill={paint[i]!.forest.treeTop}
+            style={{ transition: COLOR_TRANSITION }}
+          />
         </g>
       ))}
 
       {shapes.map((s, i) => (
         <g key={s.id}>
-          <path d={s.face} fill={colors[i]!.face} style={{ transition: COLOR_TRANSITION }} />
-          <path d={s.faceDark} fill={colors[i]!.faceDark} style={{ transition: COLOR_TRANSITION }} />
+          <path
+            d={s.face}
+            fill={paint[i]!.mountain.face}
+            style={{ transition: COLOR_TRANSITION }}
+          />
+          <path
+            d={s.faceDark}
+            fill={paint[i]!.mountain.faceDark}
+            style={{ transition: COLOR_TRANSITION }}
+          />
         </g>
       ))}
 

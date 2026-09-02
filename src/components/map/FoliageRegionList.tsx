@@ -2,8 +2,8 @@
 
 import { formatDaysValue } from '@/domain/date';
 import {
-  FOLIAGE_STATE_COLOR,
   FOLIAGE_STATE_LABEL,
+  mountainColorAt,
   type FoliageRegion,
   type FoliageSpot,
 } from '@/services/foliage-service';
@@ -35,7 +35,7 @@ export function FoliageRegionList({
 
       <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,black_calc(100%-24px),transparent)]">
         {regions.map((region) => {
-          const color = FOLIAGE_STATE_COLOR[region.state];
+          const color = mountainColorAt(region.wave);
           const active = `foliage:${region.lead.location.slug}` === selectedId;
 
           return (

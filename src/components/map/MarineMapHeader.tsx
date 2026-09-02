@@ -28,6 +28,8 @@ interface Props {
   mode: MapMode;
   counts: MapCounts;
   foliage: FoliageCounts;
+  /** 단풍 전선 한 줄 ("강원 북부 절정 · 수도권 시작") */
+  foliageWave: string;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
   filtered: boolean;
@@ -41,6 +43,7 @@ export function MarineMapHeader({
   mode,
   counts,
   foliage,
+  foliageWave,
   count,
   filtered,
   onOpenFilter,
@@ -75,6 +78,7 @@ export function MarineMapHeader({
         <CurrentStateSummary
           layer={layer}
           foliage={foliage}
+          foliageWave={foliageWave}
           mode={mode}
           count={count}
           filtered={filtered}

@@ -1,4 +1,4 @@
-import { getYear, type DateKey } from '@/domain/date';
+import { diffDays, getYear, toDateKey, type DateKey } from '@/domain/date';
 import { FOLIAGE_REGIONS, REGION_BY_LOCATION } from '@/domain/foliage-regions';
 import { locationPosition, resolveAll } from './nature-service';
 import type { MapPosition } from '@/domain/projection';
@@ -28,51 +28,134 @@ export const FOLIAGE_STATE_LABEL: Record<FoliageState, string> = {
   ended: '끝남',
 };
 
-/**
- * 상태 하나가 지도에서 갖는 색.
+/* ────────────────────────────────────────────────────────────
+ * 색은 단계가 아니라 **띠**다.
  *
- * 단풍의 진행은 '얼마나 많은가'가 아니라 '무슨 색인가'로 읽혀야 한다.
- * 그래서 밝기 한 축(intensity)이 아니라 상태마다 색을 따로 정한다 —
- * 끝물(갈색 주황)과 시작(연둣빛 노랑)은 세기가 비슷해도 전혀 다른 때다.
+ * 상태 여섯 개에 색 여섯 개를 두면 날짜가 경계를 넘는 순간 색이 툭 바뀐다.
+ * 그러면 지도에서 읽히는 것이 '어디까지 물들었나' 가 아니라
+ * '몇 곳이 빨간가' 가 된다. 그래서 진행도(0~1) 하나를 두고 그 위의
+ * 색 띠를 이어서 읽는다 — 초록에서 붉은빛으로 곧장 건너뛰지 않는다.
  *
- * pre 는 base map 이 이미 그려 둔 초록 그대로다. 덧칠해도 티가 나지 않아야
- * '아직 안 물든 곳'이 자연스럽게 원래 지도로 남는다.
- * 형광색과 순색 빨강(#FF0000)은 쓰지 않는다 — 지도 전체의 톤이 깨진다.
- */
+ * 0.0 초록          아직 (base map 이 그린 그대로. 덧칠해도 티가 나지 않아야 한다)
+ * 0.18 연둣빛 노랑   물들기 시작
+ * 0.38 황금빛        좋음
+ * 0.56 주황
+ * 0.78 붉은 주황     절정 (구간의 끝이 가장 붉다)
+ * 0.90 바랜 갈색주황 끝물
+ * 1.0 겨울 산        낮은 채도의 올리브 — '죽은 산' 이 아니라 겨울로 넘어가는 색
+ *
+ * 형광색과 순색 빨강(#FF0000)은 쓰지 않는다.
+ * ──────────────────────────────────────────────────────────── */
+
 export interface FoliageColor {
   /** 산 앞면 */
   face: string;
   /** 산 그늘면 */
   faceDark: string;
-  /** 숲 덩어리 (옅게 깔리는 바탕) */
-  mass: string;
-  /** 나무 몸통 */
+  /** 숲 덩어리 · 나무 몸통 */
   tree: string;
   /** 나무 윗면 (빛 받는 쪽) */
   treeTop: string;
 }
 
-export const FOLIAGE_STATE_COLOR: Record<FoliageState, FoliageColor> = {
-  pre: { face: '#5cb968', faceDark: '#3b9349', mass: '#3f9e46', tree: '#3f9e46', treeTop: '#5cb84f' },
-  starting: { face: '#a9c552', faceDark: '#7d9c35', mass: '#7e9b34', tree: '#7e9b34', treeTop: '#a9c552' },
-  good: { face: '#e2bb43', faceDark: '#b78e28', mass: '#bf942c', tree: '#bf942c', treeTop: '#e2bb43' },
-  peak: { face: '#d9722f', faceDark: '#a94a20', mass: '#b85526', tree: '#b85526', treeTop: '#d9722f' },
-  ending: { face: '#b0713c', faceDark: '#834d26', mass: '#92592c', tree: '#92592c', treeTop: '#b0713c' },
-  ended: { face: '#927d5e', faceDark: '#6c5943', mass: '#77644a', tree: '#77644a', treeTop: '#927d5e' },
-};
-
-const STATE_BY_STATUS: Record<OccurrenceStatus, FoliageState> = {
-  upcoming: 'pre',
-  starting: 'starting',
-  active: 'good',
-  peak: 'peak',
-  ending: 'ending',
-  ended: 'ended',
-};
-
-export function foliageStateOf(status: OccurrenceStatus): FoliageState {
-  return STATE_BY_STATUS[status];
+interface RampStop extends FoliageColor {
+  at: number;
+  /** 숲을 이만큼만 물들인다 (0~1). 산이 주인공이고 숲은 거들 뿐이다. */
+  forestMix: number;
 }
+
+const RAMP: RampStop[] = [
+  { at: 0, face: '#5cb968', faceDark: '#3b9349', tree: '#3f9e46', treeTop: '#5cb84f', forestMix: 0 },
+  { at: 0.18, face: '#a9c552', faceDark: '#7d9c35', tree: '#8aa73a', treeTop: '#a9c552', forestMix: 0.2 },
+  { at: 0.38, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.34 },
+  { at: 0.56, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42 },
+  { at: 0.78, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46 },
+  { at: 0.9, face: '#b07a45', faceDark: '#86552c', tree: '#946035', treeTop: '#b07a45', forestMix: 0.34 },
+  { at: 1, face: '#7f9163', faceDark: '#5c6f48', tree: '#6a7d52', treeTop: '#7f9163', forestMix: 0.22 },
+];
+
+/** base map 이 그린 숲 색. 여기서 조금씩만 끌어당긴다. */
+const FOREST_BASE = { tree: '#3f9e46', treeTop: '#5cb84f' };
+
+function mixHex(a: string, b: string, k: number): string {
+  const t = Math.min(1, Math.max(0, k));
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return `#${pa
+    .map((v, i) => Math.round(v + (pb[i]! - v) * t).toString(16).padStart(2, '0'))
+    .join('')}`;
+}
+
+function rampAt(progress: number): RampStop {
+  const p = Math.min(1, Math.max(0, progress));
+  for (let i = 1; i < RAMP.length; i += 1) {
+    const lo = RAMP[i - 1]!;
+    const hi = RAMP[i]!;
+    if (p <= hi.at) {
+      const k = (p - lo.at) / (hi.at - lo.at || 1);
+      return {
+        at: p,
+        face: mixHex(lo.face, hi.face, k),
+        faceDark: mixHex(lo.faceDark, hi.faceDark, k),
+        tree: mixHex(lo.tree, hi.tree, k),
+        treeTop: mixHex(lo.treeTop, hi.treeTop, k),
+        forestMix: lo.forestMix + (hi.forestMix - lo.forestMix) * k,
+      };
+    }
+  }
+  return RAMP[RAMP.length - 1]!;
+}
+
+/** 산 색 — 진행도 그대로 */
+export function mountainColorAt(progress: number): FoliageColor {
+  const stop = rampAt(progress);
+  return { face: stop.face, faceDark: stop.faceDark, tree: stop.tree, treeTop: stop.treeTop };
+}
+
+/**
+ * 숲 색 — 같은 색이되 훨씬 옅게.
+ *
+ * 산만 물들고 주변 숲이 진한 초록으로 남아 있으면 삼각형 하나하나가
+ * 지도 위에 얹힌 아이콘처럼 떨어져 보인다. 같은 권역의 숲이 같은 방향으로
+ * 따뜻해지면 '이 지역 전체가 물들고 있다' 로 읽힌다.
+ *
+ * 절정에서도 산 색의 절반이 채 되지 않게 둔다.
+ * 숲까지 주황이 되면 지도에서 산이 사라지고 지역이 통째로 칠해진 것이 된다.
+ */
+export function forestColorAt(progress: number): { tree: string; treeTop: string } {
+  const stop = rampAt(progress);
+  return {
+    tree: mixHex(FOREST_BASE.tree, stop.tree, stop.forestMix),
+    treeTop: mixHex(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix),
+  };
+}
+
+/**
+ * 색 띠 위의 위치 → 상태 이름.
+ *
+ * 이름을 occurrence 의 status 에서 그대로 가져오지 않는다.
+ * 엔진의 'active' 는 절정 앞뒤를 모두 덮어서, 절정을 지나 이미 갈색으로
+ * 물든 산이 목록에서는 '좋음' 으로 적히곤 했다 — 색과 글자가 어긋난다.
+ * 지도에 칠하는 값과 같은 값에서 이름을 뽑으면 둘이 어긋날 수가 없다.
+ */
+export function stateFromWave(wave: number): FoliageState {
+  if (wave <= 0) return 'pre';
+  if (wave >= 0.95) return 'ended';
+  if (wave < 0.28) return 'starting';
+  if (wave < WAVE_AT_PEAK_START) return 'good';
+  if (wave <= WAVE_AT_PEAK_END) return 'peak';
+  return 'ending';
+}
+
+/** 범례에 쓰는 대표 진행도 — 상태 이름 옆의 색 조각이 띠의 어디쯤인지 */
+export const STATE_PROGRESS: Record<FoliageState, number> = {
+  pre: 0,
+  starting: 0.16,
+  good: 0.38,
+  peak: 0.72,
+  ending: 0.9,
+  ended: 1,
+};
 
 /**
  * 올해 단풍이 이미 지나간 뒤인가.
@@ -101,16 +184,67 @@ export function isColoring(state: FoliageState): boolean {
 }
 
 /**
- * 산의 색을 바꾸는 것.
+ * 잎이 물드는 나무. 명소의 상태를 대표한다.
  *
- * 억새는 가을 능선에서 은빛으로 흔들리지만 산을 붉게 만들지는 않는다.
- * 그런데 억새 절정(10월 초)은 단풍보다 이르고 남쪽 지리산·덕유산에 걸려 있어서,
- * 이것까지 산 색에 넣으면 **남쪽이 북쪽보다 먼저 물든 것처럼** 보인다.
- * 단풍 전선이 거꾸로 읽히므로 잎이 물드는 나무만 산 색을 정한다.
- *
+ * 억새는 가을 능선에서 은빛으로 흔들리지만 잎이 물드는 것이 아니다.
+ * 억새 절정(10월 초)은 단풍보다 이르고 남쪽 지리산·덕유산에 걸려 있어서,
+ * 이것을 명소의 상태로 쓰면 남쪽이 북쪽보다 먼저 물든 것처럼 보인다.
  * 억새는 사라지지 않는다 — 그 명소의 entries 에 남아 상세에서 함께 말한다.
  */
-const TERRAIN_PAINTERS = new Set(['maple', 'ginkgo']);
+const SPOT_LEADS = new Set(['maple', 'ginkgo']);
+
+/**
+ * 지도의 산과 숲 색을 정하는 것은 단풍나무뿐이다.
+ *
+ * 은행나무는 도심 가로수라 산을 노랗게 만들지 않는다. 게다가 서울 은행은
+ * 11월 중순까지 이어져서, 이것이 권역 색을 잡으면 수도권만 남부와 함께
+ * 늦게까지 물든 것처럼 보인다 — 전선이 끊긴다.
+ */
+const TERRAIN_PAINTERS = new Set(['maple']);
+
+/** 잎이 다 진 뒤 겨울 산 색으로 잦아드는 데 걸리는 시간 */
+const WINTER_FADE_DAYS = 14;
+
+/*
+ * 색 띠 위의 구간.
+ * 절정을 좁게 잡아 두어야 절정의 색이 '북 → 남으로 지나가는 파도' 로 보인다.
+ */
+const WAVE_AT_PEAK_START = 0.45;
+const WAVE_AT_PEAK_END = 0.78;
+const WAVE_AT_END = 0.92;
+
+function waveOf(
+  date: DateKey,
+  window: { start: Date; end: Date },
+  peak: { start: Date; end: Date } | undefined,
+): { wave: number; wavePerDay: number } {
+  const start = toDateKey(window.start);
+  const end = toDateKey(window.end);
+  const peakStart = peak ? toDateKey(peak.start) : null;
+  const peakEnd = peak ? toDateKey(peak.end) : null;
+
+  const span = diffDays(start, end) + 1 + WINTER_FADE_DAYS;
+  const wavePerDay = span > 0 ? 1 / span : 0;
+
+  const segment = (from: DateKey, to: DateKey, lo: number, hi: number) => {
+    const total = Math.max(1, diffDays(from, to));
+    return lo + ((hi - lo) * diffDays(from, date)) / total;
+  };
+
+  if (date < start) return { wave: 0, wavePerDay };
+  if (date > end) {
+    const after = diffDays(end, date);
+    return { wave: Math.min(1, WAVE_AT_END + (1 - WAVE_AT_END) * (after / WINTER_FADE_DAYS)), wavePerDay };
+  }
+  if (!peakStart || !peakEnd) {
+    return { wave: segment(start, end, 0, WAVE_AT_END), wavePerDay };
+  }
+  if (date < peakStart) return { wave: segment(start, peakStart, 0, WAVE_AT_PEAK_START), wavePerDay };
+  if (date <= peakEnd) {
+    return { wave: segment(peakStart, peakEnd, WAVE_AT_PEAK_START, WAVE_AT_PEAK_END), wavePerDay };
+  }
+  return { wave: segment(peakEnd, end, WAVE_AT_PEAK_END, WAVE_AT_END), wavePerDay };
+}
 
 export interface FoliageSpot {
   /** 명소 = 지도 위 단위 */
@@ -124,6 +258,18 @@ export interface FoliageSpot {
   window: { start: Date; end: Date };
   peakWindow?: { start: Date; end: Date };
   progress: number;
+  /**
+   * 지도 색을 정하는 값 (0~1).
+   *
+   * occurrence 의 progress 와 다르다 — 그쪽은 '창의 몇 %를 지났나' 라
+   * 절정이 어디쯤인지가 담기지 않는다. 이 값은 첫 단풍 → 절정 → 끝물 →
+   * 겨울 산까지를 색 띠 위의 한 점으로 옮긴 것이다.
+   */
+  wave: number;
+  /** 하루가 wave 를 얼마나 움직이는가 — 산마다 며칠씩 흩을 때 쓴다 */
+  wavePerDay: number;
+  /** 이 명소가 지도의 산·숲 색을 정하는가 (단풍나무인가) */
+  paintsTerrain: boolean;
   daysToNextChange?: number;
   nextChangeLabel?: string;
   /** 같은 명소에 걸린 나머지 (은행 · 억새 등) */
@@ -152,24 +298,38 @@ export function buildFoliageSpots(date: DateKey): FoliageSpot[] {
 
   for (const { location, entries } of byLocation.values()) {
     // 그 명소를 대표하는 것은 지금 가장 앞서 있는 '잎이 물드는' 수종이다
-    const painters = entries.filter((entry) => TERRAIN_PAINTERS.has(entry.entity.slug));
-    if (painters.length === 0) continue;
+    const leads = entries.filter((entry) => SPOT_LEADS.has(entry.entity.slug));
+    if (leads.length === 0) continue;
 
-    const lead = painters.reduce((a, b) =>
-      STATE_ORDER[foliageStateOf(b.status)] > STATE_ORDER[foliageStateOf(a.status)] ? b : a,
-    );
+    /*
+     * 그 명소를 대표하는 것은 지금 가장 앞서 있는 수종이다.
+     * 앞섬은 색 띠 위의 위치로 잰다 — 화면에 칠하는 값과 같은 값이라
+     * 목록의 이름과 지도의 색이 어긋날 수 없다.
+     */
+    const measured = leads.map((entry) => ({
+      entry,
+      // 올해 것이 이미 지나갔으면 색 띠의 끝(겨울 산)에 둔다
+      ...(alreadyPassed(entry.status, date, entry.window)
+        ? { wave: 1, wavePerDay: 0 }
+        : waveOf(date, entry.window, entry.peakWindow)),
+    }));
 
-    const passed = alreadyPassed(lead.status, date, lead.window);
+    const best = measured.reduce((a, b) => (b.wave > a.wave ? b : a));
+    const lead = best.entry;
+    const wave = { wave: best.wave, wavePerDay: best.wavePerDay };
 
     spots.push({
       location,
       position: locationPosition(location),
       entity: lead.entity,
-      state: passed ? 'ended' : foliageStateOf(lead.status),
+      state: stateFromWave(wave.wave),
       status: lead.status,
       window: lead.window,
       peakWindow: lead.peakWindow,
       progress: lead.progress,
+      wave: wave.wave,
+      wavePerDay: wave.wavePerDay,
+      paintsTerrain: TERRAIN_PAINTERS.has(lead.entity.slug),
       daysToNextChange: lead.daysToNextChange,
       nextChangeLabel: lead.nextChangeLabel,
       entries,
@@ -230,12 +390,17 @@ export function getFoliagePicks(date: DateKey, limit = 6): FoliageSpot[] {
 export interface FoliageRegion {
   id: string;
   label: string;
+  shortLabel: string;
   /** 지도에서 이 권역의 중심. 산·숲을 어느 권역에 붙일지 이 점으로 정한다. */
   anchor: MapPosition;
   /** 그 권역에서 지금 가장 앞선 상태 — "여기 가면 절정인 산이 있다" */
   state: FoliageState;
   /** 상태를 대표하는 명소 (그 권역에서 가장 앞선 곳) */
   lead: FoliageSpot;
+  /** 색 띠 위의 위치 (0~1). 지도의 산과 숲이 이 값으로 칠해진다. */
+  wave: number;
+  /** 하루가 wave 를 얼마나 움직이는가 */
+  wavePerDay: number;
   spots: FoliageSpot[];
 }
 
@@ -244,6 +409,8 @@ export function buildFoliageRegions(date: DateKey): FoliageRegion[] {
   const byRegion = new Map<string, FoliageSpot[]>();
 
   for (const spot of spots) {
+    // 산 색을 정하는 것은 단풍나무뿐이다 (TERRAIN_PAINTERS 주석 참고)
+    if (!spot.paintsTerrain) continue;
     const regionId = REGION_BY_LOCATION[spot.location.slug];
     if (!regionId) continue;
     const bucket = byRegion.get(regionId) ?? [];
@@ -257,17 +424,30 @@ export function buildFoliageRegions(date: DateKey): FoliageRegion[] {
     const group = byRegion.get(config.id);
     if (!group || group.length === 0) continue;
 
-    const lead = group.reduce((a, b) => (STATE_ORDER[b.state] > STATE_ORDER[a.state] ? b : a));
+    /*
+     * 색은 평균으로, 이름은 그 평균에서 뽑는다.
+     * 상태를 따로 고르면 '끝남' 색으로 칠해 놓고 목록에는 '끝물' 이라고 적는
+     * 어긋남이 생긴다 — 지도와 글자는 같은 값에서 나와야 한다.
+     */
+    const wave = group.reduce((sum, s) => sum + s.wave, 0) / group.length;
+    const lead = group.reduce((a, b) => (b.wave > a.wave ? b : a));
 
     regions.push({
       id: config.id,
       label: config.label,
+      shortLabel: config.shortLabel,
       anchor: {
         x: group.reduce((sum, s) => sum + s.position.x, 0) / group.length,
         y: group.reduce((sum, s) => sum + s.position.y, 0) / group.length,
       },
-      state: lead.state,
+      state: stateFromWave(wave),
       lead,
+      /*
+       * 권역 안의 산이 며칠씩 어긋나 있으므로 평균으로 칠한다.
+       * 가장 앞선 곳 하나로 칠하면 그 권역 전체가 실제보다 이르게 물든 것처럼 보인다.
+       */
+      wave,
+      wavePerDay: group.reduce((sum, s) => sum + s.wavePerDay, 0) / group.length,
       spots: group,
     });
   }
@@ -276,29 +456,50 @@ export function buildFoliageRegions(date: DateKey): FoliageRegion[] {
 }
 
 /**
+ * 헤더 한 줄 — 지금 단풍의 중심이 어디까지 내려왔는가.
+ *
+ * "N곳이 물드는 중" 은 개수를 세는 말이라 흐름을 말해 주지 못한다.
+ * 대신 절정인 곳과 이제 시작하는 곳을 함께 적는다 — 그 둘의 거리가 곧 전선이다.
+ *   "강원 북부 절정 · 수도권 시작"
+ */
+export function waveSummary(regions: FoliageRegion[]): string {
+  if (regions.length === 0) return '아직 초록입니다';
+
+  const named = (list: FoliageRegion[]) =>
+    list
+      .slice(0, 2)
+      .map((r) => r.shortLabel)
+      .join('·');
+
+  const peak = regions.filter((r) => r.state === 'peak');
+  const opening = regions.filter((r) => r.state === 'starting' || r.state === 'good');
+  const closing = regions.filter((r) => r.state === 'ending');
+
+  const parts: string[] = [];
+  if (peak.length > 0) parts.push(`${named(peak)} 절정`);
+  if (opening.length > 0) parts.push(`${named(opening)} ${peak.length > 0 ? '시작' : '진행 중'}`);
+  if (parts.length === 0 && closing.length > 0) parts.push(`${named(closing)} 끝물`);
+
+  if (parts.length === 0) {
+    return regions.every((r) => r.state === 'pre') ? '아직 초록입니다' : '올해 단풍은 끝났어요';
+  }
+  return parts.join(' · ');
+}
+
+/**
  * 헤더에 쓰는 한 줄.
  *
  * "지도에 9곳 표시 중" 은 마커를 세는 말이라 단풍의 진행을 말해 주지 못한다.
  * 대신 지금 어떤 상태가 몇 곳인지를 말한다 — 이 문장이 곧 전선의 위치다.
  */
-/**
- * 헤더 첫 줄. 지금 단풍이 어디까지 왔는지를 한마디로 말한다.
- * '몇 곳이 표시 중' 이 아니라 '지금 무엇이 일어나고 있는가' 다.
- */
-export function foliageHeadline(counts: FoliageCounts): string {
-  for (const state of ['peak', 'good', 'starting', 'ending'] as const) {
-    if (counts.byState[state] > 0) {
-      return `${FOLIAGE_STATE_LABEL[state]} ${counts.byState[state]}곳`;
-    }
-  }
-  return counts.byState.ended > 0 ? '올해 단풍은 끝났어요' : '아직 초록입니다';
-}
-
 export function summarizeFoliage(counts: FoliageCounts): string {
   const parts = (['peak', 'good', 'starting', 'ending'] as const)
     .filter((state) => counts.byState[state] > 0)
     .map((state) => `${FOLIAGE_STATE_LABEL[state]} ${counts.byState[state]}곳`);
 
-  if (parts.length === 0) return '아직 물든 곳이 없습니다';
+  if (parts.length === 0) {
+    // 아직 오지 않은 것과 이미 지나간 것은 다르다
+    return counts.byState.ended > 0 ? '올해 단풍은 지나갔습니다' : '아직 물든 곳이 없습니다';
+  }
   return parts.join(' · ');
 }
