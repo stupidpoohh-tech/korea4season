@@ -77,15 +77,18 @@ npm run build
 
 ## 배포 — Cloudflare Workers
 
+**운영 주소: https://korea4season.stupidpoohh.workers.dev**
+
 `@opennextjs/cloudflare` 어댑터로 Workers 에 올립니다.
 (Pages 용 `@cloudflare/next-on-pages` 는 Next 15.5.2 가 상한이라 이 앱을 받지 못합니다.)
 
 배포는 **GitHub Actions 가 수행합니다.** `main` 또는 개발 브랜치에 푸시되면
 `.github/workflows/deploy.yml` 이 타입 검사 · 린트 · 빌드 · 배포를 순서대로 돌립니다.
 
-### 사용자 계정으로만 가능한 준비 (최초 1회)
+### 준비 상태 (완료)
 
-아래 셋은 Cloudflare · GitHub 계정 인증이 필요해 저장소 쪽에서 처리할 수 없습니다.
+아래 셋은 Cloudflare · GitHub 계정 인증이 필요한 항목이며 **모두 완료되었습니다.**
+새 환경을 다시 구성할 때만 참고하십시오.
 
 **1. KV 네임스페이스 만들기** — ISR 증분 캐시용
 
@@ -115,8 +118,8 @@ GitHub 저장소 → Settings → Secrets and variables → Actions
      CLOUDFLARE_ACCOUNT_ID  = Account ID
 ```
 
-1번에서 복사한 **Namespace ID 를 알려주시면 `wrangler.jsonc` 에 반영해 커밋합니다.**
-그 값이 들어가기 전까지는 워크플로가 명시적으로 실패하며 이유를 알려줍니다.
+Namespace ID 는 `wrangler.jsonc` 에 이미 반영돼 있습니다.
+비어 있으면 워크플로가 이유를 밝히며 명시적으로 실패합니다.
 
 ### 배포 확인
 
