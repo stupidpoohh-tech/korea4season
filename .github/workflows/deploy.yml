@@ -42,8 +42,13 @@ jobs:
       - name: 린트
         run: npx eslint .
 
+      # 배포된 화면이 어느 커밋인지 스스로 말할 수 있어야 한다.
+      # 이 저장소 안에서는 운영 주소를 열 수 없으므로, 화면이 자기 신원을 들고 있어야
+      # 사람이 그것을 그대로 옮겨 줄 수 있다 (?debug=1 진단 패널).
       - name: 빌드 및 배포
         run: npm run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}
+          NEXT_PUBLIC_BUILD_AT: ${{ github.event.head_commit.timestamp || github.run_started_at }}
