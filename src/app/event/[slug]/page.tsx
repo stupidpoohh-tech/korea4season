@@ -46,7 +46,7 @@ export async function generateMetadata({
     description: `${places} ${item.entity.name} ${kind} ${period}. ${item.entity.summary}`,
     alternates: { canonical: `/event/${slug}` },
     openGraph: {
-      title: `${title} · 계절지도`,
+      title: `${title} · 지금日지도`,
       description: `${period} · ${places}`,
       type: 'article',
     },

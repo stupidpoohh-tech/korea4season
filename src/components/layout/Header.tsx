@@ -14,7 +14,7 @@ export function Header({ demo }: { demo: boolean }) {
           <span aria-hidden className="text-[17px]">
             🌏
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">계절지도</span>
+          <span className="text-[15px] font-semibold tracking-tight">지금日지도</span>
           <span className="text-[12px] text-[color:var(--color-faint)]">Nature Now Korea</span>
         </Link>
 

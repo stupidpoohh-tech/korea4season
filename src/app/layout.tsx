@@ -8,21 +8,21 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://example.com'),
   title: {
-    default: '계절지도 — 대한민국 자연의 지금',
-    template: '%s · 계절지도',
+    default: '지금日지도 — 대한민국 자연의 지금',
+    template: '%s · 지금日지도',
   },
   description:
     '지금 대한민국의 자연에서는 무슨 일이 일어나고 있을까. 금어기, 개화, 단풍, 철새를 하나의 살아있는 지도 위에서 시간과 함께 봅니다.',
-  keywords: ['금어기', '개화시기', '단풍 절정', '철새 도래', '제철', '계절지도'],
+  keywords: ['금어기', '개화시기', '단풍 절정', '철새 도래', '제철', '지금日지도'],
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
-    siteName: '계절지도',
+    siteName: '지금日지도',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#fbfaf7',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,

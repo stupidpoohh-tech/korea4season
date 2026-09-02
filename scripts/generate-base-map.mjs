@@ -137,24 +137,38 @@ function distToPolygon([x, y], poly) {
 }
 
 /* ── 색 ───────────────────────────────────────────────────── */
+/*
+ * 화이트 테마.
+ *
+ * 바다는 칠하지 않는다 — SVG 바탕이 비어 있어 페이지의 흰색이 그대로 비친다.
+ * 그래서 육지와 바다를 가르는 것은 색이 아니라 해안을 둘러싼 옅은 회색 띠다.
+ * 바깥으로 갈수록 옅어지는 세 겹(seaFar > seaMid > seaNear 순으로 넓게)이
+ * 등고선처럼 해안선을 만든다.
+ *
+ * 지형은 흰색에서 아주 조금씩만 내려온다. 이 지도에서 색을 갖는 것은
+ * 그 위에 놓이는 생물 sprite 하나뿐이어야 한다.
+ */
 const C = {
-  seaFar: '#c3e9ff',
-  seaMid: '#6ec8f4',
-  seaNear: '#2fa6e8',
-  seaLine: '#e8f7ff',
-  sand: '#f4e5ad',
-  sandEdge: '#e0c98a',
-  grass: '#bbe264',
-  grassDeep: '#9ed14f',
-  forest: '#3f9e46',
-  forestDark: '#2c7a37',
-  treeTop: '#5cb84f',
-  mtnLight: '#5cb968',
-  mtnDark: '#3b9349',
-  mtnEdge: '#256733',
-  snow: '#f4fbff',
-  river: '#57c2f0',
-  lake: '#59c4f2',
+  seaFar: '#f3f6f8',
+  seaMid: '#e6ebef',
+  seaNear: '#d5dde4',
+  /** 해안선 — 이 지도에서 육지와 바다를 가르는 유일한 선 */
+  coast: '#b9c4cc',
+  sand: '#f2f4f6',
+  sandEdge: '#e3e7ea',
+  grass: '#ffffff',
+  grassDeep: '#f4f6f7',
+  forest: '#e7ebee',
+  forestDark: '#d3d9de',
+  treeTop: '#f1f4f6',
+  mtnLight: '#f0f2f4',
+  mtnDark: '#dfe4e8',
+  mtnEdge: '#cfd6db',
+  snow: '#ffffff',
+  river: '#e2e8ee',
+  lake: '#e2e8ee',
+  /** 지형 그림자 — 색이 아니라 농도로만 얹는다 */
+  shade: '#b9c2c9',
 };
 
 /* ── 산 ───────────────────────────────────────────────────── */
@@ -164,7 +178,7 @@ function mountain(x, y, w, h, snow) {
   const left = `${(x - half).toFixed(1)} ${y.toFixed(1)}`;
   const right = `${(x + half).toFixed(1)} ${y.toFixed(1)}`;
   const parts = [
-    `<ellipse cx="${x.toFixed(1)}" cy="${(y + 2).toFixed(1)}" rx="${(half * 0.95).toFixed(1)}" ry="${(h * 0.09 + 2).toFixed(1)}" fill="#2c7a37" opacity=".18"/>`,
+    `<ellipse cx="${x.toFixed(1)}" cy="${(y + 2).toFixed(1)}" rx="${(half * 0.95).toFixed(1)}" ry="${(h * 0.09 + 2).toFixed(1)}" fill="${C.shade}" opacity=".18"/>`,
     `<path d="M ${left} L ${apex} L ${right} Z" fill="${C.mtnLight}"/>`,
     `<path d="M ${apex} L ${right} L ${x.toFixed(1)} ${y.toFixed(1)} Z" fill="${C.mtnDark}"/>`,
   ];
@@ -368,7 +382,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     <clipPath id="land-clip"><path d="${mainlandPath}"/></clipPath>
     <clipPath id="jeju-clip"><path d="${jejuPath}"/></clipPath>
     <linearGradient id="land-shade" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="#d6ee86" stop-opacity=".9"/>
+      <stop offset="0" stop-color="${C.grassDeep}" stop-opacity=".9"/>
       <stop offset=".55" stop-color="${C.grass}" stop-opacity="0"/>
       <stop offset="1" stop-color="${C.grassDeep}" stop-opacity=".55"/>
     </linearGradient>
@@ -381,10 +395,6 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
   <g id="ocean">
     ${[[C.seaFar, 54], [C.seaMid, 30], [C.seaNear, 13]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>`).join('\n    ')}
     ${[[C.seaFar, 19], [C.seaMid, 11], [C.seaNear, 5]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>`).join('\n    ')}
-  </g>
-
-  <g id="shoreline-glow" fill="none" stroke="${C.seaLine}" stroke-width="3" opacity=".7">
-    <path d="${mainlandPath}"/><path d="${jejuPath}"/>
   </g>
 
   <g id="sand" stroke-linejoin="round" fill="${C.sand}">
@@ -400,6 +410,16 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
   <g id="land-shading">
     <path d="${mainlandPath}" fill="url(#land-shade)"/>
     <path d="${jejuPath}" fill="url(#land-shade)"/>
+  </g>
+
+  <!--
+    해안선. 육지를 칠한 뒤에 그어야 보인다 —
+    모래 띠(폭 20)가 경로를 덮으므로 그 앞에 그으면 가려진다.
+  -->
+  <g id="coastline" fill="none" stroke="${C.coast}" stroke-linejoin="round">
+    <g stroke-width="2.2"><path d="${mainlandPath}"/><path d="${jejuPath}"/></g>
+    <g stroke-width="1.6"><path d="${ulleungPath}"/><path d="${dokdoPath}"/></g>
+    <g stroke-width="1.2" opacity=".8">${islandShapes.map((i) => `<path d="${i.d}" transform="translate(${i.x} ${i.y}) scale(.9) translate(${-i.x} ${-i.y})"/>`).join('')}</g>
   </g>
 
   <g id="water-inland" clip-path="url(#land-clip)" fill="none" stroke="${C.river}" stroke-linecap="round">

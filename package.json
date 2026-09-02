@@ -2,7 +2,7 @@
   "name": "korea4season",
   "version": "0.1.0",
   "private": true,
-  "description": "계절지도 — 대한민국 자연의 시간을 탐험하는 살아있는 지도",
+  "description": "지금日지도 — 대한민국 자연의 시간을 탐험하는 살아있는 지도",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -3,7 +3,8 @@
 /*
  * 디자인 방향 (요구사항 #27)
  *  - 지도 자체가 시각적으로 풍부하므로 주변 UI 는 절제한다.
- *  - warm-white 바탕 · 중립 텍스트 · 자연 계열 저채도 accent
+ *  - 화이트 바탕 · 중립 텍스트 · 자연 계열 저채도 accent
+ *    바탕과 카드가 같은 흰색이므로 구획은 선(--color-line)이 나눈다.
  *  - shadow 는 약하게, 모든 것을 캡슐로 만들지 않는다.
  */
 @theme {
@@ -11,10 +12,11 @@
   --color-ink-soft: #33414d;
   --color-muted: #6c7883;
   --color-faint: #9aa4ad;
-  --color-paper: #fbfaf7;
+  /* 화이트 테마 — 바탕은 순백, 구획은 색이 아니라 선으로 나눈다 */
+  --color-paper: #ffffff;
   --color-surface: #ffffff;
-  --color-line: #e9e5dd;
-  --color-line-soft: #f2efe9;
+  --color-line: #e4e7ea;
+  --color-line-soft: #f1f3f5;
 
   --color-accent: #00b46c;
   --color-accent-strong: #00935a;
