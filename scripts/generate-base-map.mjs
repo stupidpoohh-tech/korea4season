@@ -129,10 +129,10 @@ function distToPolygon([x, y], poly) {
 
 /* ── 색 ───────────────────────────────────────────────────── */
 const C = {
-  seaFar: '#c3e9ff',
-  seaMid: '#6ec8f4',
-  seaNear: '#2fa6e8',
-  seaLine: '#e8f7ff',
+  /*
+   * 바다 색은 없다 — 배경(흰색)이 그대로 바다다.
+   * 이 지도에서 색을 갖는 것은 육지와 그 위의 생물뿐이다.
+   */
   sand: '#f4e5ad',
   sandEdge: '#e0c98a',
   grass: '#bbe264',
@@ -362,10 +362,6 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
       <stop offset=".55" stop-color="${C.grass}" stop-opacity="0"/>
       <stop offset="1" stop-color="${C.grassDeep}" stop-opacity=".55"/>
     </linearGradient>
-    <radialGradient id="sea-fade" cx=".5" cy=".45" r=".62">
-      <stop offset=".55" stop-color="${C.seaFar}" stop-opacity=".55"/>
-      <stop offset="1" stop-color="${C.seaFar}" stop-opacity="0"/>
-    </radialGradient>
   </defs>
 
   <!--
@@ -376,14 +372,13 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     내륙까지 모래가 뻗어 들어간다. 그래서 예전 일러스트 해안선 때보다
     얇게 두른다.
   -->
-  <g id="ocean">
-    ${[[C.seaFar, 34], [C.seaMid, 19], [C.seaNear, 8]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>`).join('\n    ')}
-    ${[[C.seaFar, 13], [C.seaMid, 8], [C.seaNear, 4]].map(([color, w]) => `<g stroke="${color}" stroke-width="${w}" fill="${color}" stroke-linejoin="round"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>`).join('\n    ')}
-  </g>
+  <!--
+    바다는 그리지 않는다.
 
-  <g id="shoreline-glow" fill="none" stroke="${C.seaLine}" stroke-width="2" opacity=".7">
-    <path d="${mainlandPath}"/><path d="${jejuPath}"/>
-  </g>
+    SVG 바탕이 비어 있어 페이지의 흰색이 그대로 바다가 된다.
+    지도 배경이 배경과 구분되지 않아야 하므로, 예전에 해안을 두르던
+    파란 물결 세 겹을 두지 않는다. 색을 갖는 것은 육지와 그 위의 생물뿐이다.
+  -->
 
   <g id="sand" stroke-linejoin="round" fill="${C.sand}">
     <g stroke="${C.sand}" stroke-width="9"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>
