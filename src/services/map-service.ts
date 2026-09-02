@@ -30,17 +30,26 @@ import {
 export type MapMode = 'species' | 'zone';
 
 /**
- * 시즌 필터. 이것은 '지금 잘 잡히는가' 한 축만 다룬다.
- * '잡아도 되는가' 는 legalOnly 로 따로 묻는다 — 두 질문을 한 줄에 섞으면
- * 사용자가 "규정 확인 0" 을 시즌 상태로 오해한다.
+ * 시즌 강도 필터 — '지금 얼마나 좋은가' 한 축만 다룬다.
+ *
+ * 'all' 을 뺀 값들은 서로 겹치지 않는 **분할**이다 —
+ *   절정 + 좋음 + 보통 = 전체
+ * 가 항상 성립한다. 예전 'good'(= peak 이상)처럼 서로를 포함하는 값을 두면
+ * 사용자가 두 칩의 숫자를 더해 보고 총합과 어긋난다고 읽는다.
+ * 'fair'(보통)는 남는 것을 전부 받는 칸이다. 지금 데이터에는 fair 아래가
+ * 없지만, 생기더라도 합이 총합과 어긋나지 않게 하려는 것이다.
+ *
+ * 다른 축은 여기에 섞지 않는다.
+ *   시점   — '시작 중' 은 startingOnly (시즌 강도와 겹친다: 좋음이면서 시작 중일 수 있다)
+ *   규정   — '잡아도 되는가' 는 legalOnly
  */
-export type SeasonFilter = 'all' | 'peak' | 'good' | 'starting';
+export type SeasonFilter = 'all' | 'peak' | 'good' | 'fair';
 
 export const SEASON_FILTERS: { id: SeasonFilter; label: string }[] = [
   { id: 'all', label: '전체' },
-  { id: 'peak', label: '피크' },
-  { id: 'good', label: '잡기 좋은 때' },
-  { id: 'starting', label: '곧 시작' },
+  { id: 'peak', label: '절정' },
+  { id: 'good', label: '좋음' },
+  { id: 'fair', label: '보통' },
 ];
 
 export type MapSubject =
@@ -88,6 +97,8 @@ export interface MapQuery {
   /** 비어 있으면 전체 */
   categories?: NatureCategory[];
   season?: SeasonFilter;
+  /** 이제 막 열리는 시즌만 본다 — 시즌 강도와 겹치는 별개의 축이다 */
+  startingOnly?: boolean;
   /** 규정이 걸린 대상만 본다 — 시즌 필터와 독립적으로 걸린다 */
   legalOnly?: boolean;
   mode?: MapMode;
@@ -123,21 +134,12 @@ function includeCategory(categories: NatureCategory[] | undefined, category: Nat
   return !categories?.length || categories.includes(category);
 }
 
-/** 시즌 한 축만 본다. 규정은 여기에 관여하지 않는다. */
-function passesSeason(
-  filter: SeasonFilter,
-  opts: { state: SeasonState; starting: boolean },
-): boolean {
-  switch (filter) {
-    case 'peak':
-      return opts.state === 'peak';
-    case 'good':
-      return opts.state === 'peak' || opts.state === 'good';
-    case 'starting':
-      return opts.starting;
-    default:
-      return true;
-  }
+/** 시즌 강도 한 축만 본다. 시점(시작 중)과 규정은 여기에 관여하지 않는다. */
+function passesSeason(filter: SeasonFilter, state: SeasonState): boolean {
+  if (filter === 'all') return true;
+  // '보통' 은 남는 것을 전부 받는다 — 분할의 합이 총합과 어긋나지 않게
+  if (filter === 'fair') return SEASON_STRENGTH_ORDER[state] <= SEASON_STRENGTH_ORDER.fair;
+  return state === filter;
 }
 
 /* ── 겹침 분산 ────────────────────────────────────────────── */
@@ -331,10 +333,9 @@ function marineSprites(query: MapQuery): MapSprite[] {
 
   return buildMarineMapItems(query.date)
     .filter((item) => {
-      const starting = item.season.status === 'starting';
-      const restricted = isLegallyBlocked(item.legal.overallStatus);
-      if (query.legalOnly && !restricted) return false;
-      return passesSeason(season, { state: item.state, starting });
+      if (query.legalOnly && !isLegallyBlocked(item.legal.overallStatus)) return false;
+      if (query.startingOnly && item.season.status !== 'starting') return false;
+      return passesSeason(season, item.state);
     })
     .map((item) => {
       const restricted = isLegallyBlocked(item.legal.overallStatus);
@@ -363,8 +364,8 @@ function marineSprites(query: MapQuery): MapSprite[] {
 }
 
 function natureSprites(query: MapQuery): MapSprite[] {
-  // 시즌·규정 필터는 해양 개념이라 다른 레이어에는 '전체' 일 때만 적용한다
-  if ((query.season ?? 'all') !== 'all' || query.legalOnly) return [];
+  // 시즌·규정 필터는 해양 개념이라 다른 레이어에는 아무 필터도 없을 때만 그린다
+  if ((query.season ?? 'all') !== 'all' || query.startingOnly || query.legalOnly) return [];
 
   const out: MapSprite[] = [];
 
@@ -397,20 +398,20 @@ function natureSprites(query: MapQuery): MapSprite[] {
   return out;
 }
 
+/**
+ * 권역 모드.
+ *
+ * 어종 상태 필터를 그대로 물려받지 않는다 — 권역은 어종 묶음이라
+ * "절정인 권역" 은 "절정인 어종을 하나라도 가진 권역" 이 되고,
+ * 그러면 칩의 숫자와 지도의 뜻이 서로 다른 것을 가리킨다.
+ * 두 모드에서 뜻이 같은 축은 규정 하나뿐이므로 그것만 남긴다.
+ */
 function zoneSprites(query: MapQuery): MapSprite[] {
-  const season = query.season ?? 'all';
-
   return buildZoneMarkers(query.date)
     .map((marker) => {
-      // 필터는 권역 모드에서도 같은 뜻이어야 한다:
-      // 시즌 필터는 어종을 거르고, 규정 필터는 규정이 걸린 어종만 남긴다.
-      const entries = marker.entries.filter((entry) => {
-        if (query.legalOnly && !entry.blocked) return false;
-        return passesSeason(season, {
-          state: entry.season.state,
-          starting: entry.season.status === 'starting',
-        });
-      });
+      const entries = query.legalOnly
+        ? marker.entries.filter((entry) => entry.blocked)
+        : marker.entries;
       return { ...marker, entries };
     })
     .filter((marker) => marker.entries.length > 0)
@@ -477,7 +478,14 @@ export function countByCategory(date: DateKey): Record<NatureCategory, number> {
 }
 
 export interface MapCounts {
+  /**
+   * 시즌 강도별 수. `all` 을 뺀 값들은 서로 겹치지 않고 합이 `all` 과 같다.
+   * 화면에서 이 숫자를 더해 보는 사용자가 총합과 어긋난다고 읽지 않게 하는 것이
+   * 이 분할의 목적이다.
+   */
   season: Record<SeasonFilter, number>;
+  /** 이제 막 열리는 시즌 수 — 강도와 겹치므로 위 분할에 넣지 않는다 */
+  starting: number;
   /** 규정이 걸린 대상 수 — 시즌 필터와 같은 줄에 두지 않는다 */
   restricted: number;
   /** 지금 시즌인 해역 수 */
@@ -487,6 +495,9 @@ export interface MapCounts {
 /**
  * 필터 칩의 수는 지금 보고 있는 모드의 단위와 같아야 한다.
  * 권역 모드에서 "전체 23" 이 어종 수라면 사용자는 그것을 권역 수로 읽는다.
+ *
+ * 권역 모드에는 시즌 강도 필터가 없으므로(zoneSprites 주석 참고)
+ * 강도별 수는 전부 전체와 같은 값을 돌려준다 — 화면이 쓰지 않는다.
  */
 export function countMap(date: DateKey, mode: MapMode = 'species'): MapCounts {
   const items = buildMarineMapItems(date);
@@ -499,26 +510,24 @@ export function countMap(date: DateKey, mode: MapMode = 'species'): MapCounts {
       markers.filter((m) => m.entries.some(predicate)).length;
 
     return {
-      season: {
-        all: markers.length,
-        peak: zonesWith((e) => e.season.state === 'peak'),
-        good: zonesWith(
-          (e) => SEASON_STRENGTH_ORDER[e.season.state] >= SEASON_STRENGTH_ORDER.good,
-        ),
-        starting: zonesWith((e) => e.season.status === 'starting'),
-      },
+      season: { all: markers.length, peak: 0, good: 0, fair: 0 },
+      starting: zonesWith((e) => e.season.status === 'starting'),
       restricted: zonesWith((e) => e.blocked),
       seaRegions: seaRegions.size,
     };
   }
 
+  const inBucket = (filter: SeasonFilter) =>
+    items.filter((i) => passesSeason(filter, i.state)).length;
+
   return {
     season: {
       all: items.length,
-      peak: items.filter((i) => i.state === 'peak').length,
-      good: items.filter((i) => SEASON_STRENGTH_ORDER[i.state] >= SEASON_STRENGTH_ORDER.good).length,
-      starting: items.filter((i) => i.season.status === 'starting').length,
+      peak: inBucket('peak'),
+      good: inBucket('good'),
+      fair: inBucket('fair'),
     },
+    starting: items.filter((i) => i.season.status === 'starting').length,
     restricted: items.filter((i) => isLegallyBlocked(i.legal.overallStatus)).length,
     seaRegions: seaRegions.size,
   };

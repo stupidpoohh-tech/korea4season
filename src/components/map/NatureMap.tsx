@@ -201,8 +201,12 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
 
       {!preview && <MapControls />}
 
+      {/*
+        접힌 수는 지도 위쪽에 둔다 — 아래쪽 가운데는 '이번 주 뭐 잡지?' 가,
+        아래쪽 오른쪽은 확대/축소가 이미 쓰고 있다.
+      */}
       {!preview && layout.hiddenCount > 0 && (
-        <p className="absolute bottom-2.5 left-2.5 z-20 rounded-lg border border-[color:var(--color-line)] bg-white/85 px-2 py-1 text-[11px] text-[color:var(--color-muted)] backdrop-blur-sm">
+        <p className="absolute left-2.5 top-2.5 z-20 rounded-lg border border-[color:var(--color-line)] bg-white/85 px-2 py-1 text-[11px] text-[color:var(--color-muted)] backdrop-blur-sm">
           <span className="font-semibold text-[color:var(--color-ink-soft)]">
             +{layout.hiddenCount}
           </span>{' '}

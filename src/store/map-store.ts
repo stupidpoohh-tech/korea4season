@@ -19,8 +19,10 @@ export const DEFAULT_VIEWPORT: Viewport = { scale: 1, x: 0, y: 0 };
 interface MapState {
   /** 비어 있으면 '전체' */
   selectedCategories: NatureCategory[];
-  /** 시즌 한 축만 거른다 — '지금 잘 잡히는가' */
+  /** 시즌 강도 한 축만 거른다 — '지금 얼마나 좋은가' */
   seasonFilter: SeasonFilter;
+  /** 이제 막 열리는 시즌만 본다 — 강도와 겹치는 별개의 축(시점) */
+  startingOnly: boolean;
   /** 규정이 걸린 대상만 본다 — '잡아도 되는가'. 시즌 필터와 독립이다. */
   legalOnly: boolean;
   /** 어종 중심 / 권역 중심 */
@@ -30,7 +32,10 @@ interface MapState {
   openZoneSlug: string | null;
   viewport: Viewport;
   setSeasonFilter: (filter: SeasonFilter) => void;
+  toggleStartingOnly: () => void;
   toggleLegalOnly: () => void;
+  /** 필터를 전부 기본값으로 — 칩의 ✕ 와 시트의 '초기화' 가 같이 쓴다 */
+  resetFilters: () => void;
   setMode: (mode: MapMode) => void;
   setOpenZone: (slug: string | null) => void;
   toggleCategory: (category: NatureCategory) => void;
@@ -74,6 +79,7 @@ export function clampViewport({ scale, x, y }: Viewport): Viewport {
 export const useMapStore = create<MapState>((set) => ({
   selectedCategories: [],
   seasonFilter: 'all',
+  startingOnly: false,
   legalOnly: false,
   mode: 'species',
   selectedOccurrenceId: null,
@@ -81,9 +87,28 @@ export const useMapStore = create<MapState>((set) => ({
   viewport: DEFAULT_VIEWPORT,
 
   setSeasonFilter: (filter) => set({ seasonFilter: filter, selectedOccurrenceId: null }),
+  toggleStartingOnly: () =>
+    set((state) => ({ startingOnly: !state.startingOnly, selectedOccurrenceId: null })),
   toggleLegalOnly: () =>
     set((state) => ({ legalOnly: !state.legalOnly, selectedOccurrenceId: null })),
-  setMode: (mode) => set({ mode, selectedOccurrenceId: null, openZoneSlug: null }),
+  resetFilters: () =>
+    set({ seasonFilter: 'all', startingOnly: false, legalOnly: false, selectedOccurrenceId: null }),
+
+  /*
+   * 모드를 바꾸면 열린 것을 닫고, 뜻이 달라지는 필터만 되돌린다.
+   *
+   * 시즌 강도와 시점은 어종의 성질이라 권역 모드에서는 적용되지 않는다.
+   * 그대로 남겨 두면 어종 모드로 돌아왔을 때 켜 둔 기억이 없는 필터가
+   * 지도를 비워 놓는다. 규정은 두 모드에서 뜻이 같으므로 유지한다.
+   */
+  setMode: (mode) =>
+    set({
+      mode,
+      selectedOccurrenceId: null,
+      openZoneSlug: null,
+      seasonFilter: 'all',
+      startingOnly: false,
+    }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),
 
   toggleCategory: (category) =>

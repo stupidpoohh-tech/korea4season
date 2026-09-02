@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
@@ -23,10 +22,12 @@ import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
 import { SHOW_LAYER_FILTER } from '@/data-sources';
 import { LayerFilter } from './LayerFilter';
-import { LegalFilterToggle, MapModeToggle, SeasonFilterRow } from './MapFilters';
-import { MapLegend } from './MapLegend';
+import { MarineFilterSheet } from './MarineFilterSheet';
+import { MarineMapHeader } from './MarineMapHeader';
 import { MapSideList } from './MapSideList';
 import { NatureMap } from './NatureMap';
+import { WeeklyPicksSheet } from './WeeklyPicksSheet';
+import { WeeklyRecommendationCTA } from './WeeklyRecommendationCTA';
 
 function parseLayers(value: string | null): NatureCategory[] {
   if (!value) return [];
@@ -65,6 +66,7 @@ export function MapScreen() {
   const categories = useMapStore((s) => s.selectedCategories);
   const setCategories = useMapStore((s) => s.setCategories);
   const seasonFilter = useMapStore((s) => s.seasonFilter);
+  const startingOnly = useMapStore((s) => s.startingOnly);
   const legalOnly = useMapStore((s) => s.legalOnly);
   const mode = useMapStore((s) => s.mode);
   const selectedId = useMapStore((s) => s.selectedOccurrenceId);
@@ -104,8 +106,9 @@ export function MapScreen() {
 
   /* ── 파생 데이터 ────────────────────────────────────────── */
   const layout = useMemo(
-    () => buildMapLayout({ date, categories, season: seasonFilter, legalOnly, mode, detail }),
-    [date, categories, seasonFilter, legalOnly, mode, detail],
+    () =>
+      buildMapLayout({ date, categories, season: seasonFilter, startingOnly, legalOnly, mode, detail }),
+    [date, categories, seasonFilter, startingOnly, legalOnly, mode, detail],
   );
 
   const categoryCounts = useMemo(() => countByCategory(date), [date]);
@@ -204,32 +207,54 @@ export function MapScreen() {
     [layout],
   );
 
-  const controls = (compact: boolean) => (
-    <>
-      <SeasonFilterRow counts={counts.season} />
-      <div className="flex flex-wrap items-center gap-1.5">
-        <MapModeToggle />
-        <LegalFilterToggle count={counts.restricted} unit={mode === 'zone' ? '권역' : '어종'} />
-        <MapLegend mode={layout.mode} compact={compact} />
-        <WeekPicksLink date={date} />
-      </div>
-    </>
+  /* ── 상단 계층 ──────────────────────────────────────────── */
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [picksOpen, setPicksOpen] = useState(false);
+
+  const filtered = mode === 'zone' ? legalOnly : seasonFilter !== 'all' || startingOnly || legalOnly;
+
+  const openFilter = useCallback(() => setFilterOpen(true), []);
+
+  /** 추천에서 고른 어종을 지도에서 집어 준다. 지금 지도에 없으면 아무것도 하지 않는다. */
+  const showSpeciesOnMap = useCallback(
+    (slug: string) => {
+      const sprite = layout.sprites.find(
+        (s) => s.subject.kind === 'marine' && s.subject.item.species.slug === slug,
+      );
+      if (!sprite) return false;
+      select(sprite.selectionId);
+      focusSprite(sprite);
+      return true;
+    },
+    [layout, select, focusSprite],
+  );
+
+  const header = (stacked: boolean) => (
+    <MarineMapHeader
+      mode={layout.mode}
+      counts={counts}
+      /* 조건에 맞는 대상 수. 과밀로 접힌 것을 뺀 '지금 그려진 수' 는 타임라인이 말한다. */
+      count={layout.totalCount}
+      filtered={filtered}
+      onOpenFilter={openFilter}
+      stacked={stacked}
+    />
   );
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-56px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
-      <div className="relative space-y-1.5 lg:hidden">
-        {controls(true)}
-        {SHOW_LAYER_FILTER && <LayerFilter counts={categoryCounts} />}
-      </div>
+      {/* 모바일 — 상태 → 보기 방식 → (필요할 때) 필터 순으로 한 묶음 */}
+      <div className="lg:hidden">{header(false)}</div>
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[252px_minmax(0,1fr)]">
         <div className="hidden min-h-0 flex-col gap-2.5 lg:flex">
-          {/* 좁은 레일에서는 칩이 넘치지 않게 줄바꿈한다 */}
-          <div className="relative space-y-1.5 [&_[role=group]]:flex-wrap [&_[role=group]]:overflow-visible">
-            {controls(false)}
-            <LayerFilter counts={categoryCounts} />
-          </div>
+          {/*
+            데스크톱에서는 같은 계층을 좌측 레일에 세로로 쌓는다.
+            상단 가로 바로 올리면 그만큼 지도 높이가 깎이는데,
+            데스크톱 지도는 세로에 걸려 있어 그 손해가 그대로 지도 크기가 된다.
+          */}
+          {header(true)}
+          {SHOW_LAYER_FILTER && <LayerFilter counts={categoryCounts} />}
 
           <MapSideList
             sprites={layout.sprites}
@@ -244,9 +269,13 @@ export function MapScreen() {
           유지해야 한다 — sprite 위치가 컨테이너 크기 대비 비율로 찍히기 때문이다.
           높이 상한도 같은 출처에서 계산한다. 여기에 숫자를 직접 적으면
           base map 을 다시 자를 때 이 한 줄만 뒤처진다.
+
+          모바일에서는 좌우 여백(-mx-2)까지 지도에 돌려준다. 이 화면에서
+          지도는 카드가 아니라 주인공이고, 폭이 곧 지도 크기다 —
+          모바일 지도 높이는 세로가 아니라 가로에 걸려 있다.
         */}
         <div
-          className="relative flex min-h-0 items-center justify-center [container-type:size]"
+          className="relative -mx-2 flex min-h-0 items-center justify-center [container-type:size] lg:mx-0"
           style={{ '--map-max-h': `${BASE_MAP_HEIGHT_CQW.toFixed(2)}cqw` } as CSSProperties}
         >
           <NatureMap
@@ -256,10 +285,15 @@ export function MapScreen() {
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
           />
 
+          {/* 상태를 훑어보다 행동으로 넘어가는 자리 — 필터 줄에 섞지 않는다 */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+            <WeeklyRecommendationCTA onOpen={() => setPicksOpen(true)} />
+          </div>
+
           {visible === 0 && (
-            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 lg:hidden">
+            <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
               <div className="pointer-events-auto">
-                <QuietState date={date} filtered={seasonFilter !== 'all' || legalOnly} />
+                <QuietState date={date} filtered={filtered} />
               </div>
             </div>
           )}
@@ -267,6 +301,20 @@ export function MapScreen() {
       </div>
 
       <NatureTimeline date={date} visibleCount={visible} mode={layout.mode} />
+
+      <MarineFilterSheet
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        mode={layout.mode}
+        counts={counts}
+      />
+
+      <WeeklyPicksSheet
+        open={picksOpen}
+        onClose={() => setPicksOpen(false)}
+        date={date}
+        onShowOnMap={showSpeciesOnMap}
+      />
 
       <MarineDetailSheet
         item={selectedMarine}
@@ -300,22 +348,6 @@ export function MapScreen() {
         }}
       />
     </div>
-  );
-}
-
-/** 상태를 훑어보는 지도에서 실제 행동으로 넘어가는 통로 */
-function WeekPicksLink({ date }: { date: string }) {
-  return (
-    <Link
-      href={`/week?date=${date}`}
-      className="flex shrink-0 items-center gap-1 rounded-lg border border-[color:var(--color-line)] bg-white/70 px-2 py-1 text-[11.5px] font-medium text-[color:var(--color-ink-soft)] transition-colors hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent-strong)]"
-    >
-      <span className="lg:hidden">이번 주 추천</span>
-      <span className="hidden lg:inline">이번 주 뭐 잡으러 갈까</span>
-      <span aria-hidden className="text-[color:var(--color-faint)]">
-        ›
-      </span>
-    </Link>
   );
 }
 

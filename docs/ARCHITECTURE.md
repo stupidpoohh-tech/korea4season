@@ -96,6 +96,39 @@ sprite 위치는 그 해역에서 시즌인 권역들의 중심으로 잡는다.
 - **어종 모드** — "지금 뭐가 있지?"
 - **권역 모드** — "어디로 가야 하지?" (권역 마커 + 종 수 배지)
 
+### 상단 위계와 필터 축
+
+상단은 **읽는 순서가 곧 구조**다. 같은 크기의 버튼을 늘어놓지 않는다.
+
+| 계층 | 컴포넌트 | surface |
+|---|---|---|
+| 1 지금 상태 | `CurrentStateSummary` | 텍스트 (버튼 아님) |
+| 2 보기 방식 | `ViewModeToggle` | 채워진 segmented control — 유일한 primary |
+| 3 필터 | `FilterTrigger` → `MarineFilterSheet` | 낮은 weight outline |
+| 4 도움말·추천 | `MarkerLegendPopover` · `WeeklyRecommendationCTA` | 아이콘 · floating |
+
+`MarineMapHeader` 가 1~3 을 묶는다. 모바일은 가로 바, 데스크톱은 좌측 레일에
+세로로 쌓는다 — 데스크톱 지도는 세로에 걸려 있어서 상단 바를 올리면
+그 높이가 그대로 지도에서 깎이기 때문이다.
+
+필터는 세 축이고, 서로 섞지 않는다.
+
+```
+시즌 강도  all | peak | good | fair      단일 선택. 상호배타적 분할
+                                          peak + good + fair = all 이 항상 성립
+시점       startingOnly                   강도와 겹친다 (good 이면서 starting 가능)
+규정       legalOnly                      '잡아도 되는가'. 시즌과 무관
+```
+
+`fair` 는 남는 것을 전부 받는 칸이다. 지금 데이터에는 `low` 가 없지만
+생기더라도 분할의 합이 총합과 어긋나지 않게 하려는 것이다.
+
+권역 모드는 시즌 축을 물려받지 않는다. 권역은 어종 묶음이라
+"절정인 권역" 이 "절정인 어종을 하나라도 가진 권역" 이 되고,
+그러면 칩의 숫자와 지도가 서로 다른 것을 가리킨다.
+두 모드에서 뜻이 같은 축은 규정 하나뿐이므로 모드를 바꾸면
+시즌 축만 초기화하고 규정은 유지한다.
+
 ---
 
 ## 왜 이 구조인가
@@ -207,7 +240,7 @@ mapPosition = location.mapPosition ?? projectGeo(location.geo)
 | store | 담는 것 |
 |---|---|
 | `time-store` | `selectedDate`, 재생 상태 — 앱 전역이 이것을 본다 |
-| `map-store` | 선택 레이어, 선택된 occurrence, viewport(pan/zoom) |
+| `map-store` | 선택 레이어, 보기 방식(mode), 필터 세 축, 선택된 occurrence, viewport(pan/zoom) |
 | `dex-store` | 자연도감 발견 기록, 알림 구독 (localStorage 영속) |
 
 `selectedDate` 가 바뀔 때 전체 페이지가 아니라 구독 중인 컴포넌트만 다시 그립니다.
