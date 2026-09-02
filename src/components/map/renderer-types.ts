@@ -16,6 +16,8 @@ export interface MapRendererProps {
   onSelect: (sprite: MapSprite) => void;
   reducedMotion: boolean;
   spriteScale?: number;
+  /** 재생·슬라이더 조작 중 — 전환을 짧게 끊는다 */
+  fast?: boolean;
 }
 
 export type MapRendererComponent = ComponentType<MapRendererProps>;

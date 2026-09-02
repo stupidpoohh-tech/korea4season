@@ -1,4 +1,4 @@
-import { diffDays, todayKey, type DateKey } from '@/domain/date';
+import { addDays, diffDays, todayKey, type DateKey } from '@/domain/date';
 import { object, topic } from '@/domain/korean';
 import {
   SEASON_STRENGTH_ORDER,
@@ -574,4 +574,21 @@ export function getRecentObservations(
     )
     .sort((a, b) => (a.observedAt < b.observedAt ? 1 : -1))
     .slice(0, limit);
+}
+
+/**
+ * 지금 화면이 비었을 때 "그럼 언제 가면 되는가" 에 답한다.
+ *
+ * 한 해를 주 단위로 훑어 지금보다 확실히 볼거리가 많은 첫 날짜를 돌려준다.
+ * 하루 단위로 훑으면 365번 전체 집계를 돌게 되므로 주 단위로 성긴다.
+ */
+export function findNextLivelyDate(date: DateKey, minGain = 3): DateKey | null {
+  const current = buildMarineMapItems(date).length;
+
+  for (let week = 1; week <= 52; week += 1) {
+    const candidate = addDays(date, week * 7);
+    if (buildMarineMapItems(candidate).length >= current + minGain) return candidate;
+  }
+
+  return null;
 }

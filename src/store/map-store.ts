@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type { MapPosition } from '@/domain/projection';
 import type { NatureCategory } from '@/domain/types';
-import type { MapMode, StateFilter } from '@/services/map-service';
+import type { MapMode, SeasonFilter } from '@/services/map-service';
 
 export interface Viewport {
   scale: number;
@@ -19,15 +19,18 @@ export const DEFAULT_VIEWPORT: Viewport = { scale: 1, x: 0, y: 0 };
 interface MapState {
   /** 비어 있으면 '전체' */
   selectedCategories: NatureCategory[];
-  /** 지금 상태로 거르는 보조 필터 */
-  stateFilter: StateFilter;
+  /** 시즌 한 축만 거른다 — '지금 잘 잡히는가' */
+  seasonFilter: SeasonFilter;
+  /** 규정이 걸린 대상만 본다 — '잡아도 되는가'. 시즌 필터와 독립이다. */
+  legalOnly: boolean;
   /** 어종 중심 / 권역 중심 */
   mode: MapMode;
   selectedOccurrenceId: string | null;
   /** 열려 있는 권역 상세 */
   openZoneSlug: string | null;
   viewport: Viewport;
-  setStateFilter: (filter: StateFilter) => void;
+  setSeasonFilter: (filter: SeasonFilter) => void;
+  toggleLegalOnly: () => void;
   setMode: (mode: MapMode) => void;
   setOpenZone: (slug: string | null) => void;
   toggleCategory: (category: NatureCategory) => void;
@@ -70,13 +73,16 @@ export function clampViewport({ scale, x, y }: Viewport): Viewport {
 
 export const useMapStore = create<MapState>((set) => ({
   selectedCategories: [],
-  stateFilter: 'all',
+  seasonFilter: 'all',
+  legalOnly: false,
   mode: 'species',
   selectedOccurrenceId: null,
   openZoneSlug: null,
   viewport: DEFAULT_VIEWPORT,
 
-  setStateFilter: (filter) => set({ stateFilter: filter, selectedOccurrenceId: null }),
+  setSeasonFilter: (filter) => set({ seasonFilter: filter, selectedOccurrenceId: null }),
+  toggleLegalOnly: () =>
+    set((state) => ({ legalOnly: !state.legalOnly, selectedOccurrenceId: null })),
   setMode: (mode) => set({ mode, selectedOccurrenceId: null, openZoneSlug: null }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),
 

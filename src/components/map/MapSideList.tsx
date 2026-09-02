@@ -15,6 +15,8 @@ interface Props {
 /**
  * 데스크톱 좌측 레일 — 지금 지도 위에 있는 것들.
  * 지도를 대신하지 않고, 지도를 읽는 다른 통로가 된다.
+ *
+ * 여기서도 시즌(별)과 규정(배지)을 다른 자리에 둔다.
  */
 export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Props) {
   return (
@@ -49,7 +51,7 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
                 >
                   <span
                     aria-hidden
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
                     style={{ background: `${sprite.accent}1f` }}
                   >
                     {sprite.entity ? (
@@ -62,6 +64,11 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate text-[13px] font-medium">{sprite.name}</span>
+                      {sprite.badgeCount !== undefined && (
+                        <span className="shrink-0 rounded bg-[color:var(--color-line-soft)] px-1 py-px text-[10px] font-semibold tabular text-[color:var(--color-ink-soft)]">
+                          {sprite.badgeCount}종
+                        </span>
+                      )}
                       {sprite.restricted && (
                         <span className="shrink-0 rounded bg-[color:var(--color-restricted-soft)] px-1 py-px text-[10px] font-medium text-[color:var(--color-restricted)]">
                           규정
@@ -70,9 +77,9 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
                     </span>
 
                     <span className="mt-0.5 flex items-center gap-1.5">
-                      {sprite.subject.kind === 'marine' && (
+                      {sprite.seasonState && (
                         <SeasonStrengthMeter
-                          state={sprite.subject.item.state}
+                          state={sprite.seasonState}
                           size="sm"
                           showLabel={false}
                         />
@@ -84,7 +91,9 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
                         />
                       )}
                       <span className="truncate text-[11.5px] text-[color:var(--color-muted)]">
-                        {sprite.placeLabel}
+                        {sprite.subject.kind === 'zone'
+                          ? sprite.subject.marker.zone.seaRegion
+                          : sprite.placeLabel}
                       </span>
                     </span>
                   </span>

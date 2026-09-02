@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { formatKoreanDate, type DateKey } from '@/domain/date';
-import { SPOT_TYPE_LABEL } from '@/domain/marine';
+import { SPOT_TYPE_LABEL, TREND_SYMBOL } from '@/domain/marine';
 import { isLegallyBlocked } from '@/domain/regulation';
 import type { ZoneDetail } from '@/services/marine-service';
 import { Sheet } from '@/components/common/Sheet';
@@ -37,7 +37,8 @@ export function ZoneSheet({
             <p className="text-[12px] text-[color:var(--color-faint)]">지금 이 바다에서는</p>
             <h2 className="mt-0.5 text-[17px] font-semibold tracking-tight">{detail.zone.name}</h2>
             <p className="mt-0.5 text-[11.5px] text-[color:var(--color-muted)]">
-              {detail.zone.seaRegion} · {formatKoreanDate(date)} 기준
+              {detail.zone.seaRegion} · {formatKoreanDate(date)} 기준 ·{' '}
+              <span className="tabular">{detail.entries.length}종</span>
             </p>
           </div>
         )
@@ -46,12 +47,8 @@ export function ZoneSheet({
       {detail && (
         <>
           <section>
-            <h3 className="mb-2 text-[13px] font-semibold">
-              대표 시즌 어종
-              <span className="ml-1.5 font-normal text-[color:var(--color-muted)]">
-                {detail.entries.length}종
-              </span>
-            </h3>
+            <h3 className="mb-2 text-[13px] font-semibold">지금 대표 어종</h3>
+
             {detail.entries.length === 0 ? (
               <p className="rounded-xl border border-dashed border-[color:var(--color-line)] px-3.5 py-4 text-[12.5px] leading-relaxed text-[color:var(--color-muted)]">
                 이 날짜에는 이 권역에서 시즌인 어종이 없습니다. 슬라이더를 움직여 다른 계절의
@@ -72,6 +69,7 @@ export function ZoneSheet({
                       >
                         <SpeciesSprite entity={entry.species} size={16} />
                       </span>
+
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-1.5">
                           <span className="truncate text-[13px] font-medium">
@@ -83,6 +81,19 @@ export function ZoneSheet({
                         </span>
                         <SeasonStrengthMeter state={entry.season.state} size="sm" />
                       </span>
+
+                      {/* 최근 관측 추세 — 시즌 평가와 다른 축이므로 오른쪽에 따로 둔다 */}
+                      {entry.observation && entry.observation.recentCount > 0 && (
+                        <span
+                          className="shrink-0 text-[12px] tabular text-[color:var(--color-muted)]"
+                          title={`최근 ${entry.observation.windowDays}일 ${entry.observation.recentCount}건`}
+                        >
+                          {entry.observation.recentCount}
+                          <span aria-hidden className="ml-0.5">
+                            {TREND_SYMBOL[entry.observation.trend]}
+                          </span>
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -92,20 +103,28 @@ export function ZoneSheet({
 
           {detail.restricted.length > 0 && (
             <p className="rounded-xl border border-[color:var(--color-restricted)]/25 bg-[color:var(--color-restricted-soft)] px-3.5 py-3 text-[12.5px] leading-relaxed text-[color:var(--color-restricted)]">
-              <strong className="font-semibold">규정 확인 필요</strong>
+              <strong className="font-semibold">규정 주의</strong>
               <br />
               {detail.restricted.map((s) => s.name).join(', ')}
-              {'은(는) '}이 시기에 규정이 적용됩니다. 각 어종을 눌러 내용을 확인하세요.
+              {'은(는) '}이 시기에 규정이 적용됩니다. 시즌과는 별개의 문제이니 각 어종을 눌러
+              내용을 확인하세요.
             </p>
           )}
 
           <section>
             <h3 className="mb-1.5 text-[13px] font-semibold">낚시 환경</h3>
-            <p className="text-[13px] text-[color:var(--color-ink-soft)]">
-              {detail.zone.shoreTypes.map((t) => SPOT_TYPE_LABEL[t]).join(' · ')}
-            </p>
+            <ul className="flex flex-wrap gap-1.5">
+              {detail.zone.shoreTypes.map((t) => (
+                <li
+                  key={t}
+                  className="rounded-lg border border-[color:var(--color-line)] px-2 py-1 text-[12px] text-[color:var(--color-ink-soft)]"
+                >
+                  {SPOT_TYPE_LABEL[t]}
+                </li>
+              ))}
+            </ul>
             {detail.zone.description && (
-              <p className="mt-1 text-[12.5px] text-[color:var(--color-muted)]">
+              <p className="mt-1.5 text-[12.5px] text-[color:var(--color-muted)]">
                 {detail.zone.description}
               </p>
             )}
@@ -146,14 +165,23 @@ export function ZoneSheet({
             />
           </section>
 
-          <ObservationFormShell zoneName={detail.zone.name} />
+          {/* 행동 */}
+          <div className="flex gap-1.5">
+            <Link
+              href={`/zone/${detail.zone.slug}`}
+              className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[color:var(--color-line)] bg-white text-[13px] font-medium text-[color:var(--color-ink-soft)] transition-colors hover:border-[color:var(--color-ink)]"
+            >
+              어종 전체 보기
+            </Link>
+            <Link
+              href="/week"
+              className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[color:var(--color-line)] bg-white text-[13px] font-medium text-[color:var(--color-ink-soft)] transition-colors hover:border-[color:var(--color-ink)]"
+            >
+              이번 주 추천
+            </Link>
+          </div>
 
-          <Link
-            href={`/zone/${detail.zone.slug}`}
-            className="block rounded-xl border border-[color:var(--color-line)] px-3 py-2.5 text-center text-[13px] font-medium text-[color:var(--color-ink-soft)] transition-colors hover:border-[color:var(--color-ink)]"
-          >
-            권역 페이지 열기
-          </Link>
+          <ObservationFormShell zoneName={detail.zone.name} />
         </>
       )}
     </Sheet>

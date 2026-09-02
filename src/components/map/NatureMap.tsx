@@ -7,6 +7,7 @@ import type { DateKey } from '@/domain/date';
 import { BASE_MAP_ASPECT, BASE_MAP_SRC } from '@/lib/map-asset';
 import type { MapLayout, MapSprite } from '@/services/map-service';
 import { clampViewport, useMapStore } from '@/store/map-store';
+import { useTimeStore } from '@/store/time-store';
 import { DomMapRenderer } from './DomMapRenderer';
 import { MapControls } from './MapControls';
 import { SeasonWash } from './SeasonWash';
@@ -29,6 +30,8 @@ interface Props {
  */
 export function NatureMap({ date, layout, onSelectSprite, preview = false, className }: Props) {
   const reducedMotion = useReducedMotion() ?? false;
+  // 1년 재생 중에는 스프링을 기다릴 시간이 없다
+  const isPlaying = useTimeStore((s) => s.isPlaying);
   const viewport = useMapStore((s) => s.viewport);
   const setViewport = useMapStore((s) => s.setViewport);
   const selectedId = useMapStore((s) => s.selectedOccurrenceId);
@@ -62,6 +65,15 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
   }, [applyViewport, preview]);
 
   /* ── 끌어서 이동 · 두 손가락 확대 ──────────────────────── */
+  /*
+   * pointerdown 에서 곧바로 setPointerCapture 를 걸면 안 된다.
+   * 캡처를 잡는 순간 이후의 pointerup 과 click 이 전부 컨테이너로 재타겟되어
+   * sprite 의 onClick 이 영영 호출되지 않는다 — 물고기를 눌러도 상세가 열리지 않았다.
+   * 그래서 실제로 끌기 시작한 뒤에만 캡처한다.
+   */
+  const captured = useRef(false);
+  const movedRef = useRef(false);
+
   const onPointerDown = (event: React.PointerEvent) => {
     if (preview) return;
     pinchRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -76,9 +88,8 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
       return;
     }
 
+    movedRef.current = false;
     dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
-    setGrabbing(true);
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
   const onPointerMove = (event: React.PointerEvent) => {
@@ -104,7 +115,19 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
     const rect = el.getBoundingClientRect();
     const dx = (event.clientX - drag.x) / rect.width;
     const dy = (event.clientY - drag.y) / rect.height;
-    if (Math.abs(dx) + Math.abs(dy) > 0.004) drag.moved = true;
+
+    if (Math.abs(dx) + Math.abs(dy) > 0.004) {
+      drag.moved = true;
+      movedRef.current = true;
+      // 끌기가 확정된 지금부터 캡처한다
+      if (!captured.current) {
+        el.setPointerCapture(event.pointerId);
+        captured.current = true;
+        setGrabbing(true);
+      }
+    }
+
+    if (!drag.moved) return;
 
     dragRef.current = { ...drag, x: event.clientX, y: event.clientY };
     applyViewport({ scale: viewport.scale, x: viewport.x + dx, y: viewport.y + dy });
@@ -113,12 +136,23 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
   const endPointer = (event: React.PointerEvent) => {
     pinchRef.current.delete(event.pointerId);
     if (pinchRef.current.size < 2) pinchStart.current = null;
-    if (dragRef.current?.id === event.pointerId) {
-      // 끌지 않고 눌렀다 뗀 것이면 선택 해제로 취급한다
-      if (!dragRef.current.moved) selectOccurrence(null);
-      dragRef.current = null;
+    if (dragRef.current?.id === event.pointerId) dragRef.current = null;
+    if (captured.current) {
+      containerRef.current?.releasePointerCapture(event.pointerId);
+      captured.current = false;
     }
     setGrabbing(false);
+  };
+
+  /*
+   * 빈 곳을 눌러 선택 해제하는 것은 click 에서 처리한다.
+   * pointerup 에서 지우면 sprite 의 stopPropagation 이 소용없어져
+   * 눌렀다 뗄 때마다 선택이 한 번 풀렸다가 다시 걸린다.
+   */
+  const onContainerClick = () => {
+    if (preview) return;
+    if (movedRef.current) return;
+    selectOccurrence(null);
   };
 
   const zoomable = !preview && viewport.scale > 1;
@@ -132,6 +166,7 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
       onPointerMove={onPointerMove}
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
+      onClick={onContainerClick}
     >
       <div
         className="absolute inset-0 will-change-transform"
@@ -159,6 +194,7 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
           selectedId={selectedId}
           onSelect={onSelectSprite}
           reducedMotion={reducedMotion}
+          fast={isPlaying}
           spriteScale={preview ? 0.7 : 1}
         />
       </div>
@@ -166,8 +202,11 @@ export function NatureMap({ date, layout, onSelectSprite, preview = false, class
       {!preview && <MapControls />}
 
       {!preview && layout.hiddenCount > 0 && (
-        <p className="absolute bottom-3 left-3 z-20 rounded-lg border border-[color:var(--color-line)] bg-white/85 px-2.5 py-1.5 text-[11px] text-[color:var(--color-muted)] backdrop-blur-sm">
-          겹침을 줄이려 {layout.hiddenCount}개를 숨겼습니다 · 레이어를 좁혀 보세요
+        <p className="absolute bottom-2.5 left-2.5 z-20 rounded-lg border border-[color:var(--color-line)] bg-white/85 px-2 py-1 text-[11px] text-[color:var(--color-muted)] backdrop-blur-sm">
+          <span className="font-semibold text-[color:var(--color-ink-soft)]">
+            +{layout.hiddenCount}
+          </span>{' '}
+          {layout.mode === 'zone' ? '권역' : '어종'} · 확대하거나 필터를 좁히면 나타납니다
         </p>
       )}
     </div>
