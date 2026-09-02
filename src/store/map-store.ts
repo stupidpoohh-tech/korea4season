@@ -26,8 +26,18 @@ interface MapState {
   selectOccurrence: (id: string | null) => void;
   setViewport: (viewport: Viewport) => void;
   resetViewport: () => void;
-  /** 카드에서 지도 위 특정 위치로 카메라를 옮긴다 (요구사항 #17) */
-  focusOn: (position: MapPosition, scale?: number) => void;
+  /**
+   * 카드에서 지도 위 특정 위치로 카메라를 옮긴다. (요구사항 #17)
+   * anchorX/anchorY 는 그 지점을 화면 어디에 둘지 정한다 (0~1, 기본 중앙).
+   * 데스크톱에서 상세 카드가 오른쪽을 덮으므로 왼쪽으로 치우쳐 잡는다.
+   */
+  focusOn: (position: MapPosition, options?: FocusOptions) => void;
+}
+
+export interface FocusOptions {
+  scale?: number;
+  anchorX?: number;
+  anchorY?: number;
 }
 
 export const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
@@ -66,15 +76,16 @@ export const useMapStore = create<MapState>((set) => ({
   setViewport: (viewport) => set({ viewport: clampViewport(viewport) }),
   resetViewport: () => set({ viewport: DEFAULT_VIEWPORT }),
 
-  focusOn: (position, scale = 1.5) =>
+  focusOn: (position, options) =>
     set(() => {
-      const s = clampScale(scale);
-      // 해당 지점이 컨테이너 중앙에 오도록
+      const s = clampScale(options?.scale ?? 1.5);
+      const anchorX = options?.anchorX ?? 0.5;
+      const anchorY = options?.anchorY ?? 0.5;
       return {
         viewport: clampViewport({
           scale: s,
-          x: (0.5 - position.x) * s,
-          y: (0.5 - position.y) * s,
+          x: (anchorX - position.x) * s,
+          y: (anchorY - position.y) * s,
         }),
       };
     }),

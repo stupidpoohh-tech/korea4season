@@ -93,10 +93,17 @@ export function MapScreen() {
     return allResolved.find((r) => r.occurrence.id === selectedOccurrenceId) ?? null;
   }, [selectedOccurrenceId, allResolved]);
 
+  /**
+   * 카메라 이동은 명시적인 요청에만 쓴다.
+   * 매 선택마다 확대해 버리면 '대한민국 한 장' 이라는 이 앱의 시야를 잃는다.
+   */
   const focusMap = useCallback(
     (item: ResolvedOccurrence) => {
       const first = item.locations[0];
-      if (first) focusOn(locationPosition(first));
+      if (!first) return;
+      // 데스크톱에서는 상세 카드가 오른쪽을 덮으므로 왼쪽으로 치우쳐 잡는다
+      const wide = typeof window !== 'undefined' && window.innerWidth >= 1024;
+      focusOn(locationPosition(first), { scale: 1.5, anchorX: wide ? 0.36 : 0.5 });
     },
     [focusOn],
   );
@@ -128,12 +135,10 @@ export function MapScreen() {
   const visible = onMapItems.length;
   const anyLayerHasData = Object.values(counts).some((n) => n > 0);
 
+  /** 좌측 목록은 지도의 범례에 가깝다 — 선택만 하고 카메라는 건드리지 않는다 */
   const selectFromList = useCallback(
-    (item: ResolvedOccurrence) => {
-      selectOccurrence(item.occurrence.id);
-      focusMap(item);
-    },
-    [selectOccurrence, focusMap],
+    (item: ResolvedOccurrence) => selectOccurrence(item.occurrence.id),
+    [selectOccurrence],
   );
 
   return (

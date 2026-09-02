@@ -46,10 +46,13 @@
 /*
  * 사내 서체. public/fonts/Freesentation.woff2 를 넣으면 자동 적용되고,
  * 없으면 위 fallback 스택으로 조용히 내려간다.
+ * 로컬에 설치된 사본이 있으면 네트워크 요청 없이 그것을 쓴다.
  */
 @font-face {
   font-family: 'Freesentation';
-  src: url('/fonts/Freesentation.woff2') format('woff2');
+  src:
+    local('Freesentation'),
+    url('/fonts/Freesentation.woff2') format('woff2');
   font-weight: 100 900;
   font-display: swap;
 }
