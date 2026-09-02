@@ -80,60 +80,71 @@ npm run build
 `@opennextjs/cloudflare` 어댑터로 Workers 에 올립니다.
 (Pages 용 `@cloudflare/next-on-pages` 는 Next 15.5.2 가 상한이라 이 앱을 받지 못합니다.)
 
-### 최초 1회 설정
+배포는 **GitHub Actions 가 수행합니다.** `main` 또는 개발 브랜치에 푸시되면
+`.github/workflows/deploy.yml` 이 타입 검사 · 린트 · 빌드 · 배포를 순서대로 돌립니다.
 
-ISR 증분 캐시로 쓸 KV 네임스페이스를 만듭니다.
+### 사용자 계정으로만 가능한 준비 (최초 1회)
 
-```bash
-npx wrangler login
-npx wrangler kv namespace create NEXT_INC_CACHE_KV
+아래 셋은 Cloudflare · GitHub 계정 인증이 필요해 저장소 쪽에서 처리할 수 없습니다.
+
+**1. KV 네임스페이스 만들기** — ISR 증분 캐시용
+
+```
+Cloudflare 대시보드 → Storage & Databases → KV → Create namespace
+  이름: korea4season-inc-cache
+  → 생성 후 목록에서 Namespace ID 복사
 ```
 
-출력된 `id` 를 `wrangler.jsonc` 의 `REPLACE_WITH_KV_NAMESPACE_ID` 자리에 넣습니다.
+**2. API 토큰 만들기** — Actions 가 배포할 때 씁니다
 
-```jsonc
-"kv_namespaces": [
-  { "binding": "NEXT_INC_CACHE_KV", "id": "여기에 붙여넣기" }
-]
+```
+Cloudflare 대시보드 → 우측 상단 계정 아이콘 → Profile → API Tokens
+  → Create Token → "Edit Cloudflare Workers" 템플릿 Use template
+  → Account Resources 에서 본인 계정 선택
+  → Continue to summary → Create Token → 값 복사(한 번만 보입니다)
 ```
 
-이 캐시가 없으면 **빌드 시점의 "오늘" 이 그대로 굳습니다.**
-모든 라우트가 `revalidate = 900` 인 이유가 날짜 갱신 하나이기 때문입니다.
+Account ID 는 `Cloudflare 대시보드 → Workers & Pages` 우측 패널에서 확인합니다.
 
-### 로컬에서 Worker 로 확인
+**3. GitHub 저장소에 값 등록**
 
-```bash
-npm run preview      # opennextjs-cloudflare build && preview
+```
+GitHub 저장소 → Settings → Secrets and variables → Actions
+  → New repository secret
+     CLOUDFLARE_API_TOKEN   = 2번에서 복사한 토큰
+     CLOUDFLARE_ACCOUNT_ID  = Account ID
 ```
 
-### 배포
+1번에서 복사한 **Namespace ID 를 알려주시면 `wrangler.jsonc` 에 반영해 커밋합니다.**
+그 값이 들어가기 전까지는 워크플로가 명시적으로 실패하며 이유를 알려줍니다.
 
-```bash
-npm run deploy       # opennextjs-cloudflare build && deploy
+### 배포 확인
+
 ```
-
-CI 에서 돌릴 때는 `wrangler login` 대신 `CLOUDFLARE_API_TOKEN` /
-`CLOUDFLARE_ACCOUNT_ID` 환경변수를 씁니다.
+Cloudflare 대시보드 → Workers & Pages → korea4season → Deployments
+GitHub 저장소 → Actions → Deploy to Cloudflare Workers
+```
 
 ### 알아둘 것
 
 - **이미지 최적화 없음** — `next.config.ts` 에 `images.unoptimized = true` 를 두었습니다.
   이 앱이 `next/image` 로 다루는 것은 base map SVG 한 장뿐이라 최적화할 것이 없습니다.
   나중에 래스터 이미지를 쓰게 되면 Cloudflare Images 를 붙이거나 이 설정을 재검토하세요.
+- **KV 캐시가 없으면 빌드 시점의 "오늘" 이 그대로 굳습니다.**
+  모든 라우트가 `revalidate = 900` 인 이유가 날짜 갱신 하나이기 때문입니다.
 - **태그 기반 재검증 미사용** — `revalidateTag` / `revalidatePath` 를 쓰지 않으므로
   tagCache 와 Durable Object 큐를 두지 않았습니다. `queue: "direct"` 로 충분합니다.
   나중에 on-demand 재검증이 필요해지면 `open-next.config.ts` 에 tagCache 를 추가해야 합니다.
-- `npm run cf-typegen` 으로 `cloudflare-env.d.ts` 를 재생성합니다 (생성물이라 커밋하지 않습니다).
 
-### 로컬 확인 결과
+### 로컬 Worker 검증 결과 (workerd 1.20260831.1)
 
 ```
-/                       200
+/                       200   104KB
 /map                    200
-/species/blue-crab      200   (SSG)
-/zone/chungnam-taean    200   (SSG)
-/week?date=2026-10-20   200   (동적 — 해당 주로 렌더됨)
-/map/korea-base.svg     200   (정적 자산)
+/species/blue-crab      200   SSG
+/zone/chungnam-taean    200   SSG
+/week?date=2026-10-20   200   동적 — 10월 19~25일 주간으로 렌더됨
+/map/korea-base.svg     200   정적 자산
 ```
 
 ---

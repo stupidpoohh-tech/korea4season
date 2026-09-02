@@ -1,0 +1,49 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main
+      - claude/korea-seasonal-map-design-rlw8mk
+  workflow_dispatch:
+
+# 같은 브랜치에서 배포가 겹치면 뒤엣것만 남긴다
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 설정 점검
+        run: |
+          if grep -q 'REPLACE_WITH_KV_NAMESPACE_ID' wrangler.jsonc; then
+            echo "::error::wrangler.jsonc 의 KV 네임스페이스 id 가 아직 채워지지 않았습니다."
+            echo "Cloudflare 대시보드에서 KV 네임스페이스를 만든 뒤 id 를 넣어야 합니다."
+            exit 1
+          fi
+
+      - name: 타입 검사
+        run: npm run typecheck
+
+      - name: 린트
+        run: npx eslint .
+
+      - name: 빌드 및 배포
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
