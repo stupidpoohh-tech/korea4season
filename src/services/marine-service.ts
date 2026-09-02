@@ -18,6 +18,7 @@ import {
   type SeasonEvaluation,
 } from '@/domain/marine-state';
 import { isLegallyBlocked, type LegalEvaluation } from '@/domain/regulation';
+import { isOnLand } from '@/domain/land';
 import { projectGeo, type MapPosition } from '@/domain/projection';
 import { getMarineIndex } from '@/repositories/marine-repository';
 
@@ -106,6 +107,18 @@ function centroid(positions: MapPosition[]): MapPosition {
 }
 
 /**
+ * 해역 대표 위치.
+ *
+ * 권역들의 중점을 쓰되, 그 점이 육지에 떨어지면 대표 권역 위치로 물러선다.
+ * 제주 북부권 + 남부권처럼 섬을 사이에 두고 갈린 경우
+ * 중점이 섬 한가운데가 되어 바다 생물이 육지에 앉는다.
+ */
+function seaAnchor(zones: ZoneSeason[], best: ZoneSeason): MapPosition {
+  const mid = centroid(zones.map((z) => zonePosition(z.zone)));
+  return isOnLand(mid) ? zonePosition(best.zone) : mid;
+}
+
+/**
  * 선택 날짜에 지도에 올릴 해양 항목.
  * 시즌이 아닌 어종은 제외한다 — 규정 때문이 아니라 자연적으로 없기 때문이다.
  * 금어기인 어종은 sprite 를 유지하고 제한 표시만 붙인다.
@@ -178,7 +191,7 @@ export function buildMarineMapItems(date: DateKey): MarineMapItem[] {
       activeZones: zoneSeasons.sort(
         (a, b) => SEASON_STRENGTH_ORDER[b.season.state] - SEASON_STRENGTH_ORDER[a.season.state],
       ),
-      position: centroid(zoneSeasons.map((z) => zonePosition(z.zone))),
+      position: seaAnchor(zoneSeasons, best),
       state: best.season.state,
       season: best.season,
       legal,

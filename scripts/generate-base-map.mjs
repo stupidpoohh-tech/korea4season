@@ -416,9 +416,68 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
 </svg>
 `;
 
+/*
+ * 육지 폴리곤을 0~1 정규 좌표로 함께 내보낸다.
+ * 지도에서 sprite 를 흩을 때 바다 생물이 육지로 밀려나지 않게 하는 데 쓴다.
+ * base map 을 다시 구우면 이 파일도 같이 갱신된다.
+ */
+/**
+ * 폴리곤을 바깥으로 margin 만큼 부풀린다.
+ * 그려지는 해안선에는 모래 테두리(20폭)가 덧대어 있고 sprite 는 점이 아니라
+ * 그림이므로, 판정선을 그림보다 조금 넓게 잡아야 물고기가 해안에 걸치지 않는다.
+ */
+function inflate(poly, margin) {
+  const n = poly.length;
+  const area = poly.reduce((sum, [x1, y1], i) => {
+    const [x2, y2] = poly[(i + 1) % n];
+    return sum + (x1 * y2 - x2 * y1);
+  }, 0);
+  // 바깥 방향은 감김 방향에 달려 있다
+  const sign = area > 0 ? 1 : -1;
+
+  return poly.map(([x, y], i) => {
+    const [px, py] = poly[(i - 1 + n) % n];
+    const [nx2, ny2] = poly[(i + 1) % n];
+    let nx = 0;
+    let ny = 0;
+    for (const [ax, ay, bx, by] of [[px, py, x, y], [x, y, nx2, ny2]]) {
+      const ex = bx - ax;
+      const ey = by - ay;
+      const len = Math.hypot(ex, ey) || 1;
+      nx += (ey / len) * sign;
+      ny += (-ex / len) * sign;
+    }
+    const len = Math.hypot(nx, ny) || 1;
+    return [x + (nx / len) * margin, y + (ny / len) * margin];
+  });
+}
+
+/** 판정선을 그림 밖으로 밀어내는 여유 (원본 좌표 px) */
+const LAND_MARGIN = 16;
+
+const ULLEUNG_PX = ellipse(0, 0, 1, 1, 16).map(([x, y]) => [
+  ulleung.x + x * ulleung.r,
+  ulleung.y + y * ulleung.r,
+]);
+
+const norm = (poly) =>
+  poly.map(([x, y]) => [Number((x / W).toFixed(4)), Number((y / H).toFixed(4))]);
+
+const landMask = {
+  note: 'scripts/generate-base-map.mjs 가 생성합니다. 직접 수정하지 마십시오.',
+  mainland: norm(inflate(MAINLAND_PX, LAND_MARGIN)),
+  jeju: norm(inflate(JEJU_PX, LAND_MARGIN)),
+  ulleung: norm(inflate(ULLEUNG_PX, LAND_MARGIN)),
+};
+writeFileSync(
+  resolve(root, 'src/domain/land-mask.json'),
+  `${JSON.stringify(landMask, null, 2)}\n`,
+  'utf8',
+);
+
 mkdirSync(resolve(root, 'public/map'), { recursive: true });
 writeFileSync(resolve(root, 'public/map/korea-base.svg'), svg, 'utf8');
 console.log(
-  `korea-base.svg  ${(svg.length / 1024).toFixed(0)}KB  ` +
+  `korea-base.svg  ${(svg.length / 1024).toFixed(0)}KB  land-mask.json  ` +
   `islands=${islands.length} mountains=${mountains.length} groves=${groves.length}`,
 );

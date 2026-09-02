@@ -6,17 +6,19 @@ import type { NatureEntity } from '@/domain/types';
  * illustration 에셋이 있으면 그것을, 없으면 이모지로 폴백한다.
  * 에셋은 public/sprites/species/<slug>.webp 로 들어온다 (규격은 그 디렉터리의 README).
  *
- * 가로로 긴 물고기와 세로로 긴 오징어·문어가 섞여 있으므로
- * 정사각 박스에 object-contain 으로 담아 어느 쪽이든 잘리지 않게 한다.
+ * 크기는 max-width/height 로만 제한한다.
+ * 그러면 요소의 박스가 그림 자체의 크기가 되므로,
+ * 지도에서 배지를 그림 모서리에 정확히 붙일 수 있다.
  */
 export function SpeciesSprite({
   entity,
   size = 20,
   className = '',
   transform,
+  style,
 }: {
   entity: NatureEntity;
-  /** 담을 정사각 박스의 한 변 (px) */
+  /** 그림을 담을 한 변의 최대 길이 (px). 비율은 그림을 따른다. */
   size?: number;
   className?: string;
   /**
@@ -24,6 +26,7 @@ export function SpeciesSprite({
    * 목록과 상세는 그림을 있는 그대로 보여준다.
    */
   transform?: string;
+  style?: React.CSSProperties;
 }) {
   if (entity.illustration) {
     return (
@@ -34,8 +37,15 @@ export function SpeciesSprite({
         alt=""
         aria-hidden
         draggable={false}
-        className={`object-contain ${className}`}
-        style={{ width: size, height: size, transform }}
+        className={`block ${className}`}
+        style={{
+          maxWidth: size,
+          maxHeight: size,
+          width: 'auto',
+          height: 'auto',
+          transform,
+          ...style,
+        }}
       />
     );
   }
@@ -43,8 +53,8 @@ export function SpeciesSprite({
   return (
     <span
       aria-hidden
-      className={className}
-      style={{ fontSize: size * 0.8, lineHeight: 1, transform, display: 'inline-block' }}
+      className={`block ${className}`}
+      style={{ fontSize: size * 0.78, lineHeight: 1, transform, ...style }}
     >
       {entity.icon}
     </span>

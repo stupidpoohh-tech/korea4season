@@ -1,5 +1,6 @@
 import type { DateKey } from '@/domain/date';
 import { isOnMap } from '@/domain/occurrence';
+import { MAP_ASPECT, nearestSeaPoint } from '@/domain/land';
 import type { MapPosition } from '@/domain/projection';
 import type { NatureCategory, NatureEntity, ResolvedOccurrence } from '@/domain/types';
 import { SEASON_STRENGTH_ORDER, type SeasonState } from '@/domain/marine';
@@ -112,15 +113,91 @@ function passesStateFilter(
 
 /* ── 겹침 분산 ────────────────────────────────────────────── */
 
-function spread(base: MapPosition, index: number, total: number): MapPosition {
-  if (total <= 1) return base;
-  const ratio = 1000 / 1300;
-  const radius = total <= 3 ? 0.024 : 0.036;
-  const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-  return {
-    x: Math.min(0.97, Math.max(0.03, base.x + Math.cos(angle) * radius)),
-    y: Math.min(0.97, Math.max(0.03, base.y + Math.sin(angle) * radius * ratio)),
-  };
+/** sprite 중심끼리 최소로 벌어져야 하는 거리 (지도 가로폭 대비) */
+const MIN_SEPARATION = 0.088;
+
+/** 원래 자리에서 이만큼 넘게 밀려나지 않는다 — 바다를 벗어나면 뜻이 달라진다 */
+const MAX_DRIFT = 0.11;
+
+/** 원래 자리로 되돌리는 힘. 크면 위치는 정확해지고 겹침은 남는다. */
+const SPRING = 0.035;
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * 가까이 붙은 sprite 를 서로 밀어낸다.
+ *
+ * 같은 좌표일 때만 흩는 방식으로는 부족하다. 권역들이 20~40px 씩 떨어져 있으면
+ * "다른 자리" 로 판정돼 흩어지지 않는데, sprite 자체가 그보다 크기 때문이다.
+ *
+ * 반복 완화(relaxation)로 겹친 쌍을 밀어내되, 매 회 원래 자리로 약하게 당기고
+ * 총 이동량을 제한해 어종이 엉뚱한 바다로 흘러가지 않게 한다.
+ * 입력 순서가 결정적이므로 결과도 항상 같다.
+ */
+function separate(sprites: MapSprite[]): MapSprite[] {
+  if (sprites.length < 2) return sprites;
+
+  const base = sprites.map((s) => s.basePosition);
+  const pos = base.map((p) => ({ x: p.x, y: p.y }));
+  // 바다 생물은 물 밖으로 나가면 뜻이 달라진다
+  const seaBound = sprites.map((s) => s.subject.kind !== 'nature');
+
+  for (let step = 0; step < 140; step += 1) {
+    for (let i = 0; i < pos.length; i += 1) {
+      for (let j = i + 1; j < pos.length; j += 1) {
+        let dx = pos[j]!.x - pos[i]!.x;
+        let dy = (pos[j]!.y - pos[i]!.y) * MAP_ASPECT;
+        let d = Math.hypot(dx, dy);
+
+        if (d < 1e-6) {
+          // 완전히 겹친 경우 결정적인 방향으로 살짝 떼어 놓는다
+          const angle = (i * 2.399963) % (Math.PI * 2);
+          dx = Math.cos(angle) * 1e-3;
+          dy = Math.sin(angle) * 1e-3;
+          d = 1e-3;
+        }
+        if (d >= MIN_SEPARATION) continue;
+
+        const push = (MIN_SEPARATION - d) / 2;
+        const ux = (dx / d) * push;
+        const uy = (dy / d) * push;
+        pos[i]!.x -= ux;
+        pos[i]!.y -= uy / MAP_ASPECT;
+        pos[j]!.x += ux;
+        pos[j]!.y += uy / MAP_ASPECT;
+      }
+    }
+
+    for (let i = 0; i < pos.length; i += 1) {
+      // 원래 자리로 약하게 되돌린다
+      pos[i]!.x += (base[i]!.x - pos[i]!.x) * SPRING;
+      pos[i]!.y += (base[i]!.y - pos[i]!.y) * SPRING;
+
+      // 육지 보정은 루프 안에서 해야 한다.
+      // 밖에서 한 번만 하면 애써 벌려 놓은 간격이 그때 다시 무너진다.
+      if (seaBound[i]) {
+        const fixed = nearestSeaPoint(pos[i]!, base[i]!);
+        pos[i]!.x = fixed.x;
+        pos[i]!.y = fixed.y;
+      }
+    }
+  }
+
+  return sprites.map((sprite, i) => {
+    const b = base[i]!;
+    const p = pos[i]!;
+    const dx = p.x - b.x;
+    const dy = (p.y - b.y) * MAP_ASPECT;
+    const drift = Math.hypot(dx, dy);
+    const k = drift > MAX_DRIFT ? MAX_DRIFT / drift : 1;
+
+    const moved = {
+      x: clamp(b.x + dx * k, 0.03, 0.97),
+      y: clamp(b.y + (dy * k) / MAP_ASPECT, 0.03, 0.97),
+    };
+
+    return { ...sprite, position: seaBound[i] ? nearestSeaPoint(moved, b) : moved };
+  });
 }
 
 /* ── 조립 ─────────────────────────────────────────────────── */
@@ -242,22 +319,9 @@ export function buildMapLayout(query: MapQuery): MapLayout {
   const totalCount = candidates.length;
   const visible = candidates.slice(0, MAX_SPRITES);
 
-  // 같은 자리에 겹치면 작은 원형으로 흩는다
-  const byPlace = new Map<string, MapSprite[]>();
-  for (const sprite of visible) {
-    const key = `${sprite.basePosition.x.toFixed(3)}:${sprite.basePosition.y.toFixed(3)}`;
-    const list = byPlace.get(key);
-    if (list) list.push(sprite);
-    else byPlace.set(key, [sprite]);
-  }
+  const sprites = separate(visible);
 
-  const sprites: MapSprite[] = [];
-  for (const group of byPlace.values()) {
-    group.forEach((sprite, i) => {
-      sprites.push({ ...sprite, position: spread(sprite.basePosition, i, group.length) });
-    });
-  }
-
+  // 위에 있는 것부터 그려 아래쪽 sprite 가 앞에 오도록 정렬
   sprites.sort((a, b) => a.position.y - b.position.y);
 
   return { sprites, hiddenCount: Math.max(0, totalCount - visible.length), totalCount };
