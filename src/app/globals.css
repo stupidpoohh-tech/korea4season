@@ -1,0 +1,208 @@
+@import 'tailwindcss';
+
+/*
+ * 디자인 방향 (요구사항 #27)
+ *  - 지도 자체가 시각적으로 풍부하므로 주변 UI 는 절제한다.
+ *  - warm-white 바탕 · 중립 텍스트 · 자연 계열 저채도 accent
+ *  - shadow 는 약하게, 모든 것을 캡슐로 만들지 않는다.
+ */
+@theme {
+  --color-ink: #000a14;
+  --color-ink-soft: #33414d;
+  --color-muted: #6c7883;
+  --color-faint: #9aa4ad;
+  --color-paper: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-line: #e9e5dd;
+  --color-line-soft: #f2efe9;
+
+  --color-accent: #00b46c;
+  --color-accent-strong: #00935a;
+  --color-accent-soft: #e7f8f0;
+  --color-sky: #0093d6;
+  --color-sky-soft: #e6f4fc;
+
+  --color-sea: #2fa6e8;
+  --color-restricted: #c8443c;
+  --color-restricted-soft: #fdeeed;
+  --color-peak: #b5811f;
+  --color-peak-soft: #fbf2df;
+
+  --color-cat-fishing: #2f80c4;
+  --color-cat-flower: #cf6f94;
+  --color-cat-foliage: #c4762f;
+  --color-cat-bird: #6f6ab8;
+  --color-cat-marine: #2b93a4;
+  --color-cat-nature: #479159;
+
+  --font-sans:
+    'Freesentation', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+
+  --shadow-soft: 0 1px 2px rgb(0 10 20 / 0.04), 0 6px 20px -8px rgb(0 10 20 / 0.10);
+  --shadow-sheet: 0 -1px 3px rgb(0 10 20 / 0.04), 0 -12px 40px -16px rgb(0 10 20 / 0.18);
+}
+
+/*
+ * 사내 서체. public/fonts/Freesentation.woff2 를 넣으면 자동 적용되고,
+ * 없으면 위 fallback 스택으로 조용히 내려간다.
+ */
+@font-face {
+  font-family: 'Freesentation';
+  src: url('/fonts/Freesentation.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 지도 sprite 가 커서를 잃지 않도록 */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 살아있는 느낌만 주는 최소한의 움직임. (요구사항 #4) */
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes ripple-out {
+  from {
+    transform: scale(0.72);
+    opacity: 0.34;
+  }
+  to {
+    transform: scale(1.42);
+    opacity: 0;
+  }
+}
+
+.sprite-float {
+  animation: float-soft 3.6s ease-in-out infinite;
+}
+
+.sprite-ripple {
+  animation: ripple-out 2.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-float {
+    animation: none;
+  }
+
+  /* 멈춘 링은 남겨 두면 과녁처럼 보이므로 아예 감춘다 */
+  .sprite-ripple {
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── 날짜 슬라이더 ─────────────────────────────────────────── */
+.date-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+}
+
+.date-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #cfe8f7 0%,
+    #ffd9e6 22%,
+    #cdeedd 46%,
+    #ffd9ac 72%,
+    #dee8f7 100%
+  );
+}
+
+.date-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #cfe8f7 0%,
+    #ffd9e6 22%,
+    #cdeedd 46%,
+    #ffd9ac 72%,
+    #dee8f7 100%
+  );
+}
+
+.date-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 2px 8px -2px rgb(0 10 20 / 0.35);
+  transition: transform 0.14s ease;
+}
+
+.date-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 2px 8px -2px rgb(0 10 20 / 0.35);
+}
+
+.date-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}

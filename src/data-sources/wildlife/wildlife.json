@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "sourceName": "계절 자연현상·해양생물 참고값 (DEMO)",
+    "sourceUrl": "https://www.knps.or.kr",
+    "updatedAt": "2026-01-01",
+    "confidence": "demo",
+    "isDemo": true,
+    "polarity": "observable",
+    "disclaimer": "개발용 DEMO 데이터입니다. 관찰 가능 시기는 기상과 개체 상황에 따라 달라집니다."
+  },
+  "entities": [
+    { "code": "firefly", "name": "반딧불이", "speciesName": "Luciola cruciata", "icon": "✨", "category": "nature", "rarity": 4, "summary": "깨끗한 하천 주변에서 초여름 밤에만 빛나는 곤충" },
+    { "code": "hoarfrost", "name": "상고대", "icon": "❄️", "category": "nature", "rarity": 3, "summary": "안개가 나뭇가지에 얼어붙어 산 전체가 하얗게 변하는 겨울 현상" },
+    { "code": "spotted-seal", "name": "점박이물범", "speciesName": "Phoca largha", "icon": "🦭", "category": "marine", "rarity": 5, "summary": "백령도 물범바위에서 여름을 보내는 천연기념물" },
+    { "code": "indo-pacific-dolphin", "name": "남방큰돌고래", "speciesName": "Tursiops aduncus", "icon": "🐬", "category": "marine", "rarity": 4, "summary": "제주 연안에 정착해 사는 국내 유일의 돌고래 무리" }
+  ],
+  "occurrences": [
+    { "code": "firefly-muju", "entity": "firefly", "regions": ["전북"], "locations": ["muju"], "start": "06-08", "end": "07-12", "peakStart": "06-18", "peakEnd": "07-02", "weight": 0.85 },
+    { "code": "hoarfrost-deogyusan", "entity": "hoarfrost", "regions": ["전북"], "locations": ["deogyusan"], "start": "12-10", "end": "02-25", "peakStart": "01-05", "peakEnd": "02-05", "weight": 0.8 },
+    { "code": "hoarfrost-sobaeksan", "entity": "hoarfrost", "regions": ["충북"], "locations": ["sobaeksan"], "start": "12-15", "end": "02-20", "peakStart": "01-10", "peakEnd": "02-05", "weight": 0.7 },
+    { "code": "seal-baengnyeong", "entity": "spotted-seal", "regions": ["인천"], "locations": ["baengnyeongdo"], "start": "04-20", "end": "11-10", "peakStart": "06-15", "peakEnd": "09-15", "weight": 0.8 },
+    { "code": "dolphin-jeju", "entity": "indo-pacific-dolphin", "regions": ["제주"], "locations": ["jeju-sea", "seogwipo"], "start": "01-01", "end": "12-31", "peakStart": "05-01", "peakEnd": "09-30", "weight": 0.75 }
+  ]
+}

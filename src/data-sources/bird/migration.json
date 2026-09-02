@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "sourceName": "철새 도래 시기 참고값 (DEMO)",
+    "sourceUrl": "https://www.nie.re.kr",
+    "updatedAt": "2026-01-01",
+    "confidence": "demo",
+    "isDemo": true,
+    "category": "bird",
+    "polarity": "observable",
+    "disclaimer": "개발용 DEMO 데이터입니다. 도래 시기와 개체 수는 해마다 다릅니다. 탐조 시 보호구역 규정을 지켜 주십시오."
+  },
+  "entities": [
+    { "code": "hooded-crane", "name": "흑두루미", "speciesName": "Grus monacha", "icon": "🕊️", "rarity": 4, "summary": "순천만 갯벌에서 겨울을 나는 천연기념물 두루미" },
+    { "code": "white-naped-crane", "name": "재두루미", "speciesName": "Grus vipio", "icon": "🐦", "rarity": 4, "summary": "철원 평야를 겨울 무대로 삼는 대형 두루미" },
+    { "code": "whooper-swan", "name": "큰고니", "speciesName": "Cygnus cygnus", "icon": "🦢", "rarity": 3, "summary": "저수지와 하구에서 겨울을 보내는 백조" },
+    { "code": "baikal-teal", "name": "가창오리", "speciesName": "Sibirionetta formosa", "icon": "🐤", "rarity": 3, "summary": "해질녘 수십만 마리가 한꺼번에 날아오르는 군무로 알려진 겨울 철새" },
+    { "code": "black-faced-spoonbill", "name": "저어새", "speciesName": "Platalea minor", "icon": "🪶", "rarity": 5, "summary": "서해 갯벌 무인도에서 번식하는 국제적 멸종위기종" }
+  ],
+  "occurrences": [
+    { "code": "hooded-crane-suncheon", "entity": "hooded-crane", "regions": ["전남"], "locations": ["suncheonbay"], "start": "10-20", "end": "03-10", "peakStart": "12-01", "peakEnd": "02-10", "weight": 0.95 },
+    { "code": "white-naped-crane-cheorwon", "entity": "white-naped-crane", "regions": ["강원"], "locations": ["cheorwon"], "start": "10-25", "end": "03-05", "peakStart": "12-05", "peakEnd": "02-05", "weight": 0.9 },
+    { "code": "whooper-swan-junam", "entity": "whooper-swan", "regions": ["경남"], "locations": ["junam"], "start": "11-05", "end": "02-28", "peakStart": "12-10", "peakEnd": "01-31", "weight": 0.8 },
+    { "code": "baikal-teal-geumgang", "entity": "baikal-teal", "regions": ["충남"], "locations": ["geumgang-estuary"], "start": "11-10", "end": "02-20", "peakStart": "12-01", "peakEnd": "01-20", "weight": 0.85 },
+    { "code": "spoonbill-ganghwa", "entity": "black-faced-spoonbill", "regions": ["인천"], "locations": ["ganghwa-tidal"], "start": "04-01", "end": "09-30", "peakStart": "05-15", "peakEnd": "07-15", "weight": 0.8 }
+  ]
+}
