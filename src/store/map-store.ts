@@ -3,6 +3,8 @@
 import { create } from 'zustand';
 import type { MapPosition } from '@/domain/projection';
 import type { NatureCategory } from '@/domain/types';
+import type { MapLayerId } from '@/domain/nature-categories';
+import type { FoliageState } from '@/services/foliage-service';
 import type { MapMode, SeasonFilter } from '@/services/map-service';
 
 export interface Viewport {
@@ -17,6 +19,8 @@ export const MAX_SCALE = 2.6;
 export const DEFAULT_VIEWPORT: Viewport = { scale: 1, x: 0, y: 0 };
 
 interface MapState {
+  /** 어떤 자연을 보고 있는가. 카테고리마다 지도의 단위와 필터가 다르다. */
+  layer: MapLayerId;
   /** 비어 있으면 '전체' */
   selectedCategories: NatureCategory[];
   /** 시즌 강도 한 축만 거른다 — '지금 얼마나 좋은가' */
@@ -32,6 +36,8 @@ interface MapState {
    * 달리 조건이 아니라 대상 자체를 고르는 축이라 따로 둔다.
    */
   focusedSpecies: { slug: string; name: string } | null;
+  /** 단풍 상태 필터. 'all' 이면 물드는 중인 곳 전부. */
+  foliageState: FoliageState | 'all';
   /** 어종 중심 / 권역 중심 */
   mode: MapMode;
   selectedOccurrenceId: string | null;
@@ -43,6 +49,9 @@ interface MapState {
   toggleLegalOnly: () => void;
   /** 어종 하나만 남긴다. null 이면 해제 */
   focusSpecies: (species: { slug: string; name: string } | null) => void;
+  setFoliageState: (state: FoliageState | 'all') => void;
+  /** 자연 카테고리를 바꾼다. 앞 카테고리의 선택과 필터는 전부 내려놓는다. */
+  setLayer: (layer: MapLayerId) => void;
   /** 필터를 전부 기본값으로 — 칩의 ✕ 와 시트의 '초기화' 가 같이 쓴다 */
   resetFilters: () => void;
   setMode: (mode: MapMode) => void;
@@ -86,11 +95,13 @@ export function clampViewport({ scale, x, y }: Viewport): Viewport {
 }
 
 export const useMapStore = create<MapState>((set) => ({
+  layer: 'marine',
   selectedCategories: [],
   seasonFilter: 'all',
   startingOnly: false,
   legalOnly: false,
   focusedSpecies: null,
+  foliageState: 'all',
   mode: 'species',
   selectedOccurrenceId: null,
   openZoneSlug: null,
@@ -103,12 +114,34 @@ export const useMapStore = create<MapState>((set) => ({
     set((state) => ({ legalOnly: !state.legalOnly, selectedOccurrenceId: null })),
   focusSpecies: (species) => set({ focusedSpecies: species, selectedOccurrenceId: null }),
 
+  setFoliageState: (state) => set({ foliageState: state, selectedOccurrenceId: null }),
+
+  /*
+   * 카테고리를 바꾸면 앞의 것은 전부 내려놓는다.
+   * 어종 필터가 단풍 화면에 남아 있으면 뜻이 없고, 고른 대상도 그대로 둘 수 없다.
+   * 되돌아오면 기본 상태에서 다시 시작한다.
+   */
+  setLayer: (layer) =>
+    set({
+      layer,
+      selectedOccurrenceId: null,
+      openZoneSlug: null,
+      mode: 'species',
+      seasonFilter: 'all',
+      startingOnly: false,
+      legalOnly: false,
+      focusedSpecies: null,
+      foliageState: 'all',
+      viewport: DEFAULT_VIEWPORT,
+    }),
+
   resetFilters: () =>
     set({
       seasonFilter: 'all',
       startingOnly: false,
       legalOnly: false,
       focusedSpecies: null,
+      foliageState: 'all',
       selectedOccurrenceId: null,
     }),
 

@@ -130,9 +130,13 @@ function distToPolygon([x, y], poly) {
 /* ── 색 ───────────────────────────────────────────────────── */
 const C = {
   /*
-   * 바다 색은 없다 — 배경(흰색)이 그대로 바다다.
-   * 이 지도에서 색을 갖는 것은 육지와 그 위의 생물뿐이다.
+   * 바다는 해안 둘레만 옅게 두른다.
+   * 배경 전체를 칠하면 지도가 페이지에서 떠 보이므로, 바깥으로 갈수록
+   * 옅어지는 띠 두 겹으로 "여기서부터 바다" 만 알린다.
    */
+  seaFar: '#e4f3fb',
+  seaNear: '#c2e4f6',
+  seaLine: '#ffffff',
   sand: '#f4e5ad',
   sandEdge: '#e0c98a',
   grass: '#bbe264',
@@ -380,6 +384,15 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
     파란 물결 세 겹을 두지 않는다. 색을 갖는 것은 육지와 그 위의 생물뿐이다.
   -->
 
+  <!--
+    바다. 해안 둘레만 두르고 배경은 비워 둔다 —
+    지도 배경은 페이지 배경(흰색)과 구분되지 않아야 한다.
+  -->
+  <g id="ocean" stroke-linejoin="round" fill="none">
+    <g stroke="${C.seaFar}" stroke-width="30" opacity=".55"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
+    <g stroke="${C.seaNear}" stroke-width="13" opacity=".75"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
+  </g>
+
   <g id="sand" stroke-linejoin="round" fill="${C.sand}">
     <g stroke="${C.sand}" stroke-width="9"><path d="${mainlandPath}"/><path d="${jejuPath}"/><path d="${ulleungPath}"/></g>
     <g stroke="${C.sand}" stroke-width="3"><path d="${dokdoPath}"/>${islandShapes.map((i) => `<path d="${i.d}"/>`).join('')}</g>
@@ -487,9 +500,32 @@ writeFileSync(
   'utf8',
 );
 
+/*
+ * 산 위치를 함께 내보낸다.
+ *
+ * 단풍 레이어가 이 좌표 위에 같은 산을 가을색으로 덧그려 '산이 물드는' 것을
+ * 만든다. 지도 이미지를 계절마다 따로 굽지 않고 한 장 위에 얹기 위해서다.
+ * 그림과 같은 배치를 써야 색이 산에서 벗어나지 않는다.
+ */
+const mountainList = {
+  note: 'scripts/generate-base-map.mjs 가 생성합니다. 직접 수정하지 마십시오.',
+  mountains: mountains.map((m) => ({
+    x: Number((m.x / W).toFixed(4)),
+    y: Number((m.y / H).toFixed(4)),
+    w: Number((m.w / W).toFixed(4)),
+    h: Number((m.h / H).toFixed(4)),
+    snow: Boolean(m.snow),
+  })),
+};
+writeFileSync(
+  resolve(root, 'src/domain/mountains.json'),
+  `${JSON.stringify(mountainList)}\n`,
+  'utf8',
+);
+
 mkdirSync(resolve(root, 'public/map'), { recursive: true });
 writeFileSync(resolve(root, 'public/map/korea-base.svg'), svg, 'utf8');
 console.log(
   `korea-base.svg  ${(svg.length / 1024).toFixed(0)}KB  land-mask.json  ` +
-  `섬=${islandShapes.length} 산=${mountains.length} 숲=${groves.length}`,
+  `섬=${islandShapes.length} 산=${mountains.length} 숲=${groves.length}  mountains.json`,
 );

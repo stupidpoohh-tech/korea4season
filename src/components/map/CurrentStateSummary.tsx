@@ -1,5 +1,8 @@
 'use client';
 
+import { CategorySelector } from './CategorySelector';
+import { FOLIAGE_STATE_LABEL, type FoliageCounts } from '@/services/foliage-service';
+import type { MapLayerId } from '@/domain/nature-categories';
 import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-service';
 
 /* ────────────────────────────────────────────────────────────
@@ -18,6 +21,8 @@ import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-ser
  * ──────────────────────────────────────────────────────────── */
 
 interface Props {
+  layer: MapLayerId;
+  foliage: FoliageCounts;
   mode: MapMode;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
@@ -33,33 +38,69 @@ interface Props {
   compact?: boolean;
 }
 
-export function CurrentStateSummary({ mode, count, filtered, counts, compact = false }: Props) {
-  const unit = mode === 'zone' ? '곳' : '종';
+export function CurrentStateSummary({
+  layer,
+  foliage,
+  mode,
+  count,
+  filtered,
+  counts,
+  compact = false,
+}: Props) {
+  const unit = layer === 'foliage' ? '곳' : mode === 'zone' ? '곳' : '종';
 
   return (
     <div className="min-w-0">
       {compact ? (
         <>
-          <p className="text-[15px] font-semibold leading-[19px] tracking-tight">지금日지도</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[15px] font-semibold leading-[19px] tracking-tight">지금日지도</p>
+            <span aria-hidden className="text-[color:var(--color-line)]">|</span>
+            <CategorySelector compact />
+          </div>
           <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
-            지금 바다에{' '}
-            <span className="tabular font-semibold text-[color:var(--color-ink-soft)]">{count}</span>
-            {unit}
-            {filtered && ` · 전체 ${counts.season.all}${unit} 가운데`}
+            {layer === 'foliage' ? (
+              <>
+                지금{' '}
+                <span className="tabular font-semibold text-[color:var(--color-ink-soft)]">
+                  {count}
+                </span>
+                곳이 물드는 중
+                {filtered && ` · 전체 ${foliage.coloring}곳 가운데`}
+              </>
+            ) : (
+              <>
+                지금 바다에{' '}
+                <span className="tabular font-semibold text-[color:var(--color-ink-soft)]">
+                  {count}
+                </span>
+                {unit}
+                {filtered && ` · 전체 ${counts.season.all}${unit} 가운데`}
+              </>
+            )}
           </p>
         </>
       ) : (
         <>
-          <p className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
-            <span className="text-[16px] font-semibold tracking-tight">지금, 바다</span>
+          {/* CategorySelector 가 div 를 그리므로 p 로 감싸면 안 된다 (HTML 위반 → hydration 오류) */}
+          <div className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
+            <CategorySelector />
             <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
               <span className="tabular font-semibold text-[color:var(--color-ink)]">{count}</span>
               {unit}
-              {mode === 'zone' ? '에서 만날 수 있어요' : ' 활동 중'}
+              {layer === 'foliage'
+                ? '이 물드는 중'
+                : mode === 'zone'
+                  ? '에서 만날 수 있어요'
+                  : ' 활동 중'}
             </span>
-          </p>
+          </div>
           <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
-            <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
+            {layer === 'foliage' ? (
+              <FoliageBreakdown foliage={foliage} filtered={filtered} />
+            ) : (
+              <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
+            )}
           </p>
         </>
       )}
@@ -102,4 +143,21 @@ function Breakdown({
   if (shown.length === 0) return <>지금 시즌인 것이 없습니다</>;
 
   return <>{shown.join(' · ')}</>;
+}
+
+function FoliageBreakdown({ foliage, filtered }: { foliage: FoliageCounts; filtered: boolean }) {
+  if (filtered) {
+    return (
+      <span className="text-[color:var(--color-accent-strong)]">
+        필터 적용 중 · 물드는 중 {foliage.coloring}곳 가운데
+      </span>
+    );
+  }
+
+  const parts = (['peak', 'good', 'starting', 'ending'] as const)
+    .filter((state) => foliage.byState[state] > 0)
+    .map((state) => `${FOLIAGE_STATE_LABEL[state]} ${foliage.byState[state]}`);
+
+  if (parts.length === 0) return <>아직 물든 곳이 없습니다</>;
+  return <>{parts.join(' · ')}</>;
 }

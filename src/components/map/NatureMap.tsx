@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { useReducedMotion } from 'motion/react';
 import { BASE_MAP_ASPECT, BASE_MAP_SRC } from '@/lib/map-asset';
@@ -8,7 +8,6 @@ import type { MapLayout, MapSprite } from '@/services/map-service';
 import { clampViewport, useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
 import { DomMapRenderer } from './DomMapRenderer';
-import { MapControls } from './MapControls';
 
 interface Props {
   layout: MapLayout;
@@ -17,6 +16,11 @@ interface Props {
   preview?: boolean;
   /** 크기는 호출자가 정한다. 지도 비율(map-bounds.json)은 내부에서 유지한다. */
   className?: string;
+  /**
+   * base map 과 sprite 사이에 끼우는 레이어.
+   * 단풍처럼 지도 그림 자체가 변하는 카테고리가 여기로 들어온다.
+   */
+  overlay?: ReactNode;
 }
 
 /**
@@ -25,7 +29,7 @@ interface Props {
  * 이 컴포넌트가 화면의 주인공이다. 정보 패널이 지도를 밀어내지 않도록
  * 주변 UI 는 전부 floating 으로 띄운다. (요구사항 #3, #34)
  */
-export function NatureMap({ layout, onSelectSprite, preview = false, className }: Props) {
+export function NatureMap({ layout, onSelectSprite, preview = false, className, overlay }: Props) {
   const reducedMotion = useReducedMotion() ?? false;
   // 1년 재생 중에는 스프링을 기다릴 시간이 없다
   const isPlaying = useTimeStore((s) => s.isPlaying);
@@ -183,6 +187,8 @@ export function NatureMap({ layout, onSelectSprite, preview = false, className }
           draggable={false}
         />
 
+        {overlay}
+
         <DomMapRenderer
           sprites={layout.sprites}
           viewport={viewport}
@@ -193,8 +199,6 @@ export function NatureMap({ layout, onSelectSprite, preview = false, className }
           spriteScale={preview ? 0.7 : 1}
         />
       </div>
-
-      {!preview && <MapControls />}
 
       {/*
         접힌 수는 지도 위쪽에 둔다 — 아래쪽 가운데는 '이번 주 뭐 잡지?' 가,

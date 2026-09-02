@@ -1,5 +1,54 @@
 # Architecture
 
+## 자연 카테고리
+
+이 서비스는 바다 · 꽃 · 단풍 · 철새를 같은 껍데기 위에 올린다.
+
+```
+지금 상태 → 보기 방식 → 필터 → 지도 → 추천 → 시간
+```
+
+**인터페이스는 넷을 위해 만들고, 기능은 하나씩 완성한다.**
+지금 동작하는 것은 바다(Phase 1)와 단풍(Phase 2)뿐이다.
+꽃 · 철새는 `src/domain/nature-categories.ts` 에 이름만 있다 —
+데이터도, 레이어도, 상세도, 추천도 없다.
+
+| 무엇 | 어디 |
+|---|---|
+| 카테고리 설정 | `domain/nature-categories.ts` |
+| 데이터 소스 on/off | `data-sources/index.ts` 의 `enabled` |
+| 카테고리 전환 | `map-store` 의 `layer` · `setLayer` (앞 카테고리의 선택·필터를 전부 내려놓는다) |
+| 카테고리별 sprite | `map-service` 의 `buildMapLayout` 이 `query.layer` 로 가른다 |
+
+### 바다와 단풍이 나누는 것 / 나누지 않는 것
+
+```
+공유   occurrence 엔진 · 지도 렌더러 · sprite 분산 · 육지 판정 · 타임라인
+       상단 4계층(요약 · 보기 방식 · 필터 · 도움말) · 추천 CTA 자리 · 시트
+
+전용   marine   MarineDetailSheet · WeeklyPicksSheet · 규정 엔진 · 권역
+       foliage  FoliageOverlay · FoliageDetailSheet · FoliagePicksSheet
+```
+
+단풍의 지도 단위는 **명소(산)** 다. 바다가 어종 × 해역인 것과 다르다 —
+사용자가 묻는 것은 "설악산이 지금 어떤가" 이지 "설악산의 단풍나무" 가 아니다.
+그래서 같은 명소에 걸린 여러 수종(단풍나무 · 은행 · 억새)은
+`foliage-service` 가 하나로 묶어 가장 앞선 상태를 그 산의 상태로 쓴다.
+
+### 산이 물드는 방식
+
+지도를 계절마다 다른 이미지로 갈아 끼우지 않는다.
+base map 이 그린 산과 **같은 자리에 같은 크기로** 가을색 산을 덧그린다.
+좌표는 `scripts/generate-base-map.mjs` 가 `src/domain/mountains.json` 으로
+함께 내보낸다 — 그림과 같은 배치를 써야 색이 산에서 벗어나지 않는다.
+
+산 46개에 각각 데이터가 있는 것은 아니다. 명소 12곳의 상태를
+거리 가중(반경 0.34, 제곱 감쇠)으로 섞어 각 산의 물든 정도(0~1)를 정한다.
+그래서 절정인 산 둘레부터 붉어지고, 시간이 흐르면 그 띠가 남쪽으로 내려간다.
+지도 위에 핀을 찍는 것이 아니라 산맥이 물드는 것으로 보여야 하기 때문이다.
+
+---
+
 ## Phase 1 — 바다의 NOW
 
 Phase 1 의 중심축은 "무엇을 잡으면 안 되는가" 가 아니라

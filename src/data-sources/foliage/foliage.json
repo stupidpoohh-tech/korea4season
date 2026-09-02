@@ -7,7 +7,7 @@
     "isDemo": true,
     "category": "foliage",
     "polarity": "observable",
-    "disclaimer": "개발용 DEMO 데이터입니다. 단풍 시기는 기온에 따라 매년 달라집니다. 방문 전 국립공원·지자체 정보를 확인하십시오."
+    "disclaimer": "개발용 DEMO 데이터입니다. 첫 단풍과 절정 시기는 그해 기온에 따라 1~2주씩 달라집니다. 방문 전 국립공원·지자체 정보를 확인하십시오."
   },
   "entities": [
     { "code": "maple", "name": "단풍나무", "speciesName": "Acer palmatum", "icon": "🍁", "rarity": 1, "summary": "북쪽 높은 산에서 시작해 약 한 달에 걸쳐 남쪽으로 내려오는 가을" },
@@ -15,13 +15,18 @@
     { "code": "silver-grass", "name": "억새", "speciesName": "Miscanthus sinensis", "icon": "🌾", "rarity": 2, "summary": "가을 능선에서 은빛으로 흔들리는 풀" }
   ],
   "occurrences": [
-    { "code": "maple-seoraksan", "entity": "maple", "regions": ["강원"], "locations": ["seoraksan"], "start": "09-28", "end": "10-30", "peakStart": "10-15", "peakEnd": "10-24", "weight": 1.0 },
-    { "code": "maple-odaesan", "entity": "maple", "regions": ["강원"], "locations": ["odaesan"], "start": "10-05", "end": "11-02", "peakStart": "10-18", "peakEnd": "10-28", "weight": 0.85 },
-    { "code": "maple-sobaeksan", "entity": "maple", "regions": ["충북"], "locations": ["sobaeksan"], "start": "10-10", "end": "11-05", "peakStart": "10-22", "peakEnd": "11-01", "weight": 0.8 },
-    { "code": "maple-bukhansan", "entity": "maple", "regions": ["서울"], "locations": ["bukhansan"], "start": "10-18", "end": "11-12", "peakStart": "10-28", "peakEnd": "11-06", "weight": 0.85 },
-    { "code": "maple-jirisan", "entity": "maple", "regions": ["경남"], "locations": ["jirisan"], "start": "10-15", "end": "11-10", "peakStart": "10-25", "peakEnd": "11-04", "weight": 0.85 },
-    { "code": "maple-naejangsan", "entity": "maple", "regions": ["전북"], "locations": ["naejangsan"], "start": "10-25", "end": "11-20", "peakStart": "11-04", "peakEnd": "11-13", "weight": 0.95 },
-    { "code": "maple-hallasan", "entity": "maple", "regions": ["제주"], "locations": ["hallasan"], "start": "10-15", "end": "11-08", "peakStart": "10-23", "peakEnd": "11-02", "weight": 0.7 },
+    { "code": "maple-seoraksan", "entity": "maple", "regions": ["강원"], "locations": ["seoraksan"], "start": "09-29", "end": "11-01", "peakStart": "10-14", "peakEnd": "10-23", "weight": 1.0, "notes": ["대한민국에서 가장 먼저 물드는 산"] },
+    { "code": "maple-odaesan", "entity": "maple", "regions": ["강원"], "locations": ["odaesan"], "start": "10-03", "end": "11-04", "peakStart": "10-17", "peakEnd": "10-26", "weight": 0.9 },
+    { "code": "maple-chiaksan", "entity": "maple", "regions": ["강원"], "locations": ["chiaksan"], "start": "10-09", "end": "11-08", "peakStart": "10-21", "peakEnd": "10-30", "weight": 0.8 },
+    { "code": "maple-sobaeksan", "entity": "maple", "regions": ["충북"], "locations": ["sobaeksan"], "start": "10-09", "end": "11-08", "peakStart": "10-21", "peakEnd": "10-30", "weight": 0.8 },
+    { "code": "maple-woraksan", "entity": "maple", "regions": ["충북"], "locations": ["woraksan"], "start": "10-12", "end": "11-10", "peakStart": "10-23", "peakEnd": "11-01", "weight": 0.8 },
+    { "code": "maple-songnisan", "entity": "maple", "regions": ["충북"], "locations": ["songnisan"], "start": "10-14", "end": "11-12", "peakStart": "10-25", "peakEnd": "11-03", "weight": 0.85 },
+    { "code": "maple-hallasan", "entity": "maple", "regions": ["제주"], "locations": ["hallasan"], "start": "10-15", "end": "11-12", "peakStart": "10-25", "peakEnd": "11-03", "weight": 0.75, "notes": ["남쪽이지만 높이 때문에 이르게 물든다"] },
+    { "code": "maple-gyeryongsan", "entity": "maple", "regions": ["충남"], "locations": ["gyeryongsan"], "start": "10-17", "end": "11-14", "peakStart": "10-27", "peakEnd": "11-05", "weight": 0.8 },
+    { "code": "maple-jirisan", "entity": "maple", "regions": ["경남"], "locations": ["jirisan"], "start": "10-18", "end": "11-15", "peakStart": "10-26", "peakEnd": "11-04", "weight": 0.9 },
+    { "code": "maple-bukhansan", "entity": "maple", "regions": ["서울"], "locations": ["bukhansan"], "start": "10-18", "end": "11-16", "peakStart": "10-27", "peakEnd": "11-05", "weight": 0.85 },
+    { "code": "maple-mudeungsan", "entity": "maple", "regions": ["광주"], "locations": ["mudeungsan"], "start": "10-21", "end": "11-18", "peakStart": "10-30", "peakEnd": "11-08", "weight": 0.8 },
+    { "code": "maple-naejangsan", "entity": "maple", "regions": ["전북"], "locations": ["naejangsan"], "start": "10-24", "end": "11-22", "peakStart": "11-02", "peakEnd": "11-11", "weight": 0.95, "notes": ["가장 늦게, 가장 붉게 물드는 곳"] },
     { "code": "ginkgo-seoul", "entity": "ginkgo", "regions": ["서울"], "locations": ["seoul"], "start": "10-28", "end": "11-22", "peakStart": "11-05", "peakEnd": "11-15", "weight": 0.75 },
     { "code": "silver-grass-jirisan", "entity": "silver-grass", "regions": ["경남", "전북"], "locations": ["jirisan", "deogyusan"], "start": "09-25", "end": "11-05", "peakStart": "10-08", "peakEnd": "10-25", "weight": 0.65 }
   ]

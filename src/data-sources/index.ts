@@ -9,8 +9,8 @@ import type { NatureDataSource } from './types';
 /**
  * 데이터 소스 레지스트리.
  *
- * Phase 1 은 바다의 NOW 에 집중한다.
- * 꽃 · 단풍 · 철새 · 자연현상 소스는 삭제하지 않고 enabled 만 false 로 둔다.
+ * Phase 1 은 바다, Phase 2 는 단풍이다.
+ * 꽃 · 철새 · 자연현상 소스는 삭제하지 않고 enabled 만 false 로 둔다.
  * 데이터 파일과 adapter 는 그대로 살아 있으므로
  * 다시 켤 때는 이 플래그 하나만 바꾸면 지도 · 타임라인 · 도감 · 추천이 전부 따라온다.
  */
@@ -24,7 +24,7 @@ interface RegisteredSource {
 const REGISTRY: RegisteredSource[] = [
   { source: marineDataSource, categories: ['fishing'], enabled: true },
   { source: flowerDataSource, categories: ['flower'], enabled: false },
-  { source: foliageDataSource, categories: ['foliage'], enabled: false },
+  { source: foliageDataSource, categories: ['foliage'], enabled: true },
   { source: birdDataSource, categories: ['bird'], enabled: false },
   // wildlife 는 해양생물(물범·돌고래)과 자연현상(반딧불이·상고대)을 함께 담는다
   { source: wildlifeDataSource, categories: ['marine', 'nature'], enabled: false },

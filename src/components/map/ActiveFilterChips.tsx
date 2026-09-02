@@ -1,5 +1,7 @@
 'use client';
 
+import type { MapLayerId } from '@/domain/nature-categories';
+import { FOLIAGE_STATE_LABEL } from '@/services/foliage-service';
 import { SEASON_FILTERS, type MapMode } from '@/services/map-service';
 import { useMapStore } from '@/store/map-store';
 
@@ -12,10 +14,12 @@ import { useMapStore } from '@/store/map-store';
  * ──────────────────────────────────────────────────────────── */
 
 export function ActiveFilterChips({
+  layer,
   mode,
   total,
   unit,
 }: {
+  layer: MapLayerId;
   mode: MapMode;
   /**
    * 필터가 없을 때의 전체 수 — 지금 수가 무엇의 일부인지 밝힌다.
@@ -32,10 +36,21 @@ export function ActiveFilterChips({
   const toggleLegal = useMapStore((s) => s.toggleLegalOnly);
   const focusedSpecies = useMapStore((s) => s.focusedSpecies);
   const focusSpecies = useMapStore((s) => s.focusSpecies);
+  const foliageState = useMapStore((s) => s.foliageState);
+  const setFoliageState = useMapStore((s) => s.setFoliageState);
 
   const chips: { key: string; label: string; tone: 'season' | 'legal'; clear: () => void }[] = [];
 
-  if (mode === 'species') {
+  if (layer === 'foliage') {
+    if (foliageState !== 'all') {
+      chips.push({
+        key: 'foliage',
+        label: FOLIAGE_STATE_LABEL[foliageState],
+        tone: 'season',
+        clear: () => setFoliageState('all'),
+      });
+    }
+  } else if (mode === 'species') {
     if (focusedSpecies) {
       chips.push({
         key: 'species',

@@ -7,6 +7,13 @@ import { SEASON_STRENGTH_ORDER, type SeaRegion, type SeasonState } from '@/domai
 import { isLegallyBlocked, type LegalStatusCode } from '@/domain/regulation';
 import { locationPosition, resolveAll } from './nature-service';
 import {
+  buildFoliageSpots,
+  isColoring,
+  type FoliageSpot,
+  type FoliageState,
+} from './foliage-service';
+import type { MapLayerId } from '@/domain/nature-categories';
+import {
   buildMarineMapItems,
   buildZoneMarkers,
   type MarineMapItem,
@@ -55,7 +62,8 @@ export const SEASON_FILTERS: { id: SeasonFilter; label: string }[] = [
 export type MapSubject =
   | { kind: 'nature'; resolved: ResolvedOccurrence }
   | { kind: 'marine'; item: MarineMapItem }
-  | { kind: 'zone'; marker: ZoneMarker };
+  | { kind: 'zone'; marker: ZoneMarker }
+  | { kind: 'foliage'; spot: FoliageSpot };
 
 export interface MapSprite {
   key: string;
@@ -103,6 +111,10 @@ export interface MapQuery {
   legalOnly?: boolean;
   /** 이 어종 하나만 지도에 남긴다 (slug). 조건이 아니라 대상을 고르는 축이다. */
   speciesSlug?: string;
+  /** 어떤 자연을 볼 것인가. 카테고리마다 지도에 올리는 단위가 다르다. */
+  layer?: MapLayerId;
+  /** 단풍 상태 필터. 'all' 이면 물드는 중인 곳 전부. */
+  foliageState?: FoliageState | 'all';
   mode?: MapMode;
   /**
    * 0 = 기본, 1 = 확대. 확대하면 접어 두었던 sprite 를 더 펼친다.
@@ -172,8 +184,8 @@ function separate(sprites: MapSprite[]): MapSprite[] {
 
   const base = sprites.map((s) => s.basePosition);
   const pos = base.map((p) => ({ x: p.x, y: p.y }));
-  // 바다 생물은 물 밖으로 나가면 뜻이 달라진다
-  const seaBound = sprites.map((s) => s.subject.kind !== 'nature');
+  // 바다 생물은 물 밖으로 나가면 뜻이 달라진다. 단풍은 산이므로 반대다.
+  const seaBound = sprites.map((s) => s.subject.kind === 'marine' || s.subject.kind === 'zone');
 
   for (let step = 0; step < 140; step += 1) {
     for (let i = 0; i < pos.length; i += 1) {
@@ -282,6 +294,8 @@ function bucketOf(sprite: MapSprite): string {
       return sprite.subject.item.seaRegion;
     case 'zone':
       return sprite.subject.marker.zone.seaRegion;
+    case 'foliage':
+      return `land:${sprite.subject.spot.location.region}`;
     default:
       return `land:${sprite.placeLabel}`;
   }
@@ -374,7 +388,8 @@ function natureSprites(query: MapQuery): MapSprite[] {
   const out: MapSprite[] = [];
 
   for (const item of resolveAll({ date: query.date })) {
-    if (item.entity.category === 'fishing') continue;
+    // 단풍은 명소 단위로 따로 그린다 (foliageSprites)
+    if (item.entity.category === 'fishing' || item.entity.category === 'foliage') continue;
     if (!includeCategory(query.categories, item.entity.category)) continue;
     if (!isOnMap(item.status)) continue;
 
@@ -444,12 +459,51 @@ function zoneSprites(query: MapQuery): MapSprite[] {
     });
 }
 
+/**
+ * 단풍 명소 하나 = sprite 하나.
+ *
+ * 바다는 어종 × 해역이 단위지만 단풍은 산이 단위다 —
+ * 사용자가 묻는 것은 "설악산이 지금 어떤가" 이지 "설악산의 단풍나무" 가 아니다.
+ * 아직 물들지 않았거나 이미 끝난 곳은 지도에 올리지 않는다.
+ * (산 색은 sprite 가 아니라 FoliageOverlay 가 칠한다)
+ */
+function foliageSprites(query: MapQuery): MapSprite[] {
+  const filter = query.foliageState ?? 'all';
+
+  return buildFoliageSpots(query.date)
+    .filter((spot) => isColoring(spot.state))
+    .filter((spot) => filter === 'all' || spot.state === filter)
+    .map((spot) => {
+      const prominence = spot.state === 'peak' ? 1 : spot.state === 'good' ? 0.86 : 0.72;
+      return {
+        key: `foliage:${spot.location.id}`,
+        selectionId: `foliage:${spot.location.slug}`,
+        entity: spot.entity,
+        name: spot.location.name,
+        placeLabel: spot.location.region,
+        position: spot.position,
+        basePosition: spot.position,
+        prominence,
+        seasonState: null,
+        starting: spot.state === 'starting',
+        restricted: false,
+        legalStatus: 'open',
+        accent: spot.state === 'peak' ? ACCENT.peak : ACCENT.nature,
+        subject: { kind: 'foliage', spot },
+      } satisfies MapSprite;
+    });
+}
+
 export function buildMapLayout(query: MapQuery): MapLayout {
   const mode = query.mode ?? 'species';
   const detail = query.detail ?? 0;
 
   const candidates =
-    mode === 'zone' ? zoneSprites(query) : [...marineSprites(query), ...natureSprites(query)];
+    query.layer === 'foliage'
+      ? foliageSprites(query)
+      : mode === 'zone'
+        ? zoneSprites(query)
+        : [...marineSprites(query), ...natureSprites(query)];
 
   const { visible, hidden } = thin(candidates, detail);
   const sprites = separate(visible);

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
-import { buildMapLayout, countByCategory, countMap, type MapSprite } from '@/services/map-service';
+import { buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
+import { countFoliage, type FoliageSpot } from '@/services/foliage-service';
 import {
   findNextLivelyDate,
   getZoneDetail,
@@ -20,10 +21,13 @@ import { NatureDetailSheet } from '@/components/nature/NatureDetailSheet';
 import { MarineDetailSheet } from '@/components/marine/MarineDetailSheet';
 import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
-import { SHOW_LAYER_FILTER } from '@/data-sources';
-import { LayerFilter } from './LayerFilter';
+import { FoliageOverlay } from './FoliageOverlay';
+import { FoliagePicksSheet } from './FoliagePicksSheet';
+import { FoliageDetailSheet } from '@/components/nature/FoliageDetailSheet';
+import { buildFoliageSpots } from '@/services/foliage-service';
 import { MarineFilterSheet } from './MarineFilterSheet';
 import { MarineMapHeader } from './MarineMapHeader';
+import { MapControls } from './MapControls';
 import { MapSideList } from './MapSideList';
 import { NatureMap } from './NatureMap';
 import { WeeklyPicksSheet } from './WeeklyPicksSheet';
@@ -71,6 +75,8 @@ export function MapScreen() {
   const legalOnly = useMapStore((s) => s.legalOnly);
   const focusedSpecies = useMapStore((s) => s.focusedSpecies);
   const focusSpecies = useMapStore((s) => s.focusSpecies);
+  const layer = useMapStore((s) => s.layer);
+  const foliageState = useMapStore((s) => s.foliageState);
   const mode = useMapStore((s) => s.mode);
   const selectedId = useMapStore((s) => s.selectedOccurrenceId);
   const select = useMapStore((s) => s.selectOccurrence);
@@ -118,14 +124,32 @@ export function MapScreen() {
         startingOnly,
         legalOnly,
         speciesSlug: focusedSpecies?.slug,
+        layer,
+        foliageState,
         mode,
         detail,
       }),
-    [date, categories, seasonFilter, startingOnly, legalOnly, focusedSpecies, mode, detail],
+    [
+      date,
+      categories,
+      seasonFilter,
+      startingOnly,
+      legalOnly,
+      focusedSpecies,
+      layer,
+      foliageState,
+      mode,
+      detail,
+    ],
   );
 
-  const categoryCounts = useMemo(() => countByCategory(date), [date]);
   const counts = useMemo(() => countMap(date, mode), [date, mode]);
+  const foliage = useMemo(() => countFoliage(date), [date]);
+  /* 산 색은 sprite 가 아니라 명소 전체(아직 초록인 곳 포함)로 정한다 */
+  const foliageSpots = useMemo(
+    () => (layer === 'foliage' ? buildFoliageSpots(date) : []),
+    [layer, date],
+  );
 
   const selectedSprite = useMemo(
     () => layout.sprites.find((s) => s.selectionId === selectedId) ?? null,
@@ -136,6 +160,8 @@ export function MapScreen() {
     selectedSprite?.subject.kind === 'marine' ? selectedSprite.subject.item : null;
   const selectedNature: ResolvedOccurrence | null =
     selectedSprite?.subject.kind === 'nature' ? selectedSprite.subject.resolved : null;
+  const selectedFoliage: FoliageSpot | null =
+    selectedSprite?.subject.kind === 'foliage' ? selectedSprite.subject.spot : null;
 
   /* ── 권역 시트 ──────────────────────────────────────────── */
   const openZoneSlug = useMapStore((s) => s.openZoneSlug);
@@ -225,9 +251,11 @@ export function MapScreen() {
   const [picksOpen, setPicksOpen] = useState(false);
 
   const filtered =
-    mode === 'zone'
-      ? legalOnly
-      : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
+    layer === 'foliage'
+      ? foliageState !== 'all'
+      : mode === 'zone'
+        ? legalOnly
+        : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
 
   const openFilter = useCallback(() => setFilterOpen(true), []);
 
@@ -246,6 +274,15 @@ export function MapScreen() {
     [focusSpecies, select, setOpenZone, resetViewport, play],
   );
 
+  /** 추천에서 고른 단풍 명소를 지도에서 집어 준다 */
+  const showFoliageOnMap = useCallback(
+    (spot: FoliageSpot) => {
+      select(`foliage:${spot.location.slug}`);
+      focusOn(spot.position, { scale: 1.5, anchorX: 0.36 });
+    },
+    [select, focusOn],
+  );
+
   /** 추천에서 고른 어종을 지도에서 집어 준다. 지금 지도에 없으면 아무것도 하지 않는다. */
   const showSpeciesOnMap = useCallback(
     (slug: string) => {
@@ -262,6 +299,8 @@ export function MapScreen() {
 
   const header = (stacked: boolean) => (
     <MarineMapHeader
+      layer={layer}
+      foliage={foliage}
       mode={layout.mode}
       counts={counts}
       /* 조건에 맞는 대상 수. 과밀로 접힌 것을 뺀 '지금 그려진 수' 는 타임라인이 말한다. */
@@ -285,8 +324,8 @@ export function MapScreen() {
             상단 가로 바로 올리면 그만큼 지도 높이가 깎이는데,
             데스크톱 지도는 세로에 걸려 있어 그 손해가 그대로 지도 크기가 된다.
           */}
+          {/* 자연 카테고리는 제목 자체(CategorySelector)가 고르므로 별도 칩 줄을 두지 않는다 */}
           {header(true)}
-          {SHOW_LAYER_FILTER && <LayerFilter counts={categoryCounts} />}
 
           <MapSideList
             sprites={layout.sprites}
@@ -314,11 +353,23 @@ export function MapScreen() {
             layout={layout}
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
+            overlay={layer === 'foliage' ? <FoliageOverlay spots={foliageSpots} /> : null}
           />
 
-          {/* 상태를 훑어보다 행동으로 넘어가는 자리 — 필터 줄에 섞지 않는다 */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
-            <WeeklyRecommendationCTA onOpen={() => setPicksOpen(true)} />
+          {/*
+            지도 아래 한 줄. 가운데는 행동으로 넘어가는 자리(추천),
+            오른쪽은 지도 자체를 다루는 확대/축소다.
+            가운데 열을 auto 로 두어 CTA 는 컨트롤 폭과 무관하게 가운데 온다.
+          */}
+          <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <span />
+            <WeeklyRecommendationCTA
+              label={layer === 'foliage' ? '이번 주 단풍 어디가 좋지?' : '이번 주 뭐 잡지?'}
+              onOpen={() => setPicksOpen(true)}
+            />
+            <div className="justify-self-end">
+              <MapControls />
+            </div>
           </div>
 
           {/*
@@ -328,27 +379,54 @@ export function MapScreen() {
           {visible === 0 && !isPlaying && (
             <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
               <div className="pointer-events-auto">
-                <QuietState date={date} filtered={filtered} species={focusedSpecies?.name} />
+                <QuietState
+                  date={date}
+                  filtered={filtered}
+                  species={focusedSpecies?.name}
+                  foliage={layer === 'foliage'}
+                />
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <NatureTimeline date={date} visibleCount={visible} mode={layout.mode} />
+      <NatureTimeline
+        date={date}
+        visibleCount={visible}
+        unit={layer === 'foliage' ? '곳' : layout.mode === 'zone' ? '곳' : '종'}
+      />
 
       <MarineFilterSheet
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
+        layer={layer}
         mode={layout.mode}
         counts={counts}
+        foliage={foliage}
       />
 
-      <WeeklyPicksSheet
-        open={picksOpen}
-        onClose={() => setPicksOpen(false)}
+      {layer === 'foliage' ? (
+        <FoliagePicksSheet
+          open={picksOpen}
+          onClose={() => setPicksOpen(false)}
+          date={date}
+          onShowOnMap={showFoliageOnMap}
+        />
+      ) : (
+        <WeeklyPicksSheet
+          open={picksOpen}
+          onClose={() => setPicksOpen(false)}
+          date={date}
+          onShowOnMap={showSpeciesOnMap}
+        />
+      )}
+
+      <FoliageDetailSheet
+        spot={selectedFoliage}
         date={date}
-        onShowOnMap={showSpeciesOnMap}
+        onClose={() => select(null)}
+        onFocusMap={(spot) => focusOn(spot.position, { scale: 1.6, anchorX: 0.36 })}
       />
 
       <MarineDetailSheet
@@ -395,20 +473,27 @@ function QuietState({
   date,
   filtered,
   species,
+  foliage = false,
 }: {
   date: string;
   filtered: boolean;
   /** 어종 하나만 보고 있다면 그 이름 — 안내를 그 어종의 말로 한다 */
   species?: string;
+  /** 단풍 화면인가 — 빈 화면의 뜻이 다르다 */
+  foliage?: boolean;
 }) {
   const setDate = useTimeStore((s) => s.setDate);
   const next = useMemo(() => (filtered ? null : findNextLivelyDate(date)), [date, filtered]);
 
   const title = species
     ? `지금은 ${species} 시즌이 아니에요`
-    : filtered
-      ? '조건에 맞는 어종이 없어요'
-      : '이 시기에는 볼 것이 적어요';
+    : foliage
+      ? filtered
+        ? '이 상태인 곳이 없어요'
+        : '아직 물든 곳이 없어요'
+      : filtered
+        ? '조건에 맞는 어종이 없어요'
+        : '이 시기에는 볼 것이 적어요';
 
   return (
     <EmptyState
@@ -416,9 +501,11 @@ function QuietState({
       description={
         species
           ? '▶ 1년 재생을 누르면 언제 시즌인지 보입니다.'
-          : filtered
-            ? '필터를 풀거나 날짜를 옮겨 보세요.'
-            : '아래 슬라이더로 날짜를 옮기면 다른 계절의 바다가 보입니다.'
+          : foliage
+            ? '아래 슬라이더를 10월로 옮기면 북쪽 산부터 물듭니다.'
+            : filtered
+              ? '필터를 풀거나 날짜를 옮겨 보세요.'
+              : '아래 슬라이더로 날짜를 옮기면 다른 계절의 바다가 보입니다.'
       }
       action={
         next ? (

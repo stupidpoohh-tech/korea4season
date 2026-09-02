@@ -1,6 +1,12 @@
 'use client';
 
 import { Sheet } from '@/components/common/Sheet';
+import type { MapLayerId } from '@/domain/nature-categories';
+import {
+  FOLIAGE_STATE_LABEL,
+  type FoliageCounts,
+  type FoliageState,
+} from '@/services/foliage-service';
 import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-service';
 import { useMapStore } from '@/store/map-store';
 import { useActiveFilterCount } from './FilterTrigger';
@@ -20,11 +26,16 @@ import { useActiveFilterCount } from './FilterTrigger';
 interface Props {
   open: boolean;
   onClose: () => void;
+  layer: MapLayerId;
   mode: MapMode;
   counts: MapCounts;
+  foliage: FoliageCounts;
 }
 
-export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
+/** 단풍 상태 필터. 바다의 시즌 강도와 같은 자리, 같은 어휘를 쓴다. */
+const FOLIAGE_FILTERS: (FoliageState | 'all')[] = ['all', 'peak', 'good', 'starting', 'ending'];
+
+export function MarineFilterSheet({ open, onClose, layer, mode, counts, foliage }: Props) {
   const seasonFilter = useMapStore((s) => s.seasonFilter);
   const setSeason = useMapStore((s) => s.setSeasonFilter);
   const startingOnly = useMapStore((s) => s.startingOnly);
@@ -32,6 +43,9 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
   const legalOnly = useMapStore((s) => s.legalOnly);
   const toggleLegal = useMapStore((s) => s.toggleLegalOnly);
   const reset = useMapStore((s) => s.resetFilters);
+
+  const foliageState = useMapStore((s) => s.foliageState);
+  const setFoliageState = useMapStore((s) => s.setFoliageState);
 
   const active = useActiveFilterCount();
   const unit = mode === 'zone' ? '권역' : '어종';
@@ -47,7 +61,11 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
       header={
         <div>
           <h2 className="text-[16px] font-semibold tracking-tight">
-            {mode === 'zone' ? '어떤 권역을 볼까요?' : '어떤 상태를 볼까요?'}
+            {layer === 'foliage'
+              ? '어떤 단풍을 볼까요?'
+              : mode === 'zone'
+                ? '어떤 권역을 볼까요?'
+                : '어떤 상태를 볼까요?'}
           </h2>
           <p className="mt-0.5 text-[12px] text-[color:var(--color-muted)]">
             고르는 즉시 지도에 반영됩니다
@@ -55,7 +73,44 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
         </div>
       }
     >
-      {mode === 'species' && (
+      {layer === 'foliage' && (
+        <fieldset>
+          <legend className="mb-1.5 text-[12px] font-medium text-[color:var(--color-faint)]">
+            단풍 상태
+          </legend>
+
+          <div className="space-y-0.5">
+            {FOLIAGE_FILTERS.map((state) => {
+              const on = foliageState === state;
+              const count = state === 'all' ? foliage.coloring : foliage.byState[state];
+              return (
+                <label
+                  key={state}
+                  className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2.5 transition-colors ${
+                    on ? 'bg-[color:var(--color-accent-soft)]' : 'hover:bg-[color:var(--color-line-soft)]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="foliage-filter"
+                    checked={on}
+                    onChange={() => setFoliageState(state)}
+                    className="h-4 w-4 shrink-0 accent-[color:var(--color-accent-strong)]"
+                  />
+                  <span
+                    className={`flex-1 text-[14px] ${on ? 'font-semibold text-[color:var(--color-accent-strong)]' : 'text-[color:var(--color-ink-soft)]'}`}
+                  >
+                    {state === 'all' ? '전체' : FOLIAGE_STATE_LABEL[state]}
+                  </span>
+                  <span className="tabular text-[13px] text-[color:var(--color-muted)]">{count}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      {layer !== 'foliage' && mode === 'species' && (
         <fieldset>
           <legend className="mb-1.5 text-[12px] font-medium text-[color:var(--color-faint)]">
             시즌 강도
@@ -97,7 +152,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
         0 건인 축은 아예 그리지 않는다 — 누를 수 없는 빈 줄은 정보가 아니다.
         이미 켜 둔 필터가 0 건이 된 경우에는 끌 수 있어야 하므로 남긴다.
       */}
-      {(showStarting || showLegal) && (
+      {layer !== 'foliage' && (showStarting || showLegal) && (
         <div className="space-y-0.5 border-t border-[color:var(--color-line-soft)] pt-3">
           <p className="mb-1 text-[12px] font-medium text-[color:var(--color-faint)]">
             함께 좁히기
@@ -125,7 +180,7 @@ export function MarineFilterSheet({ open, onClose, mode, counts }: Props) {
         </div>
       )}
 
-      {mode === 'zone' && (
+      {layer !== 'foliage' && mode === 'zone' && (
         <p className="rounded-xl bg-[color:var(--color-line-soft)] px-3 py-2.5 text-[12px] leading-relaxed text-[color:var(--color-muted)]">
           {!showLegal && '지금 이 날짜에는 좁힐 조건이 없습니다. '}
           권역은 여러 어종을 묶어 보여 주기 때문에 시즌 강도로 좁히지 않습니다.

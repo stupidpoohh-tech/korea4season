@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import type { MapLayerId } from '@/domain/nature-categories';
+import type { FoliageCounts } from '@/services/foliage-service';
 import type { MapCounts, MapMode } from '@/services/map-service';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { CurrentStateSummary } from './CurrentStateSummary';
@@ -22,8 +24,10 @@ import { ViewModeToggle } from './ViewModeToggle';
  * ──────────────────────────────────────────────────────────── */
 
 interface Props {
+  layer: MapLayerId;
   mode: MapMode;
   counts: MapCounts;
+  foliage: FoliageCounts;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
   filtered: boolean;
@@ -33,8 +37,10 @@ interface Props {
 }
 
 export function MarineMapHeader({
+  layer,
   mode,
   counts,
+  foliage,
   count,
   filtered,
   onOpenFilter,
@@ -61,6 +67,8 @@ export function MarineMapHeader({
     <div ref={boxRef} className="relative">
       <div className="flex items-start gap-2">
         <CurrentStateSummary
+          layer={layer}
+          foliage={foliage}
           mode={mode}
           count={count}
           filtered={filtered}
@@ -76,14 +84,14 @@ export function MarineMapHeader({
       <div className={stacked ? 'mt-2 space-y-1.5' : 'mt-1 flex items-center gap-2'}>
         {stacked ? (
           <>
-            <ViewModeToggle full />
+            <ViewModeToggle layer={layer} full />
             <FilterTrigger onOpen={openFilter} full />
           </>
         ) : (
           <>
             <FilterTrigger onOpen={openFilter} />
             <div className="ml-auto">
-              <ViewModeToggle />
+              <ViewModeToggle layer={layer} />
             </div>
           </>
         )}
@@ -92,6 +100,7 @@ export function MarineMapHeader({
       <div className="mt-1 empty:mt-0">
         {/* 데스크톱 레일에서는 요약 줄이 이미 '전체 N종 가운데' 를 말한다 */}
         <ActiveFilterChips
+          layer={layer}
           mode={mode}
           total={stacked ? undefined : counts.season.all}
           unit={mode === 'zone' ? '곳' : '종'}

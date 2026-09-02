@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { formatKoreanDate, todayKey, type DateKey } from '@/domain/date';
 import { seasonMeta } from '@/lib/season';
-import type { MapMode } from '@/services/map-service';
 import { useTimeStore } from '@/store/time-store';
 import { DateSlider } from './DateSlider';
 import { PlaybackControl } from './PlaybackControl';
@@ -13,7 +12,8 @@ interface Props {
   date: DateKey;
   /** 지금 지도에 실제로 그려진 수 */
   visibleCount: number;
-  mode: MapMode;
+  /** 세는 단위 — 카테고리마다 다르다 (어종 / 권역 / 명소) */
+  unit: string;
 }
 
 /**
@@ -23,7 +23,7 @@ interface Props {
  * 접힌 상태에도 날짜 · 슬라이더 · 오늘 · 재생은 남는다 — 여기까지가
  * "시간을 움직이면 지도가 바뀐다" 를 이해하는 데 필요한 최소한이다.
  */
-export function NatureTimeline({ date, visibleCount, mode }: Props) {
+export function NatureTimeline({ date, visibleCount, unit }: Props) {
   usePlayback();
 
   const [expanded, setExpanded] = useState(false);
@@ -59,8 +59,8 @@ export function NatureTimeline({ date, visibleCount, mode }: Props) {
             과밀로 접힌 것이 있으면 두 수가 다르므로 문구로 뜻을 구분한다.
           */}
           <p className="mt-0.5 truncate text-[11.5px] text-[color:var(--color-muted)]">
-            {date.slice(0, 4)}년 · 지도에{' '}
-            {mode === 'zone' ? `${visibleCount}곳 표시 중` : `${visibleCount}종 표시 중`}
+            {date.slice(0, 4)}년 · 지도에 {visibleCount}
+            {unit} 표시 중
           </p>
         </div>
 
