@@ -23,6 +23,7 @@ import { NatureDetailSheet } from '@/components/nature/NatureDetailSheet';
 import { MarineDetailSheet } from '@/components/marine/MarineDetailSheet';
 import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
+import { SHOW_LAYER_FILTER } from '@/data-sources';
 import { LayerFilter, MapModeToggle, StateFilterRow } from './LayerFilter';
 import { MapSideList } from './MapSideList';
 import { NatureMap } from './NatureMap';
@@ -160,15 +161,17 @@ export function MapScreen() {
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-56px)] lg:gap-3 lg:px-6 lg:pb-5 lg:pt-3">
-      <div className="flex items-center gap-2 lg:hidden">
+      <div className="flex items-start gap-2 lg:hidden">
         <div className="min-w-0 flex-1">
           <StateFilterRow counts={stateCounts} />
         </div>
         <MapModeToggle />
       </div>
-      <div className="lg:hidden">
-        <LayerFilter counts={categoryCounts} />
-      </div>
+      {SHOW_LAYER_FILTER && (
+        <div className="lg:hidden">
+          <LayerFilter counts={categoryCounts} />
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[252px_minmax(0,1fr)]">
         <div className="hidden min-h-0 flex-col gap-2.5 lg:flex">

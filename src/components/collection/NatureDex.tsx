@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CATEGORY_META, CATEGORY_ORDER } from '@/lib/category-meta';
+import { ENABLED_CATEGORIES, SHOW_LAYER_FILTER } from '@/data-sources';
+import { CATEGORY_META } from '@/lib/category-meta';
 import type { NatureCategory } from '@/domain/types';
 import type { DexEntry } from '@/services/nature-service';
 import { useDexHydrated, useDexStore } from '@/store/dex-store';
@@ -59,7 +60,9 @@ export function NatureDex({ entries }: { entries: DexEntry[] }) {
       <div
         role="group"
         aria-label="분류 필터"
-        className="scrollbar-none mb-3 flex gap-1.5 overflow-x-auto"
+        className={`scrollbar-none mb-3 flex gap-1.5 overflow-x-auto ${
+          SHOW_LAYER_FILTER ? '' : 'hidden'
+        }`}
       >
         <button
           type="button"
@@ -73,7 +76,7 @@ export function NatureDex({ entries }: { entries: DexEntry[] }) {
         >
           전체
         </button>
-        {CATEGORY_ORDER.map((id) => (
+        {ENABLED_CATEGORIES.map((id) => (
           <button
             key={id}
             type="button"

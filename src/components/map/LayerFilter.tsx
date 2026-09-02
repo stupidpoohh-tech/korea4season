@@ -1,7 +1,8 @@
 'use client';
 
 import type { NatureCategory } from '@/domain/types';
-import { CATEGORY_META, CATEGORY_ORDER } from '@/lib/category-meta';
+import { ENABLED_CATEGORIES, SHOW_LAYER_FILTER } from '@/data-sources';
+import { CATEGORY_META } from '@/lib/category-meta';
 import { STATE_FILTERS, type MapMode, type StateFilter } from '@/services/map-service';
 import { useMapStore } from '@/store/map-store';
 
@@ -19,7 +20,7 @@ export function StateFilterRow({ counts }: { counts: Record<StateFilter, number>
   const setState = useMapStore((s) => s.setStateFilter);
 
   return (
-    <div role="group" aria-label="바다 상태" className="scrollbar-none flex gap-1.5 overflow-x-auto">
+    <div role="group" aria-label="바다 상태" className="flex flex-wrap gap-1.5">
       {STATE_FILTERS.map((filter) => {
         const on = selected === filter.id;
         const restricted = filter.id === 'restricted';
@@ -55,6 +56,9 @@ export function LayerFilter({ counts }: { counts: Record<NatureCategory, number>
   const toggle = useMapStore((s) => s.toggleCategory);
   const clear = useMapStore((s) => s.clearCategories);
 
+  // 바다 하나만 켜져 있는 동안에는 레이어 선택이 할 일이 없다
+  if (!SHOW_LAYER_FILTER) return null;
+
   return (
     <div role="group" aria-label="자연 레이어" className="scrollbar-none flex gap-1.5 overflow-x-auto">
       <button
@@ -68,7 +72,7 @@ export function LayerFilter({ counts }: { counts: Record<NatureCategory, number>
         전체
       </button>
 
-      {CATEGORY_ORDER.map((id) => {
+      {ENABLED_CATEGORIES.map((id) => {
         const meta = CATEGORY_META[id];
         const on = selected.includes(id);
         return (
