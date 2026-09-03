@@ -72,11 +72,21 @@ function NatureSpriteBase({
    * 평소에는 보통 크기의 40% 안팎으로 두어 색을 가리지 않게 하고,
    * 고른 것만 크게 키워 무엇을 짚었는지 분명히 한다.
    */
-  const size = sprite.compact ? 12 + prominence * 7 : 30 + prominence * 18;
+  /*
+   * 크기는 2px 단위로 끊는다.
+   *
+   * 시즌 강도는 이어진 값이라 그대로 쓰면 하루가 지날 때마다 sprite 마다
+   * 새로운 크기가 나온다. 브라우저는 크기가 바뀔 때마다 그림을 그 크기로
+   * 다시 굽고 그 결과를 들고 있으므로, 1년을 훑는 동안 어종 하나가 수백 벌의
+   * 그림을 남긴다. 2px 차이는 눈에 보이지 않는다.
+   */
+  const raw = sprite.compact ? 12 + prominence * 7 : 30 + prominence * 18;
+  const size = Math.round(raw / 2) * 2;
   const selectedScale = sprite.compact ? 1.6 : 1.14;
   const tint = LEGAL_TINT[sprite.legalStatus];
 
-  const baseOpacity = 0.62 + prominence * 0.38;
+  /* 불투명도도 같은 이유로 끊는다 — 값이 그대로면 motion 이 아무 일도 하지 않는다 */
+  const baseOpacity = Math.round((0.62 + prominence * 0.38) * 20) / 20;
   const opacity = dimmed ? baseOpacity * 0.45 : baseOpacity;
 
   return (
@@ -87,10 +97,17 @@ function NatureSpriteBase({
       animate={{ opacity, scale: selected ? selectedScale : 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={
-        // 슬라이더를 빠르게 움직일 때 스프링이 밀리면 지도가 굼떠 보인다
-        reducedMotion || fast
-          ? { duration: 0.1 }
-          : { type: 'spring', stiffness: 460, damping: 26, mass: 0.7 }
+        /*
+         * 끄는 동안에는 애니메이션을 아예 걸지 않는다.
+         * 0.1초라도 걸면 sprite 하나하나가 자기 타임라인을 붙들고,
+         * 사라지는 것들도 그만큼 트리에 남는다. 초당 수십 번 바뀌는
+         * 중에는 그 잔여물이 계속 쌓인다.
+         */
+        fast
+          ? { duration: 0 }
+          : reducedMotion
+            ? { duration: 0.1 }
+            : { type: 'spring', stiffness: 460, damping: 26, mass: 0.7 }
       }
       onClick={(event) => {
         event.stopPropagation();
@@ -112,12 +129,14 @@ function NatureSpriteBase({
       aria-label={`${sprite.name} · ${sprite.placeLabel}${tint ? ` · ${tint.title}` : ''}`}
       aria-pressed={selected}
     >
-      <span className="sprite-float relative block">
-        {(peak || selected) && (
+      {/* 끄는 동안에는 떠다니는 움직임을 멈춘다 — sprite 마다 무한 애니메이션이 돌면
+          그만큼 합성 레이어가 유지된다 */}
+      <span className={`relative block ${fast ? '' : 'sprite-float'}`}>
+        {(selected || (peak && !fast)) && (
           <span
             aria-hidden
             className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${
-              selected ? '' : 'sprite-ripple'
+              selected || fast ? '' : 'sprite-ripple'
             }`}
             style={{
               width: size * 1.25,
@@ -148,10 +167,19 @@ function NatureSpriteBase({
               transform={variation}
               tint={tint?.color}
               style={{
-                // 오려낸 그림이 바다·육지 어디에 놓여도 떠 보이게 한다
-                filter: selected
-                  ? 'drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 3px 5px rgba(0,10,20,.42))'
-                  : 'drop-shadow(0 0 1.5px rgba(255,255,255,.9)) drop-shadow(0 2px 3px rgba(0,10,20,.28))',
+                /*
+                 * 오려낸 그림이 바다·육지 어디에 놓여도 떠 보이게 한다.
+                 *
+                 * 다만 끄는 동안에는 걷는다. drop-shadow 는 요소마다 별도의
+                 * 버퍼를 잡고 흐림을 계산하는데, 스무 개가 매 프레임 자리를
+                 * 옮기면 그 버퍼를 매번 다시 만든다. 움직이는 중에는 그림자가
+                 * 있는지 없는지 눈에 들어오지도 않는다.
+                 */
+                filter: fast
+                  ? undefined
+                  : selected
+                    ? 'drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 3px 5px rgba(0,10,20,.42))'
+                    : 'drop-shadow(0 0 1.5px rgba(255,255,255,.9)) drop-shadow(0 2px 3px rgba(0,10,20,.28))',
               }}
             />
 

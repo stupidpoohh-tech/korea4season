@@ -81,13 +81,18 @@ export function TerrainOverlay({
   const transition = fast ? 'none' : COLOR_TRANSITION;
 
   /*
-   * 색은 50 단계로 끊어 쓴다.
+   * 색은 단계로 끊어 쓴다.
    *
    * 하루가 지날 때마다 요소 100여 개의 fill 을 새 값으로 바꾸면 1년 재생이나
    * 슬라이더 드래그에서 지도 전체를 매 프레임 다시 칠하게 된다. 눈으로는
    * 구분되지 않는 차이이므로 단계로 끊어 다시 칠하는 횟수를 줄인다.
+   *
+   * 끄는 동안에는 더 굵게 끊는다. 손가락을 따라 1년을 지나가는 사이 지도
+   * 전체를 365번 다시 칠할 이유가 없다 — 움직이는 중에 보이는 것은
+   * 색이 어디로 흐르는가이지 오늘과 내일의 차이가 아니다.
    */
-  const step = (v: number) => Math.round(v * 50) / 50;
+  const grain = fast ? 16 : 50;
+  const step = (v: number) => Math.round(v * grain) / grain;
   const snow = step(winter);
   const fresh = regions.map((r) => step(freshAt(springOffset(r.offsetDays))));
   const paintKey = `${regions.map((r) => step(r.wave)).join(',')}|${fresh.join(',')}|${snow}`;
@@ -128,8 +133,10 @@ export function TerrainOverlay({
       ...stops,
       { ...stops[stops.length - 1]!, offset: 1 },
     ];
+    /* regions 는 매 렌더 새 배열이라 그대로 두면 기억이 되지 않는다.
+       바뀐 것이 있으면 paintKey 나 key 가 먼저 달라진다. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regions, paintKey]);
+  }, [key, paintKey]);
 
   /*
    * 여름에는 base map 이 이미 그 색이다.
@@ -161,17 +168,12 @@ export function TerrainOverlay({
           y2={VIEW.height}
         >
           {landStops.map((stop, i) => (
-            <stop
-              key={i}
-              offset={stop.offset}
-              stopColor={stop.color}
-              stopOpacity={stop.opacity}
-              style={{
-                transition: fast
-                  ? 'none'
-                  : 'stop-color 320ms ease-out, stop-opacity 320ms ease-out',
-              }}
-            />
+            /*
+             * 그라디언트 정지점에는 전환을 걸지 않는다. 한 번 바뀔 때마다
+             * 그라디언트를 다시 굽고 육지 전체를 다시 칠하는데, 이 칠은
+             * 절정에서도 32% 라 하루치 차이가 눈에 들어오지 않는다.
+             */
+            <stop key={i} offset={stop.offset} stopColor={stop.color} stopOpacity={stop.opacity} />
           ))}
         </linearGradient>
       </defs>

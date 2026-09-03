@@ -40,15 +40,21 @@ export function FlowerOverlay({
   );
 
   /*
-   * 밀도는 10 단계로 끊는다. 하루마다 꽃송이 수가 한 개씩 늘고 주는 것은
+   * 밀도는 단계로 끊는다. 하루마다 꽃송이 수가 한 개씩 늘고 주는 것은
    * 눈에 보이지 않으면서 매 프레임 path 를 새로 만들게 한다.
+   * 끄는 동안에는 더 굵게 끊는다 — 1년을 훑는 사이 path 를 다시 만드는
+   * 횟수가 그만큼 줄어든다.
    */
+  const steps = fast ? 4 : 10;
   const densityKey = regions
-    .map((r) => r.blooms.map((b) => `${b.slug}:${Math.round(b.density * 10)}`).join('+'))
+    .map((r) => r.blooms.map((b) => `${b.slug}:${Math.round(b.density * steps)}`).join('+'))
     .join('|');
 
   const clusters = useMemo(() => {
-    const bySpecies = new Map<string, { petal: string; center: string; d: string[] }>();
+    const bySpecies = new Map<
+      string,
+      { petal: string; center: string; d: string[]; core: string[] }
+    >();
 
     shapes.forEach((shape) => {
       const region = regions[shape.regionIndex];
@@ -66,6 +72,7 @@ export function FlowerOverlay({
           petal: bloom.petal,
           center: bloom.center,
           d: [],
+          core: [],
         };
 
         shape.anchors.forEach((anchor, anchorIndex) => {
@@ -75,7 +82,10 @@ export function FlowerOverlay({
             const radius = anchor.r * (0.35 + ((seed % 5) / 5) * 0.6);
             const x = anchor.x + Math.cos(angle) * radius;
             const y = anchor.y + Math.sin(angle) * radius * 0.7;
-            bucket.d.push(circlePath(x, y, PETAL_R * (0.8 + ((seed % 3) / 3) * 0.45)));
+            const r = PETAL_R * (0.8 + ((seed % 3) / 3) * 0.45);
+            bucket.d.push(circlePath(x, y, r));
+            /* 꽃술 — 나무 윗면과 같은 방식으로 살짝 어긋나게 얹는다 */
+            bucket.core.push(circlePath(x - r * 0.22, y - r * 0.24, r * 0.44));
           }
         });
 
@@ -83,7 +93,12 @@ export function FlowerOverlay({
       });
     });
 
-    return [...bySpecies.entries()].map(([slug, v]) => ({ slug, ...v, d: v.d.join(' ') }));
+    return [...bySpecies.entries()].map(([slug, v]) => ({
+      slug,
+      ...v,
+      d: v.d.join(' '),
+      core: v.core.join(' '),
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shapes, densityKey]);
 
@@ -97,9 +112,16 @@ export function FlowerOverlay({
     >
       {clusters.map((c) => (
         <g key={c.slug} style={{ transition: fast ? 'none' : 'opacity 320ms ease-out' }}>
-          {/* 바깥은 꽃잎, 가운데는 밝게 — 작아도 꽃송이로 읽히게 한다 */}
+          {/*
+           * 바깥은 꽃잎, 가운데는 밝게 — 작아도 꽃송이로 읽히게 한다.
+           *
+           * 밝게 하는 데 mix-blend-mode 를 쓰지 않는다. 혼합 모드는 이 SVG 만
+           * 한 별도의 버퍼를 잡아 두고 합성하는데, 화면 전체를 덮는 레이어라
+           * 그 버퍼가 곧 화면 크기다. 대신 나무 윗면과 같은 방식으로
+           * 작은 밝은 원을 어긋나게 얹는다.
+           */}
           <path d={c.d} fill={c.petal} opacity={0.92} />
-          <path d={c.d} fill={c.center} opacity={0.5} transform="scale(1)" style={{ mixBlendMode: 'screen' }} />
+          <path d={c.core} fill={c.center} opacity={0.85} />
         </g>
       ))}
     </svg>

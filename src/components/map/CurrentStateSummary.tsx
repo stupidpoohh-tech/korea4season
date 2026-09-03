@@ -53,9 +53,8 @@ export function CurrentStateSummary({
     <div className="min-w-0">
       {compact ? (
         <>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <p className="text-[15px] font-semibold leading-[19px] tracking-tight">지금日지도</p>
-            <span aria-hidden className="text-[color:var(--color-line)]">|</span>
             <CategorySelector compact />
           </div>
           <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
@@ -85,7 +84,7 @@ export function CurrentStateSummary({
       ) : (
         <>
           {/* CategorySelector 가 div 를 그리므로 p 로 감싸면 안 된다 (HTML 위반 → hydration 오류) */}
-          <div className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-[19px]">
             <CategorySelector />
             {layer === 'mountain' ? (
               <span className="text-[13.5px] font-semibold text-[color:var(--color-ink)]">

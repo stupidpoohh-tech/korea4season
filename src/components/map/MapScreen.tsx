@@ -27,6 +27,7 @@ import {
 import { locationPosition } from '@/services/nature-service';
 import type { MapPosition } from '@/domain/projection';
 import { BASE_MAP_HEIGHT_CQW } from '@/lib/map-asset';
+import { useWideScreen } from '@/lib/use-wide-screen';
 import { useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
 import { NatureTimeline } from '@/components/timeline/NatureTimeline';
@@ -84,6 +85,8 @@ export function MapScreen() {
   const setDate = useTimeStore((s) => s.setDate);
   const isPlaying = useTimeStore((s) => s.isPlaying);
   const isScrubbing = useTimeStore((s) => s.isScrubbing);
+  /* 보이지 않는 쪽(모바일의 좌측 레일 · 데스크톱의 상단 바)은 아예 그리지 않는다 */
+  const wideScreen = useWideScreen();
   const play = useTimeStore((s) => s.play);
 
   const categories = useMapStore((s) => s.selectedCategories);
@@ -123,15 +126,37 @@ export function MapScreen() {
     if (focusId) pendingFocus.current = focusId;
   }, [searchParams, setDate, setCategories]);
 
-  /* ── state -> URL (재생 중에는 건너뛴다) ────────────────── */
+  /* ── state -> URL ───────────────────────────────────────
+   *
+   * 주소를 다시 쓰는 일은 값싸지 않다. Safari 는 replaceState 를 30초에
+   * 100번으로 제한하고, 그 한도를 넘기면 경고를 남긴 뒤 페이지를 놓아
+   * 버린다 (iOS 에서 '이 페이지를 불러올 수 없음'). 슬라이더를 한 번
+   * 끌면 하루마다 한 번씩 — 1년이면 365번이다.
+   *
+   * 그래서 잡고 있는 동안과 재생 중에는 아예 쓰지 않고, 손을 뗀 뒤
+   * 잠깐 기다렸다가 한 번만 쓴다. 주소는 지금 보고 있는 것을 남에게
+   * 건네기 위한 것이므로 끄는 도중의 하루하루를 담을 이유가 없다.
+   */
   useEffect(() => {
-    if (isPlaying) return;
-    const params = new URLSearchParams();
-    params.set('date', date);
-    if (categories.length) params.set('layer', categories.join(','));
-    if (selectedId) params.set('focus', selectedId);
-    window.history.replaceState(null, '', `/map?${params.toString()}`);
-  }, [date, categories, isPlaying, selectedId]);
+    if (isPlaying || isScrubbing) return;
+    const write = setTimeout(() => {
+      const params = new URLSearchParams();
+      params.set('date', date);
+      if (categories.length) params.set('layer', categories.join(','));
+      if (selectedId) params.set('focus', selectedId);
+      /*
+       * 한도를 넘기면 Safari 는 예외를 던진다. effect 안에서 그대로 터지면
+       * React 가 트리를 통째로 내려 버리므로, 주소 한 줄 때문에 화면을
+       * 잃지 않도록 여기서 받아 둔다 (진단 패널이 기록을 남긴다).
+       */
+      try {
+        window.history.replaceState(null, '', `/map?${params.toString()}`);
+      } catch (error) {
+        console.warn('주소를 갱신하지 못했습니다', error);
+      }
+    }, 250);
+    return () => clearTimeout(write);
+  }, [date, categories, isPlaying, isScrubbing, selectedId]);
 
   /* ── 파생 데이터 ────────────────────────────────────────── */
 
@@ -438,9 +463,10 @@ export function MapScreen() {
      */
     <div className="mx-auto flex h-[calc(100dvh-32px-env(safe-area-inset-bottom))] max-w-[1180px] flex-col gap-2 px-2 pb-2 pt-2 lg:h-[calc(100dvh-57px-32px)] lg:gap-3 lg:px-6 lg:pb-3 lg:pt-3">
       {/* 모바일 — 상태 → 보기 방식 → (필요할 때) 필터 순으로 한 묶음 */}
-      <div className="lg:hidden">{header(false)}</div>
+      {wideScreen !== true && <div className="lg:hidden">{header(false)}</div>}
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[252px_minmax(0,1fr)]">
+        {wideScreen !== false && (
         <div className="hidden min-h-0 flex-col gap-2.5 lg:flex">
           {/*
             데스크톱에서는 같은 계층을 좌측 레일에 세로로 쌓는다.
@@ -465,6 +491,7 @@ export function MapScreen() {
             />
           )}
         </div>
+        )}
 
         {/*
           지도는 map-bounds.json 의 viewWidth : viewHeight 비율을 반드시

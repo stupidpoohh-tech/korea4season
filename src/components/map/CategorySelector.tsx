@@ -7,7 +7,12 @@ import { useMapStore } from '@/store/map-store';
 /* ────────────────────────────────────────────────────────────
  * 무슨 자연을 볼 것인가.
  *
- * 이 서비스의 제목 자체가 선택지다 — '지금, 바다 ⌄' 를 눌러 단풍으로 옮긴다.
+ * 예전에는 제목 글자 자체가 선택지였다 — '지금, 바다 ▾'.
+ * 글자와 같은 크기·같은 색이라 누를 수 있다는 것이 읽히지 않았다.
+ * 지금은 알약 버튼이다. 테두리와 배경을 갖고, 아이콘이 무엇을 보고
+ * 있는지 먼저 말한다. 옆 문장(상태)과 구분되므로 제목 줄에서 유일하게
+ * 누를 수 있는 것이 된다.
+ *
  * 아직 없는 카테고리도 목록에는 둔다. 앞으로 무엇이 올지 보이는 편이
  * "낚시 앱" 이 아니라 "자연의 시간을 보는 지도" 로 읽히기 때문이다.
  * 다만 준비 중인 것을 누르면 화면을 만들지 않고 그렇다고만 말한다.
@@ -58,14 +63,23 @@ export function CategorySelector({ compact = false }: { compact?: boolean }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`flex items-center gap-1 rounded-lg font-semibold tracking-tight transition-colors hover:bg-[color:var(--color-line-soft)] ${
-          compact ? '-mx-1 px-1 text-[15px]' : '-mx-1 px-1 text-[16px]'
+        aria-label={`보는 자연: ${current.label} — 바꾸기`}
+        className={`inline-flex items-center gap-1 rounded-full border font-semibold tracking-tight transition-colors ${
+          open
+            ? 'border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent-strong)]'
+            : 'border-[color:var(--color-line)] bg-[color:var(--color-surface)] text-[color:var(--color-ink)] hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)]'
+        } ${
+          /* 모바일에서는 이 줄 높이가 곧 지도 높이다 — 줄을 늘리지 않을 만큼만 키운다 */
+          compact ? '-my-[4px] h-[27px] pl-2 pr-1.5 text-[13px]' : 'h-[28px] pl-2.5 pr-2 text-[14px]'
         }`}
       >
-        {current.headline}
+        <span aria-hidden className="text-[13px] leading-none">
+          {current.icon}
+        </span>
+        {current.label}
         <span
           aria-hidden
-          className={`text-[10px] text-[color:var(--color-faint)] transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`text-[9px] text-[color:var(--color-faint)] transition-transform ${open ? 'rotate-180' : ''}`}
         >
           ▾
         </span>
