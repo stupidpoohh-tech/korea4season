@@ -8,6 +8,7 @@ import { EMPTY_MAP_COUNTS, buildMapLayout, countMap, type MapSprite } from '@/se
 import {
   FOLIAGE_STATE_LABEL,
   freshAmount,
+  winterAt,
   mountainColorAt,
 } from '@/services/foliage-service';
 import { FLOWER_STATE_LABEL, getFlowerPicks } from '@/services/flower-service';
@@ -516,7 +517,8 @@ export function MapScreen() {
                 {/* 계절이 지형을 칠한다 — 카테고리와 무관하다 (1월 바다 화면도 눈이다) */}
                 <TerrainOverlay
                   regions={terrain.foliageRegions}
-                  winter={terrain.winter}
+                  /* 겨울도 신록처럼 권역마다 다르다 — 남쪽은 늦게 들어가고 얕게 지나간다 */
+                  winterAt={(offsetDays) => winterAt(date, offsetDays)}
                   freshAt={(offsetDays) => freshAmount(date, offsetDays)}
                   detailed={layer === 'mountain'}
                   /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */

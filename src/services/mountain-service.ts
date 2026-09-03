@@ -19,6 +19,7 @@ import {
   summarizeFoliage,
   waveSummary,
   winterAmount,
+  winterAt,
   type FoliageCounts,
   type FoliageRegion,
   type FoliageSpot,
@@ -43,8 +44,10 @@ export type MountainPhase = 'flower' | 'green' | 'foliage' | 'winter';
 
 export interface MountainNow {
   phase: MountainPhase;
-  /** 눈이 얼마나 덮였는가 (0~1) */
+  /** 중부 기준 겨울 깊이 (0~1) */
   winter: number;
+  /** 겨울의 앞머리(북부) 깊이 (0~1) */
+  winterLead: number;
   /** 신록이 얼마나 올라왔는가 (0~1). 권역별 offset 은 지형 레이어가 따로 쓴다. */
   fresh: number;
   flowerSpots: FlowerSpot[];
@@ -61,12 +64,17 @@ export interface MountainNow {
 
 const PHASE_HEADLINE: Record<'green' | 'winter', string> = {
   green: '여름 · 산이 짙어졌습니다',
-  winter: '겨울 · 산에 눈이 쌓입니다',
+  /*
+   * '눈이 쌓입니다' 라고 쓰지 않는다. 지도는 관측한 적설을 그리는 것이
+   * 아니라 잎을 떨군 겨울 산의 색을 그린다 — 글이 그림보다 앞서 나가면
+   * 사용자는 없는 정보를 읽는다.
+   */
+  winter: '겨울 · 산이 쉬어 갑니다',
 };
 
 const PHASE_CAPTION: Record<'green' | 'winter', string> = {
   green: '짙은 녹음',
-  winter: '눈 덮인 산',
+  winter: '잎을 떨군 산',
 };
 
 /**
@@ -77,7 +85,15 @@ const PHASE_CAPTION: Record<'green' | 'winter', string> = {
  * 날짜를 끄는 동안 매 프레임 도는 계산이라 쓰지 않을 것을 세면 그만큼 무겁다.
  */
 export interface TerrainNow {
+  /** 중부 기준 겨울 깊이 — 문구와 국면 판정에 쓰는 한 값 */
   winter: number;
+  /**
+   * 겨울의 앞머리(북부) 깊이.
+   *
+   * 겨울이 권역마다 다르게 오므로 '나라가 겨울인가' 를 중부 값 하나로 물으면
+   * 북쪽 산이 이미 겨울색인 12월 초에 화면이 '여름' 이라고 답한다.
+   */
+  winterLead: number;
   fresh: number;
   foliageSpots: FoliageSpot[];
   foliageRegions: FoliageRegion[];
@@ -88,6 +104,7 @@ export function buildTerrainNow(date: DateKey): TerrainNow {
   const foliageSpots = buildFoliageSpots(date);
   return {
     winter: winterAmount(date),
+    winterLead: winterAt(date, 0),
     fresh: freshAmount(date),
     foliageSpots,
     foliageRegions: groupFoliageRegions(foliageSpots),
@@ -107,7 +124,7 @@ export function buildMountainNow(
   terrain: TerrainNow,
   withFlowers = true,
 ): MountainNow {
-  const { winter, fresh, foliageSpots, foliageRegions, foliageCounts } = terrain;
+  const { winter, winterLead, fresh, foliageSpots, foliageRegions, foliageCounts } = terrain;
 
   const flowerSpots = withFlowers ? buildFlowerSpots(date) : [];
   const flowerRegions = withFlowers ? groupFlowerRegions(flowerSpots) : [];
@@ -125,7 +142,12 @@ export function buildMountainNow(
     ? 'flower'
     : coloring
       ? 'foliage'
-      : winter >= 0.5
+      : /*
+         * 겨울이 **어디에서든** 시작되었는가로 판정한다.
+         * 중부 값 하나로 물으면 북쪽 산이 이미 겨울색인 12월 초 엿새 동안
+         * 화면이 '여름 · 산이 짙어졌습니다' 라고 말한다.
+         */
+        winterLead >= 0.12
         ? 'winter'
         : 'green';
 
@@ -146,6 +168,7 @@ export function buildMountainNow(
   return {
     phase,
     winter,
+    winterLead,
     fresh,
     flowerSpots,
     flowerRegions,

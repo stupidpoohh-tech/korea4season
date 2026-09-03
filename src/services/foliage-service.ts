@@ -42,13 +42,13 @@ export const FOLIAGE_STATE_LABEL: Record<FoliageState, string> = {
  * '몇 곳이 빨간가' 가 된다. 그래서 진행도(0~1) 하나를 두고 그 위의
  * 색 띠를 이어서 읽는다 — 초록에서 붉은빛으로 곧장 건너뛰지 않는다.
  *
- * 0.0 초록          아직 (base map 이 그린 그대로. 덧칠해도 티가 나지 않아야 한다)
- * 0.18 연둣빛 노랑   물들기 시작
- * 0.38 황금빛        좋음
- * 0.56 주황
- * 0.78 붉은 주황     절정 (구간의 끝이 가장 붉다)
- * 0.90 바랜 갈색주황 끝물
- * 1.0 겨울 산        낮은 채도의 올리브 — '죽은 산' 이 아니라 겨울로 넘어가는 색
+ * 0.0  초록         아직 (base map 이 그린 그대로. 덧칠해도 티가 나지 않아야 한다)
+ * 0.10 연둣빛 노랑   물들기 시작 — 여기를 일찍 두어야 '시작 중' 이 초록 안에서 읽힌다
+ * 0.30 황금빛        좋음
+ * 0.50 주황
+ * 0.72 붉은 주황     절정 (0.45~0.78 구간이 절정이므로 그 안이 가장 선명하다)
+ * 0.90 바랜 갈색주황 끝물 — 채도는 낮추되 따뜻한 잔색을 남긴다
+ * 1.0  겨울 산       낮은 채도의 올리브 — '죽은 산' 이 아니라 겨울로 넘어가는 색
  *
  * 형광색과 순색 빨강(#FF0000)은 쓰지 않는다.
  * ──────────────────────────────────────────────────────────── */
@@ -75,26 +75,37 @@ interface RampStop extends FoliageColor {
 
 const RAMP: RampStop[] = [
   { at: 0, face: '#5cb968', faceDark: '#3b9349', tree: '#3f9e46', treeTop: '#5cb84f', forestMix: 0, land: '#bbe264', landMix: 0 },
-  { at: 0.18, face: '#a9c552', faceDark: '#7d9c35', tree: '#8aa73a', treeTop: '#a9c552', forestMix: 0.2, land: '#cbd558', landMix: 0.16 },
-  { at: 0.38, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.34, land: '#e0c25c', landMix: 0.26 },
-  { at: 0.56, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42, land: '#dda75a', landMix: 0.3 },
-  { at: 0.78, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46, land: '#d18f58', landMix: 0.32 },
-  { at: 0.9, face: '#b07a45', faceDark: '#86552c', tree: '#946035', treeTop: '#b07a45', forestMix: 0.34, land: '#c9a473', landMix: 0.28 },
-  { at: 1, face: '#7f9163', faceDark: '#5c6f48', tree: '#6a7d52', treeTop: '#7f9163', forestMix: 0.22, land: '#b6bf92', landMix: 0.22 },
+  { at: 0.1, face: '#a2c453', faceDark: '#769736', tree: '#84a43b', treeTop: '#a2c453', forestMix: 0.16, land: '#c8d559', landMix: 0.14 },
+  { at: 0.3, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.32, land: '#e0c25c', landMix: 0.26 },
+  { at: 0.5, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42, land: '#dda75a', landMix: 0.3 },
+  { at: 0.72, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46, land: '#d18f58', landMix: 0.32 },
+  { at: 0.9, face: '#b3784a', faceDark: '#885530', tree: '#976139', treeTop: '#b3784a', forestMix: 0.34, land: '#c9a473', landMix: 0.28 },
+  { at: 1, face: '#8b8f6b', faceDark: '#666e4f', tree: '#737b58', treeTop: '#8b8f6b', forestMix: 0.22, land: '#bcbe95', landMix: 0.22 },
 ];
 
 /* ── 겨울 ─────────────────────────────────────────────────────
  * 단풍이 끝났다고 지도가 계속 가을색으로 남아 있으면 안 된다.
- * 12월에서 2월 사이에는 산과 땅이 눈으로 덮인다 — 이것은 단풍 진행도와
- * 무관하게 날짜가 정하는 값이다 (1월의 산은 '아직 안 물든 초록' 이 아니다).
+ * 겨울에는 산과 땅의 색이 가라앉는다 — 이것은 단풍 진행도와 무관하게
+ * 날짜가 정하는 값이다 (1월의 산은 '아직 안 물든 초록' 이 아니다).
+ *
+ * 다만 날짜 하나로 전국을 한꺼번에 덮지 않는다. 남쪽은 늦게 들어가고
+ * 얕게 지나간다 — 단풍이 쓰는 권역 offset 을 그대로 쓴다.
  * ──────────────────────────────────────────────────────────── */
 
+/*
+ * 겨울색은 '흰색' 이 아니라 '서리 낀 자연색' 이다.
+ *
+ * 순백에 가깝게 덮으면 산 앞면과 그늘면의 차이가 사라지고 숲 · 강 · 해안선이
+ * 한 장의 흰 종이가 된다. 그러면 계절이 바뀐 것이 아니라 화면이 꺼진 것처럼
+ * 보인다. 관측하지 않은 적설을 사실처럼 그리지 않기 위해서도 이쪽이 맞다 —
+ * 그리는 것은 눈이 아니라 잎을 떨군 겨울 산의 색이다.
+ */
 const SNOW = {
-  face: '#f4f9fd',
-  faceDark: '#d9e5f0',
-  tree: '#9db9a6',
-  treeTop: '#dceae4',
-  land: '#eef5fb',
+  face: '#d6e0d8',
+  faceDark: '#a4b5ab',
+  tree: '#6f8a76',
+  treeTop: '#93ab97',
+  land: '#dcded0',
 };
 
 /* ── 봄 ───────────────────────────────────────────────────────
@@ -130,17 +141,53 @@ export function freshAmount(date: DateKey, offsetDays = 0): number {
   return Math.min(1, Math.max(0, 1 - ramp(FULL_TO, FADE_TO)));
 }
 
-/** 겨울이 얼마나 깊은가 (0~1). 11월 말부터 오르고 3월 중순에 0 이 된다. */
-export function winterAmount(date: DateKey): number {
-  const md = date.slice(5); // 'MM-DD'
-  const ramp = (from: string, to: string) => {
-    const day = (v: string) => Number(v.slice(0, 2)) * 31 + Number(v.slice(3, 5));
-    return (day(md) - day(from)) / (day(to) - day(from));
-  };
-  if (md >= '11-25' && md < '12-15') return Math.min(1, Math.max(0, ramp('11-25', '12-15')));
-  if (md >= '12-15' || md <= '02-20') return 1;
-  if (md > '02-20' && md < '03-20') return Math.min(1, Math.max(0, 1 - ramp('02-20', '03-20')));
+/* 11-25 부터 03-20 까지. 연말을 넘어가므로 '11-25 로부터 며칠' 로 센다. */
+const WINTER_RISE = 20; // 11-25 → 12-15
+const WINTER_HOLD = 87; // → 02-20
+const WINTER_FADE = 115; // → 03-20
+
+/** 남쪽이 얼마나 늦게 들어가는가. 권역 offset(0 강원 ~ 34 제주) 하루당. */
+const WINTER_LAG_PER_OFFSET = 0.5;
+
+/** 남쪽은 얼마나 얕게 지나가는가. offset 34(제주)에서 이만큼 낮다. */
+const WINTER_SOUTH_RELIEF = 0.34;
+
+/**
+ * 겨울이 얼마나 깊은가 (0~1).
+ *
+ * offsetDays 는 단풍 권역의 것(0 = 강원 북부, 34 = 제주)을 그대로 받는다.
+ * 남쪽은 열흘 남짓 늦게 들어가고 가장 깊은 때에도 북쪽만큼 가라앉지 않는다.
+ * 그래서 한 날짜의 지도에 겨울의 앞머리와 아직 가을이 남은 곳이 함께 있다.
+ */
+export function winterAt(date: DateKey, offsetDays = 0): number {
+  const lag = Math.min(34, Math.max(0, offsetDays)) * WINTER_LAG_PER_OFFSET;
+  const since = (((dayOfYear(date) - 329) % 365) + 365) % 365;
+  const ceiling = 1 - (Math.min(34, Math.max(0, offsetDays)) / 34) * WINTER_SOUTH_RELIEF;
+
+  /*
+   * 남쪽은 늦게 들어가고 **일찍 나온다**.
+   * 들어가는 쪽과 나오는 쪽에 같은 부호의 지연을 걸면 3월의 제주가
+   * 강원보다 더 깊은 겨울이 된다 — 그래서 나오는 쪽은 반대로 당긴다.
+   */
+  const riseFrom = lag;
+  const riseTo = lag + WINTER_RISE;
+  const fadeFrom = WINTER_HOLD - lag * 0.6;
+  const fadeTo = WINTER_FADE - lag * 0.6;
+
+  if (since < riseFrom) return 0;
+  if (since < riseTo) return ((since - riseFrom) / WINTER_RISE) * ceiling;
+  if (since <= fadeFrom) return ceiling;
+  if (since <= fadeTo) return (1 - (since - fadeFrom) / (fadeTo - fadeFrom)) * ceiling;
   return 0;
+}
+
+/**
+ * 나라 전체를 한 값으로 말해야 할 때 (헤더 문구 · 국면 판정).
+ * 중부(offset 17)를 기준으로 삼는다 — 북쪽만 보면 남쪽이 아직 가을인데
+ * 화면이 겨울이라고 말하게 된다.
+ */
+export function winterAmount(date: DateKey): number {
+  return winterAt(date, 17);
 }
 
 /** base map 이 그린 숲 색. 여기서 조금씩만 끌어당긴다. */
@@ -204,8 +251,12 @@ export function landWashAt(
   const stop = rampAt(progress);
   return {
     color: mixHex(mixHex(stop.land, FRESH.land, fresh), SNOW.land, winter),
-    // 겨울에는 눈이 땅을 덮으므로 훨씬 짙게 깔린다
-    opacity: Math.max(stop.landMix, fresh * 0.3, winter * 0.82),
+    /*
+     * 겨울에도 땅을 덮어 버리지 않는다. 이 칠이 짙으면 강 · 호수 · 해안 모래와
+     * 지역별 단풍·개화가 그 아래로 사라진다 — 배경 tint 가 자연현상보다
+     * 세지는 순간 지도는 계절을 말하는 것이 아니라 테마를 바꾼 것이 된다.
+     */
+    opacity: Math.max(stop.landMix, fresh * 0.3, winter * 0.42),
   };
 }
 
