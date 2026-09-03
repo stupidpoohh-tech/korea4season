@@ -62,17 +62,47 @@ interface RampStop extends FoliageColor {
   at: number;
   /** 숲을 이만큼만 물들인다 (0~1). 산이 주인공이고 숲은 거들 뿐이다. */
   forestMix: number;
+  /** 땅에 얹는 색과 그 짙기. 산·숲보다 훨씬 옅다 — 강과 해안선이 살아 있어야 한다. */
+  land: string;
+  landMix: number;
 }
 
 const RAMP: RampStop[] = [
-  { at: 0, face: '#5cb968', faceDark: '#3b9349', tree: '#3f9e46', treeTop: '#5cb84f', forestMix: 0 },
-  { at: 0.18, face: '#a9c552', faceDark: '#7d9c35', tree: '#8aa73a', treeTop: '#a9c552', forestMix: 0.2 },
-  { at: 0.38, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.34 },
-  { at: 0.56, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42 },
-  { at: 0.78, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46 },
-  { at: 0.9, face: '#b07a45', faceDark: '#86552c', tree: '#946035', treeTop: '#b07a45', forestMix: 0.34 },
-  { at: 1, face: '#7f9163', faceDark: '#5c6f48', tree: '#6a7d52', treeTop: '#7f9163', forestMix: 0.22 },
+  { at: 0, face: '#5cb968', faceDark: '#3b9349', tree: '#3f9e46', treeTop: '#5cb84f', forestMix: 0, land: '#bbe264', landMix: 0 },
+  { at: 0.18, face: '#a9c552', faceDark: '#7d9c35', tree: '#8aa73a', treeTop: '#a9c552', forestMix: 0.2, land: '#cbd558', landMix: 0.16 },
+  { at: 0.38, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.34, land: '#e0c25c', landMix: 0.26 },
+  { at: 0.56, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42, land: '#dda75a', landMix: 0.3 },
+  { at: 0.78, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46, land: '#d18f58', landMix: 0.32 },
+  { at: 0.9, face: '#b07a45', faceDark: '#86552c', tree: '#946035', treeTop: '#b07a45', forestMix: 0.34, land: '#c9a473', landMix: 0.28 },
+  { at: 1, face: '#7f9163', faceDark: '#5c6f48', tree: '#6a7d52', treeTop: '#7f9163', forestMix: 0.22, land: '#b6bf92', landMix: 0.22 },
 ];
+
+/* ── 겨울 ─────────────────────────────────────────────────────
+ * 단풍이 끝났다고 지도가 계속 가을색으로 남아 있으면 안 된다.
+ * 12월에서 2월 사이에는 산과 땅이 눈으로 덮인다 — 이것은 단풍 진행도와
+ * 무관하게 날짜가 정하는 값이다 (1월의 산은 '아직 안 물든 초록' 이 아니다).
+ * ──────────────────────────────────────────────────────────── */
+
+const SNOW = {
+  face: '#f4f9fd',
+  faceDark: '#d9e5f0',
+  tree: '#9db9a6',
+  treeTop: '#dceae4',
+  land: '#eef5fb',
+};
+
+/** 겨울이 얼마나 깊은가 (0~1). 11월 말부터 오르고 3월 중순에 0 이 된다. */
+export function winterAmount(date: DateKey): number {
+  const md = date.slice(5); // 'MM-DD'
+  const ramp = (from: string, to: string) => {
+    const day = (v: string) => Number(v.slice(0, 2)) * 31 + Number(v.slice(3, 5));
+    return (day(md) - day(from)) / (day(to) - day(from));
+  };
+  if (md >= '11-25' && md < '12-15') return Math.min(1, Math.max(0, ramp('11-25', '12-15')));
+  if (md >= '12-15' || md <= '02-20') return 1;
+  if (md > '02-20' && md < '03-20') return Math.min(1, Math.max(0, 1 - ramp('02-20', '03-20')));
+  return 0;
+}
 
 /** base map 이 그린 숲 색. 여기서 조금씩만 끌어당긴다. */
 const FOREST_BASE = { tree: '#3f9e46', treeTop: '#5cb84f' };
@@ -100,16 +130,38 @@ function rampAt(progress: number): RampStop {
         tree: mixHex(lo.tree, hi.tree, k),
         treeTop: mixHex(lo.treeTop, hi.treeTop, k),
         forestMix: lo.forestMix + (hi.forestMix - lo.forestMix) * k,
+        land: mixHex(lo.land, hi.land, k),
+        landMix: lo.landMix + (hi.landMix - lo.landMix) * k,
       };
     }
   }
   return RAMP[RAMP.length - 1]!;
 }
 
-/** 산 색 — 진행도 그대로 */
-export function mountainColorAt(progress: number): FoliageColor {
+/** 산 색 — 진행도 그대로. winter 를 주면 눈으로 덮인다. */
+export function mountainColorAt(progress: number, winter = 0): FoliageColor {
   const stop = rampAt(progress);
-  return { face: stop.face, faceDark: stop.faceDark, tree: stop.tree, treeTop: stop.treeTop };
+  return {
+    face: mixHex(stop.face, SNOW.face, winter),
+    faceDark: mixHex(stop.faceDark, SNOW.faceDark, winter),
+    tree: mixHex(stop.tree, SNOW.tree, winter),
+    treeTop: mixHex(stop.treeTop, SNOW.treeTop, winter),
+  };
+}
+
+/**
+ * 땅에 얹는 색.
+ *
+ * 산만 물들고 땅은 그대로면 가을이 산에서만 일어나는 일처럼 보인다.
+ * 다만 아주 옅게 얹는다 — 강 · 호수 · 해안 모래는 그대로 읽혀야 한다.
+ */
+export function landWashAt(progress: number, winter = 0): { color: string; opacity: number } {
+  const stop = rampAt(progress);
+  return {
+    color: mixHex(stop.land, SNOW.land, winter),
+    // 겨울에는 눈이 땅을 덮으므로 훨씬 짙게 깔린다
+    opacity: Math.max(stop.landMix, winter * 0.82),
+  };
 }
 
 /**
@@ -122,11 +174,11 @@ export function mountainColorAt(progress: number): FoliageColor {
  * 절정에서도 산 색의 절반이 채 되지 않게 둔다.
  * 숲까지 주황이 되면 지도에서 산이 사라지고 지역이 통째로 칠해진 것이 된다.
  */
-export function forestColorAt(progress: number): { tree: string; treeTop: string } {
+export function forestColorAt(progress: number, winter = 0): { tree: string; treeTop: string } {
   const stop = rampAt(progress);
   return {
-    tree: mixHex(FOREST_BASE.tree, stop.tree, stop.forestMix),
-    treeTop: mixHex(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix),
+    tree: mixHex(mixHex(FOREST_BASE.tree, stop.tree, stop.forestMix), SNOW.tree, winter),
+    treeTop: mixHex(mixHex(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix), SNOW.treeTop, winter),
   };
 }
 
@@ -348,8 +400,7 @@ export interface FoliageCounts {
   byState: Record<FoliageState, number>;
 }
 
-export function countFoliage(date: DateKey): FoliageCounts {
-  const spots = buildFoliageSpots(date);
+export function countFoliage(spots: FoliageSpot[]): FoliageCounts {
   const byState = Object.fromEntries(FOLIAGE_STATES.map((s) => [s, 0])) as Record<
     FoliageState,
     number
@@ -404,8 +455,13 @@ export interface FoliageRegion {
   spots: FoliageSpot[];
 }
 
-export function buildFoliageRegions(date: DateKey): FoliageRegion[] {
-  const spots = buildFoliageSpots(date);
+/**
+ * 명소를 권역으로 묶는다.
+ *
+ * 날짜가 아니라 이미 만들어 둔 명소 목록을 받는다 — 한 화면에서 개수와
+ * 권역을 각각 계산하면 슬라이더를 끄는 동안 같은 일을 두 번씩 한다.
+ */
+export function groupFoliageRegions(spots: FoliageSpot[]): FoliageRegion[] {
   const byRegion = new Map<string, FoliageSpot[]>();
 
   for (const spot of spots) {
@@ -462,7 +518,9 @@ export function buildFoliageRegions(date: DateKey): FoliageRegion[] {
  * 대신 절정인 곳과 이제 시작하는 곳을 함께 적는다 — 그 둘의 거리가 곧 전선이다.
  *   "강원 북부 절정 · 수도권 시작"
  */
-export function waveSummary(regions: FoliageRegion[]): string {
+export function waveSummary(regions: FoliageRegion[], winter = 0): string {
+  // 1월의 산은 '아직 안 물든 초록' 이 아니라 눈 덮인 산이다
+  if (winter >= 0.5) return '겨울 · 산에 눈이 쌓입니다';
   if (regions.length === 0) return '아직 초록입니다';
 
   const named = (list: FoliageRegion[]) =>
@@ -492,7 +550,8 @@ export function waveSummary(regions: FoliageRegion[]): string {
  * "지도에 9곳 표시 중" 은 마커를 세는 말이라 단풍의 진행을 말해 주지 못한다.
  * 대신 지금 어떤 상태가 몇 곳인지를 말한다 — 이 문장이 곧 전선의 위치다.
  */
-export function summarizeFoliage(counts: FoliageCounts): string {
+export function summarizeFoliage(counts: FoliageCounts, winter = 0): string {
+  if (winter >= 0.5) return '눈 덮인 산';
   const parts = (['peak', 'good', 'starting', 'ending'] as const)
     .filter((state) => counts.byState[state] > 0)
     .map((state) => `${FOLIAGE_STATE_LABEL[state]} ${counts.byState[state]}곳`);

@@ -129,6 +129,8 @@ export interface MapQuery {
    * 연속값을 그대로 받으면 핀치 중 매 프레임 재배치가 일어난다.
    */
   detail?: 0 | 1;
+  /** 슬라이더를 끄는 중 · 1년 재생 중 — 무거운 계산을 줄인다 */
+  fast?: boolean;
 }
 
 const STATE_PROMINENCE: Record<SeasonState, number> = {
@@ -187,7 +189,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * 총 이동량을 제한해 어종이 엉뚱한 바다로 흘러가지 않게 한다.
  * 입력 순서가 결정적이므로 결과도 항상 같다.
  */
-function separate(sprites: MapSprite[]): MapSprite[] {
+function separate(sprites: MapSprite[], steps: number): MapSprite[] {
   if (sprites.length < 2) return sprites;
 
   const base = sprites.map((s) => s.basePosition);
@@ -195,7 +197,7 @@ function separate(sprites: MapSprite[]): MapSprite[] {
   // 바다 생물은 물 밖으로 나가면 뜻이 달라진다. 단풍은 산이므로 반대다.
   const seaBound = sprites.map((s) => s.subject.kind === 'marine' || s.subject.kind === 'zone');
 
-  for (let step = 0; step < 140; step += 1) {
+  for (let step = 0; step < steps; step += 1) {
     for (let i = 0; i < pos.length; i += 1) {
       for (let j = i + 1; j < pos.length; j += 1) {
         let dx = pos[j]!.x - pos[i]!.x;
@@ -526,7 +528,16 @@ export function buildMapLayout(query: MapQuery): MapLayout {
         : [...marineSprites(query), ...natureSprites(query)];
 
   const { visible, hidden } = thin(candidates, detail);
-  const sprites = separate(visible);
+  /*
+   * 슬라이더를 끄는 동안에는 완화 횟수를 줄인다.
+   *
+   * 이 계산은 날짜가 바뀔 때마다 처음부터 다시 돈다. 140회 × 어종 22개에
+   * 육지 보정까지 매 프레임 돌면 휴대폰에서 감당하지 못한다 —
+   * iOS 에서 슬라이더를 끌다 화면이 죽은 것이 이것이었다.
+   * 횟수를 줄여도 육지 보정은 매 회 그대로 도므로 바다를 벗어나지 않는다.
+   * 손을 떼면 다시 140회로 자리를 잡는다.
+   */
+  const sprites = separate(visible, query.fast ? 36 : 140);
 
   // 위에 있는 것부터 그려 아래쪽 sprite 가 앞에 오도록 정렬
   sprites.sort((a, b) => a.position.y - b.position.y);
@@ -577,6 +588,14 @@ export interface MapCounts {
  * 권역 모드에는 시즌 강도 필터가 없으므로(zoneSprites 주석 참고)
  * 강도별 수는 전부 전체와 같은 값을 돌려준다 — 화면이 쓰지 않는다.
  */
+/** 어종 집계가 뜻을 갖지 않는 화면(단풍 등)에서 쓰는 빈 값 */
+export const EMPTY_MAP_COUNTS: MapCounts = {
+  season: { all: 0, peak: 0, good: 0, fair: 0 },
+  starting: 0,
+  restricted: 0,
+  seaRegions: 0,
+};
+
 export function countMap(date: DateKey, mode: MapMode = 'species'): MapCounts {
   const items = buildMarineMapItems(date);
   const seaRegions = new Set<SeaRegion>();

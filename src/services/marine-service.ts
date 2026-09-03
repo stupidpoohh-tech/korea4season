@@ -123,7 +123,32 @@ function seaAnchor(zones: ZoneSeason[], best: ZoneSeason): MapPosition {
  * 시즌이 아닌 어종은 제외한다 — 규정 때문이 아니라 자연적으로 없기 때문이다.
  * 금어기인 어종은 sprite 를 유지하고 제한 표시만 붙인다.
  */
-export function buildMarineMapItems(date: DateKey): MarineMapItem[] {
+/*
+ * 같은 날짜를 두 번 계산하지 않는다.
+ *
+ * 한 화면에서 지도(buildMapLayout)와 집계(countMap)가 같은 날짜의 어종을
+ * 각각 훑는다. 날짜를 끄는 동안에는 그것이 매 프레임 두 번씩 도는 셈이라
+ * 휴대폰에서 쓰레기 수집만으로도 화면이 버겁다.
+ *
+ * 한 칸짜리 기억이면 충분하다 — 한 프레임 안에서는 언제나 같은 날짜다.
+ * '오늘'이 바뀌면(자정) 최근 조황 판정이 달라지므로 키에 함께 넣는다.
+ */
+function memoByDate<T>(compute: (date: DateKey) => T) {
+  let key = '';
+  let value: T;
+  return (date: DateKey): T => {
+    const next = `${date}|${todayKey()}`;
+    if (next !== key) {
+      key = next;
+      value = compute(date);
+    }
+    return value;
+  };
+}
+
+export const buildMarineMapItems = memoByDate(computeMarineMapItems);
+
+function computeMarineMapItems(date: DateKey): MarineMapItem[] {
   const index = getMarineIndex();
   const d = deps();
   const showObservation = observationApplies(date);
@@ -217,7 +242,9 @@ export interface ZoneMarker {
 }
 
 /** "어디로 가야 하는가" 를 지도에서 직접 묻는 모드 */
-export function buildZoneMarkers(date: DateKey): ZoneMarker[] {
+export const buildZoneMarkers = memoByDate(computeZoneMarkers);
+
+function computeZoneMarkers(date: DateKey): ZoneMarker[] {
   const index = getMarineIndex();
   const d = deps();
 

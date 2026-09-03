@@ -527,10 +527,19 @@ const terrain = {
   /* base map 과 같은 좌표계(viewBox 0 0 W H). 정규화하지 않는다 —
      가로세로 비율이 다른 공간으로 옮기면 산과 숲의 모양이 찌그러진다. */
   view: { width: W, height: H },
-  clip: { mainland: mainlandPath, jeju: jejuPath },
+  /* 계절 색을 덮을 땅. 섬까지 넣지 않으면 겨울에 본토만 하얗고 섬은 초록으로 남는다. */
+  clip: {
+    mainland: mainlandPath,
+    jeju: jejuPath,
+    islands: [...islandShapes.map((i) => i.d), ulleungPath, dokdoPath].join(' '),
+  },
   mountains: mountains.map((m) => ({
     x: r1(m.x), y: r1(m.y), w: r1(m.w), h: r1(m.h), snow: Boolean(m.snow),
   })),
+  /* 섬 위의 나무 한 그루씩. 이것을 빼면 겨울에 섬에만 초록 점이 남는다. */
+  islandTrees: islandShapes
+    .filter((i) => i.r > 11)
+    .map((i) => ({ x: r1(i.x), y: r1(i.y - 1), s: r1(i.r * 0.36) })),
   groves: groves.map((g, i) => ({
     x: r1(g.x),
     y: r1(g.y),

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import terrainData from '@/domain/terrain.json';
 import {
   forestColorAt,
+  landWashAt,
   mountainColorAt,
   type FoliageRegion,
 } from '@/services/foliage-service';
@@ -50,8 +51,15 @@ interface Grove {
 const VIEW = terrainData.view;
 const MOUNTAINS = terrainData.mountains as Mountain[];
 const GROVES = terrainData.groves as Grove[];
+const ISLAND_TREES = terrainData.islandTrees as Tree[];
 
-/** 색이 바뀌는 데 걸리는 시간. 슬라이더를 끌 때 지도가 끌려오는 느낌이 나면 안 된다. */
+/**
+ * 색이 바뀌는 데 걸리는 시간.
+ *
+ * 슬라이더를 끄는 동안에는 걸지 않는다. 매 프레임 색이 바뀌는데 전환까지
+ * 걸면 요소 하나하나가 자기 애니메이션을 붙들고 있게 되고, 모바일에서는
+ * 그것만으로 화면이 죽는다(iOS 에서 '페이지를 불러올 수 없음').
+ */
 const COLOR_TRANSITION = 'fill 320ms ease-out';
 
 const n = (v: number) => v.toFixed(1);
@@ -89,8 +97,6 @@ interface RegionShapes {
   shiftDays: number;
   /** 숲 덩어리 */
   mass: string;
-  /** 나무 그림자 · 산 밑동 그림자 */
-  shadow: string;
   /** 나무 몸통 */
   tree: string;
   /** 나무 윗면 */
@@ -133,7 +139,6 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
       regionIndex,
       shiftDays,
       mass: [] as string[],
-      shadow: [] as string[],
       tree: [] as string[],
       treeTop: [] as string[],
       face: [] as string[],
@@ -147,7 +152,6 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
     const bucket = at(nearest(m.x, m.y), micro(m.x, m.y));
     if (!bucket) continue;
     const half = m.w / 2;
-    bucket.shadow.push(ellipsePath(m.x, m.y + 2, half * 0.95, m.h * 0.09 + 2));
     bucket.face.push(
       `M ${n(m.x - half)} ${n(m.y)} L ${n(m.x)} ${n(m.y - m.h)} L ${n(m.x + half)} ${n(m.y)} Z`,
     );
@@ -156,12 +160,19 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
     );
   }
 
+  /* 섬 나무도 같은 규칙으로 물든다 — 겨울에 섬만 초록으로 남지 않게 */
+  for (const t of ISLAND_TREES) {
+    const bucket = at(nearest(t.x, t.y), micro(t.x, t.y));
+    if (!bucket) continue;
+    bucket.tree.push(circlePath(t.x, t.y, t.s));
+    bucket.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
+  }
+
   for (const g of GROVES) {
     const bucket = at(nearest(g.x, g.y), micro(g.x, g.y));
     if (!bucket) continue;
     bucket.mass.push(g.mass);
     for (const t of g.trees) {
-      bucket.shadow.push(ellipsePath(t.x, t.y + t.s * 0.15, t.s * 0.85, t.s * 0.32));
       bucket.tree.push(circlePath(t.x, t.y, t.s));
       bucket.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
     }
@@ -172,7 +183,6 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
     regionIndex: p.regionIndex,
     shiftDays: p.shiftDays,
     mass: p.mass.join(' '),
-    shadow: p.shadow.join(' '),
     tree: p.tree.join(' '),
     treeTop: p.treeTop.join(' '),
     face: p.face.join(' '),
@@ -180,21 +190,87 @@ function buildShapes(regions: FoliageRegion[]): RegionShapes[] {
   }));
 }
 
+/*
+ * 그림자는 계절과 무관한 접지면이다. 권역마다 색을 달리하면 얻는 것 없이
+ * 매 프레임 다시 칠할 요소만 24개 늘어난다 — 한 덩어리로 굳혀 둔다.
+ */
+const SHADOW_D = [
+  ...MOUNTAINS.map((m) => ellipsePath(m.x, m.y + 2, (m.w / 2) * 0.95, m.h * 0.09 + 2)),
+  ...GROVES.flatMap((g) =>
+    g.trees.map((t) => ellipsePath(t.x, t.y + t.s * 0.15, t.s * 0.85, t.s * 0.32)),
+  ),
+  ...ISLAND_TREES.map((t) => ellipsePath(t.x, t.y + t.s * 0.15, t.s * 0.85, t.s * 0.32)),
+].join(' ');
+
 /** 눈 덮인 봉우리는 계절과 무관하다 — 한 번 그려 두고 색을 바꾸지 않는다 */
 const SNOW_D = MOUNTAINS.filter((m) => m.snow)
   .map(snowPath)
   .join(' ');
 
-export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
+export function FoliageOverlay({
+  regions,
+  winter,
+  fast = false,
+}: {
+  regions: FoliageRegion[];
+  /** 겨울이 얼마나 깊은가 (0~1). 산과 땅이 눈으로 덮인다. */
+  winter: number;
+  /** 슬라이더를 끄는 중 · 1년 재생 중 — 전환을 끈다 */
+  fast?: boolean;
+}) {
   // 권역 구성은 날짜가 바뀌어도 그대로다. 다시 나눠 붙일 이유가 없다.
   const key = regions.map((r) => r.id).join('|');
   const shapes = useMemo(() => buildShapes(regions), [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const paint = shapes.map((s) => {
-    const region = regions[s.regionIndex]!;
-    const wave = Math.min(1, Math.max(0, region.wave + region.wavePerDay * s.shiftDays));
-    return { mountain: mountainColorAt(wave), forest: forestColorAt(wave) };
-  });
+  const transition = fast ? 'none' : COLOR_TRANSITION;
+
+  /*
+   * 색은 50 단계로 끊어 쓴다.
+   *
+   * 하루가 지날 때마다 요소 100여 개의 fill 을 새 값으로 바꾸면 1년 재생이나
+   * 슬라이더 드래그에서 지도 전체를 매 프레임 다시 칠하게 된다. 눈으로는
+   * 구분되지 않는 차이이므로 단계로 끊어 다시 칠하는 횟수를 줄인다.
+   */
+  const step = (v: number) => Math.round(v * 50) / 50;
+  const waves = regions.map((r) => r.wave);
+  const snow = step(winter);
+  const paintKey = `${waves.map(step).join(',')}|${snow}`;
+
+  const paint = useMemo(
+    () =>
+      shapes.map((s) => {
+        const region = regions[s.regionIndex]!;
+        const wave = step(
+          Math.min(1, Math.max(0, region.wave + region.wavePerDay * s.shiftDays)),
+        );
+        return { mountain: mountainColorAt(wave, snow), forest: forestColorAt(wave, snow) };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shapes, paintKey],
+  );
+
+  /*
+   * 땅은 권역마다 잘라 칠하지 않는다 — 경계가 선으로 드러나면 지도가 조각난다.
+   * 대신 권역의 자리(위도)에 색을 꽂은 세로 그라디언트 하나로 덮는다.
+   * 그래서 땅 위에서도 색이 북에서 남으로 이어져 내려간다.
+   */
+  const landStops = useMemo(() => {
+    const stops = regions
+      .map((region) => ({
+        offset: Math.min(1, Math.max(0, region.anchor.y)),
+        ...landWashAt(step(region.wave), snow),
+      }))
+      .sort((a, b) => a.offset - b.offset);
+
+    if (stops.length === 0) return [];
+    // 위아래 끝까지 이어 준다 — 남는 자리가 비면 그 띠만 색이 끊긴다
+    return [
+      { ...stops[0]!, offset: 0 },
+      ...stops,
+      { ...stops[stops.length - 1]!, offset: 1 },
+    ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regions, paintKey]);
 
   if (shapes.length === 0) return null;
 
@@ -208,58 +284,54 @@ export function FoliageOverlay({ regions }: { regions: FoliageRegion[] }) {
         <clipPath id="foliage-land">
           <path d={terrainData.clip.mainland} />
           <path d={terrainData.clip.jeju} />
+          <path d={terrainData.clip.islands} />
         </clipPath>
+        <linearGradient
+          id="foliage-land-wash"
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="0"
+          x2="0"
+          y2={VIEW.height}
+        >
+          {landStops.map((stop, i) => (
+            <stop
+              key={i}
+              offset={stop.offset}
+              stopColor={stop.color}
+              stopOpacity={stop.opacity}
+              style={{ transition: fast ? 'none' : 'stop-color 320ms ease-out, stop-opacity 320ms ease-out' }}
+            />
+          ))}
+        </linearGradient>
       </defs>
+
+      {/* 땅 — 산·숲보다 훨씬 옅게. 강과 해안 모래가 그대로 읽혀야 한다. */}
+      <g>
+        <path d={terrainData.clip.mainland} fill="url(#foliage-land-wash)" />
+        <path d={terrainData.clip.jeju} fill="url(#foliage-land-wash)" />
+        <path d={terrainData.clip.islands} fill="url(#foliage-land-wash)" />
+      </g>
 
       <g clipPath="url(#foliage-land)" opacity={0.22}>
         {shapes.map((s, i) => (
-          <path
-            key={s.id}
-            d={s.mass}
-            fill={paint[i]!.forest.tree}
-            style={{ transition: COLOR_TRANSITION }}
-          />
+          <path key={s.id} d={s.mass} fill={paint[i]!.forest.tree} style={{ transition }} />
         ))}
       </g>
 
-      <g opacity={0.2}>
-        {shapes.map((s, i) => (
-          <path
-            key={s.id}
-            d={s.shadow}
-            fill={paint[i]!.mountain.faceDark}
-            style={{ transition: COLOR_TRANSITION }}
-          />
-        ))}
-      </g>
+      <path d={SHADOW_D} fill="#4a5a3c" opacity={0.16} />
 
       {shapes.map((s, i) => (
         <g key={s.id}>
-          <path
-            d={s.tree}
-            fill={paint[i]!.forest.tree}
-            style={{ transition: COLOR_TRANSITION }}
-          />
-          <path
-            d={s.treeTop}
-            fill={paint[i]!.forest.treeTop}
-            style={{ transition: COLOR_TRANSITION }}
-          />
+          <path d={s.tree} fill={paint[i]!.forest.tree} style={{ transition }} />
+          <path d={s.treeTop} fill={paint[i]!.forest.treeTop} style={{ transition }} />
         </g>
       ))}
 
       {shapes.map((s, i) => (
         <g key={s.id}>
-          <path
-            d={s.face}
-            fill={paint[i]!.mountain.face}
-            style={{ transition: COLOR_TRANSITION }}
-          />
-          <path
-            d={s.faceDark}
-            fill={paint[i]!.mountain.faceDark}
-            style={{ transition: COLOR_TRANSITION }}
-          />
+          <path d={s.face} fill={paint[i]!.mountain.face} style={{ transition }} />
+          <path d={s.faceDark} fill={paint[i]!.mountain.faceDark} style={{ transition }} />
         </g>
       ))}
 

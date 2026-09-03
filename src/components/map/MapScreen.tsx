@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
-import { buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
+import { EMPTY_MAP_COUNTS, buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
 import {
-  buildFoliageRegions,
+  buildFoliageSpots,
   countFoliage,
+  groupFoliageRegions,
   summarizeFoliage,
   waveSummary,
+  winterAmount,
   type FoliageSpot,
 } from '@/services/foliage-service';
 import {
@@ -72,6 +74,7 @@ export function MapScreen() {
   const date = useTimeStore((s) => s.selectedDate);
   const setDate = useTimeStore((s) => s.setDate);
   const isPlaying = useTimeStore((s) => s.isPlaying);
+  const isScrubbing = useTimeStore((s) => s.isScrubbing);
   const play = useTimeStore((s) => s.play);
 
   const categories = useMapStore((s) => s.selectedCategories);
@@ -134,6 +137,7 @@ export function MapScreen() {
         foliageState,
         mode,
         detail,
+        fast: isPlaying || isScrubbing,
       }),
     [
       date,
@@ -146,22 +150,42 @@ export function MapScreen() {
       foliageState,
       mode,
       detail,
+      isPlaying,
+      isScrubbing,
     ],
   );
 
-  const counts = useMemo(() => countMap(date, mode), [date, mode]);
-  const foliage = useMemo(() => countFoliage(date), [date]);
+  /*
+   * 어종 집계는 바다 화면에서만 센다.
+   * 날짜를 끄는 동안 매 프레임 도는 계산이라, 단풍을 보는 중에 어종 124건을
+   * 다시 훑으면 슬라이더가 그만큼 무거워진다 (모바일에서 화면이 죽었다).
+   */
+  const counts = useMemo(
+    () => (layer === 'foliage' ? EMPTY_MAP_COUNTS : countMap(date, mode)),
+    [layer, date, mode],
+  );
+
   /*
    * 지도의 색은 sprite 가 아니라 권역이 정한다.
    * 아직 초록인 곳도 함께 와야 지도 전체가 하나의 띠로 읽힌다.
+   * 명소 목록은 한 번만 만들고 개수·권역이 그것을 나눠 쓴다.
    */
-  const foliageRegions = useMemo(
-    () => (layer === 'foliage' ? buildFoliageRegions(date) : []),
-    [layer, date],
+  /*
+   * 겨울에는 어느 카테고리를 보고 있든 산과 땅이 눈으로 덮인다.
+   * 1월의 지도가 초여름처럼 초록이면 시간을 움직이는 지도가 아니다.
+   */
+  const winter = useMemo(() => winterAmount(date), [date]);
+  const terrainLive = layer === 'foliage' || winter > 0;
+
+  const foliageSpots = useMemo(
+    () => (terrainLive ? buildFoliageSpots(date) : []),
+    [terrainLive, date],
   );
+  const foliage = useMemo(() => countFoliage(foliageSpots), [foliageSpots]);
+  const foliageRegions = useMemo(() => groupFoliageRegions(foliageSpots), [foliageSpots]);
 
   /* 헤더 한 줄 — "강원 북부 절정 · 수도권 시작". 개수가 아니라 전선의 위치다. */
-  const foliageWave = useMemo(() => waveSummary(foliageRegions), [foliageRegions]);
+  const foliageWave = useMemo(() => waveSummary(foliageRegions, winter), [foliageRegions, winter]);
 
   const selectedSprite = useMemo(
     () => layout.sprites.find((s) => s.selectionId === selectedId) ?? null,
@@ -390,7 +414,16 @@ export function MapScreen() {
             layout={layout}
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
-            overlay={layer === 'foliage' ? <FoliageOverlay regions={foliageRegions} /> : null}
+            overlay={
+              terrainLive ? (
+                <FoliageOverlay
+                  regions={foliageRegions}
+                  winter={winter}
+                  /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */
+                  fast={isPlaying || isScrubbing}
+                />
+              ) : null
+            }
           />
 
           {/*
@@ -436,7 +469,7 @@ export function MapScreen() {
          */
         caption={
           layer === 'foliage'
-            ? summarizeFoliage(foliage)
+            ? summarizeFoliage(foliage, winter)
             : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
         }
       />
