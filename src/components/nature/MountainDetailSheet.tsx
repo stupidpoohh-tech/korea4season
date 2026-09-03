@@ -2,10 +2,10 @@
 
 import { formatKoreanDate, toDateKey, type DateKey } from '@/domain/date';
 import { Sheet } from '@/components/common/Sheet';
-import { FOLIAGE_STATE_LABEL, type FoliageSpot } from '@/services/foliage-service';
+import type { Location, NatureEntity, ResolvedOccurrence } from '@/domain/types';
 
 /* ────────────────────────────────────────────────────────────
- * 단풍 명소 상세.
+ * 산 명소 상세 — 꽃과 단풍이 같은 카드를 쓴다.
  *
  * 이 단계에서 답하는 것은 넷뿐이다 —
  * 지금 어떤 상태인지, 언제 시작했는지, 절정이 언제인지, 지도 어디인지.
@@ -21,16 +21,35 @@ const TONE: Record<string, string> = {
   ended: 'text-[color:var(--color-faint)]',
 };
 
-export function FoliageDetailSheet({
+/**
+ * 꽃과 단풍은 같은 것을 묻는다 — 지금 어떤 상태이고, 언제 시작했고,
+ * 절정이 언제이고, 지도 어디인가. 그래서 카드도 하나만 둔다.
+ */
+export interface MountainSpotView {
+  location: Location;
+  entity: NatureEntity;
+  state: string;
+  stateLabel: string;
+  daysToNextChange?: number;
+  nextChangeLabel?: string;
+  window: { start: Date; end: Date };
+  peakWindow?: { start: Date; end: Date };
+  entries: ResolvedOccurrence[];
+}
+
+export function MountainDetailSheet({
   spot,
   date,
+  /** '꽃' / '단풍' — 시트 제목과 첫 줄 이름이 달라진다 */
+  kind,
   onClose,
   onFocusMap,
 }: {
-  spot: FoliageSpot | null;
+  spot: MountainSpotView | null;
   date: DateKey;
+  kind: '꽃' | '단풍';
   onClose: () => void;
-  onFocusMap: (spot: FoliageSpot) => void;
+  onFocusMap: () => void;
 }) {
   // 출처는 occurrence 가 들고 있다 — 명소를 대표하는 것의 출처를 쓴다
   const lead = spot?.entries[0]?.occurrence;
@@ -40,7 +59,7 @@ export function FoliageDetailSheet({
     <Sheet
       open={Boolean(spot)}
       onClose={onClose}
-      label={spot ? `${spot.location.name} 단풍` : ''}
+      label={spot ? `${spot.location.name} ${kind}` : ''}
       header={
         spot && (
           <div className="flex items-start gap-3">
@@ -66,7 +85,7 @@ export function FoliageDetailSheet({
           <div className="rounded-xl border border-[color:var(--color-line)] px-3.5 py-3">
             <p className="text-[12px] text-[color:var(--color-faint)]">지금 상태</p>
             <p className={`mt-0.5 text-[19px] font-semibold ${TONE[spot.state] ?? ''}`}>
-              {FOLIAGE_STATE_LABEL[spot.state]}
+              {spot.stateLabel}
             </p>
             {spot.daysToNextChange !== undefined && spot.nextChangeLabel && (
               <p className="mt-1 text-[12.5px] text-[color:var(--color-muted)]">
@@ -76,14 +95,18 @@ export function FoliageDetailSheet({
           </div>
 
           <dl className="divide-y divide-[color:var(--color-line-soft)]">
-            <Row label="첫 단풍">{formatKoreanDate(toDateKey(spot.window.start))}</Row>
+            <Row label={kind === '꽃' ? '개화' : '첫 단풍'}>
+              {formatKoreanDate(toDateKey(spot.window.start))}
+            </Row>
             {spot.peakWindow && (
               <Row label="절정">
                 {formatKoreanDate(toDateKey(spot.peakWindow.start))} ~{' '}
                 {formatKoreanDate(toDateKey(spot.peakWindow.end))}
               </Row>
             )}
-            <Row label="끝물">{formatKoreanDate(toDateKey(spot.window.end))}</Row>
+            <Row label={kind === '꽃' ? '지는 때' : '끝물'}>
+              {formatKoreanDate(toDateKey(spot.window.end))}
+            </Row>
             <Row label="보는 날짜">{formatKoreanDate(date)}</Row>
           </dl>
 
@@ -105,7 +128,7 @@ export function FoliageDetailSheet({
 
           <button
             type="button"
-            onClick={() => onFocusMap(spot)}
+            onClick={onFocusMap}
             className="flex h-10 w-full items-center justify-center rounded-xl bg-[color:var(--color-ink)] text-[13.5px] font-semibold text-white"
           >
             지도에서 보기

@@ -8,6 +8,9 @@ import {
   STATE_PROGRESS,
   mountainColorAt,
 } from '@/services/foliage-service';
+import { FLOWER_COLOR } from '@/services/flower-service';
+import { FLOWER_WAVE_LABEL } from '@/domain/flower-labels';
+import type { MountainPhase } from '@/services/mountain-service';
 import type { MapMode } from '@/services/map-service';
 
 /* ────────────────────────────────────────────────────────────
@@ -72,12 +75,15 @@ export function MarkerLegendPopover({
   open,
   onClose,
   layer,
+  phase,
   mode,
   anchorRef,
 }: {
   open: boolean;
   onClose: () => void;
   layer: MapLayerId;
+  /** 지금 산에서 무엇이 일어나고 있는가 — 범례가 달라진다 */
+  phase: MountainPhase;
   mode: MapMode;
   /**
    * 트리거까지 포함하는 바깥 상자.
@@ -104,7 +110,42 @@ export function MarkerLegendPopover({
 
   if (!open) return null;
 
-  if (layer === 'foliage') {
+  if (layer === 'mountain' && phase === 'flower') {
+    return (
+      <div
+        role="dialog"
+        aria-label="지도 보는 법"
+        className="absolute inset-x-0 top-full z-30 mt-1.5 space-y-2 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-3 text-[11.5px] leading-relaxed shadow-[var(--shadow-soft)]"
+      >
+        <p className="text-[13px] font-semibold tracking-tight">지도 보는 법</p>
+
+        <ul className="space-y-1">
+          {Object.entries(FLOWER_WAVE_LABEL).map(([slug, name]) => (
+            <li key={slug} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: FLOWER_COLOR[slug]?.petal }}
+              />
+              <span className="font-medium text-[color:var(--color-ink-soft)]">{name}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
+          숲과 산자락에 얹힌 꽃송이가 그 지역의 개화입니다. 촘촘할수록 활짝 핀 것이고,
+          날짜를 넘기면 그 자리가 남쪽에서 북쪽으로 올라갑니다.
+        </p>
+
+        <p className="text-[color:var(--color-faint)]">
+          꽃은 계절이 바꿔 줍니다 — 3월에는 개나리와 진달래, 4월에는 벚꽃이 앞에 섭니다.
+          어느 명소인지 짚어 보려면 명소별로 바꾸세요.
+        </p>
+      </div>
+    );
+  }
+
+  if (layer === 'mountain') {
     return (
       <div
         role="dialog"
@@ -131,7 +172,7 @@ export function MarkerLegendPopover({
 
         <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
           지도의 산과 숲 색이 그 지역의 단풍 상태입니다. 날짜를 넘기면 색이 북쪽에서
-          남쪽으로 내려갑니다.
+          남쪽으로 내려갑니다 — 봄의 꽃과 정확히 반대 방향입니다.
         </p>
 
         <p className="text-[color:var(--color-faint)]">

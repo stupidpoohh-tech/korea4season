@@ -1,7 +1,6 @@
 'use client';
 
 import { CategorySelector } from './CategorySelector';
-import { type FoliageCounts } from '@/services/foliage-service';
 import type { MapLayerId } from '@/domain/nature-categories';
 import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-service';
 
@@ -22,9 +21,8 @@ import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-ser
 
 interface Props {
   layer: MapLayerId;
-  foliage: FoliageCounts;
-  /** 단풍 전선 한 줄 — 개수가 아니라 지금 색이 어디까지 왔는가 */
-  foliageWave: string;
+  /** 지금 산 한 줄 — 개수가 아니라 지금 계절이 어디까지 왔는가 */
+  mountainHeadline: string;
   mode: MapMode;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
@@ -42,15 +40,14 @@ interface Props {
 
 export function CurrentStateSummary({
   layer,
-  foliage,
-  foliageWave,
+  mountainHeadline,
   mode,
   count,
   filtered,
   counts,
   compact = false,
 }: Props) {
-  const unit = layer === 'foliage' ? '곳' : mode === 'zone' ? '곳' : '종';
+  const unit = layer === 'mountain' ? '곳' : mode === 'zone' ? '곳' : '종';
 
   return (
     <div className="min-w-0">
@@ -62,14 +59,14 @@ export function CurrentStateSummary({
             <CategorySelector compact />
           </div>
           <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
-            {layer === 'foliage' ? (
+            {layer === 'mountain' ? (
               /*
-               * 단풍은 마커 수를 세지 않는다.
-               * 지도에서 바뀌는 것은 표시의 개수가 아니라 색이 어디까지 왔는가다.
+               * 산은 마커 수를 세지 않는다.
+               * 지도에서 바뀌는 것은 표시의 개수가 아니라 계절이 어디까지 왔는가다.
                */
               <>
                 <span className="font-semibold text-[color:var(--color-ink-soft)]">
-                  {foliageWave}
+                  {mountainHeadline}
                 </span>
                 {filtered && ` · 지도에 ${count}곳`}
               </>
@@ -90,9 +87,9 @@ export function CurrentStateSummary({
           {/* CategorySelector 가 div 를 그리므로 p 로 감싸면 안 된다 (HTML 위반 → hydration 오류) */}
           <div className="flex flex-wrap items-baseline gap-x-1.5 leading-[19px]">
             <CategorySelector />
-            {layer === 'foliage' ? (
+            {layer === 'mountain' ? (
               <span className="text-[13.5px] font-semibold text-[color:var(--color-ink)]">
-                {foliageWave}
+                {mountainHeadline}
               </span>
             ) : (
               <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
@@ -103,16 +100,16 @@ export function CurrentStateSummary({
             )}
           </div>
           {/*
-            단풍은 아래 권역 목록이 곧 내역이다 — 같은 말을 숫자로 한 번 더 하지 않는다.
+            산은 아래 권역 목록이 곧 내역이다 — 같은 말을 숫자로 한 번 더 하지 않는다.
           */}
-          {layer !== 'foliage' && (
+          {layer !== 'mountain' && (
             <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
               <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
             </p>
           )}
-          {layer === 'foliage' && filtered && (
+          {layer === 'mountain' && filtered && (
             <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-accent-strong)]">
-              필터 적용 중 · 물드는 중 {foliage.coloring}곳 가운데
+              필터 적용 중
             </p>
           )}
         </>

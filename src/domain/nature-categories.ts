@@ -3,16 +3,19 @@ import type { NatureCategory } from './types';
 /* ────────────────────────────────────────────────────────────
  * 자연 카테고리 레지스트리.
  *
- * 이 서비스는 결국 바다 · 꽃 · 단풍 · 철새를 같은 껍데기 위에 올린다.
- *   지금 상태 → 보기 방식 → 필터 → 지도 → 추천 → 시간
+ * 상위 구분은 둘이다.
  *
- * 다만 **인터페이스는 넷을 위해 만들고, 기능은 하나씩 완성한다.**
- * 지금 실제로 동작하는 것은 바다와 단풍뿐이고,
- * 꽃 · 철새는 여기 이름만 있다 — 데이터도, 레이어도, 상세도 없다.
- * 준비되면 enabled 를 true 로 올리고 그 카테고리의 레이어만 붙이면 된다.
+ *   지금 바다 — 무엇이 잡히는가 (어종 · 권역 · 규정)
+ *   지금 산   — 무엇이 피고 물드는가 (꽃 · 단풍)
+ *
+ * 꽃과 단풍을 나란한 카테고리로 두지 않는다. 둘은 같은 산에서 계절만 달리해
+ * 일어나는 일이라, 사용자가 "지금 뭘 보러 갈까" 를 물을 때 고를 것이 아니다.
+ * 날짜가 정하면 된다 — 봄에는 꽃, 가을에는 단풍, 여름은 녹음, 겨울은 눈.
+ *
+ * 철새는 여기 이름만 있다. 준비되면 enabled 를 올리고 레이어만 붙인다.
  * ──────────────────────────────────────────────────────────── */
 
-export const MAP_LAYERS = ['marine', 'foliage', 'flower', 'bird'] as const;
+export const MAP_LAYERS = ['marine', 'mountain', 'bird'] as const;
 export type MapLayerId = (typeof MAP_LAYERS)[number];
 
 export interface NatureCategoryConfig {
@@ -22,7 +25,7 @@ export interface NatureCategoryConfig {
   /** 지도에 실제로 그릴 수 있는가 */
   enabled: boolean;
   /** 이 레이어가 쓰는 데이터 카테고리. 아직 없는 것은 undefined. */
-  dataCategory?: NatureCategory;
+  dataCategories?: NatureCategory[];
   /** 카테고리를 바꿨을 때 상단에 쓰는 말 */
   headline: string;
   /** 준비 중인 카테고리를 눌렀을 때 */
@@ -35,24 +38,16 @@ export const NATURE_CATEGORIES: NatureCategoryConfig[] = [
     label: '바다',
     icon: '🌊',
     enabled: true,
-    dataCategory: 'fishing',
+    dataCategories: ['fishing'],
     headline: '지금, 바다',
   },
   {
-    id: 'foliage',
-    label: '단풍',
-    icon: '🍁',
+    id: 'mountain',
+    label: '산',
+    icon: '⛰️',
     enabled: true,
-    dataCategory: 'foliage',
-    headline: '지금, 단풍',
-  },
-  {
-    id: 'flower',
-    label: '꽃',
-    icon: '🌸',
-    enabled: false,
-    headline: '지금, 꽃',
-    comingSoonMessage: '꽃 지도는 준비 중이에요.',
+    dataCategories: ['flower', 'foliage'],
+    headline: '지금, 산',
   },
   {
     id: 'bird',

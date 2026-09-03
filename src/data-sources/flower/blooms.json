@@ -1,49 +1,747 @@
 {
-  "meta": {
-    "sourceName": "개화 시기 평년 참고값 (DEMO)",
-    "sourceUrl": "https://www.weather.go.kr",
-    "updatedAt": "2026-01-01",
-    "confidence": "demo",
-    "isDemo": true,
-    "category": "flower",
-    "polarity": "observable",
-    "disclaimer": "개발용 DEMO 데이터입니다. 실제 개화 시기는 해마다 기온에 따라 크게 달라집니다. 방문 전 각 지자체·기상 정보의 개화 예보를 확인하십시오."
+ "meta": {
+  "sourceName": "개화 시기 평년 참고값 (DEMO)",
+  "sourceUrl": "https://www.weather.go.kr",
+  "updatedAt": "2026-01-01",
+  "confidence": "demo",
+  "isDemo": true,
+  "category": "flower",
+  "polarity": "observable",
+  "disclaimer": "개발용 DEMO 데이터입니다. 실제 개화 시기는 해마다 기온에 따라 크게 달라집니다. 개나리·진달래·벚꽃 시기는 남에서 북으로 올라오는 흐름이 지도에서 읽히도록 권역 간격을 두고 잡은 값이며, 방문 전 각 지자체·기상 정보의 개화 예보를 확인하십시오."
+ },
+ "entities": [
+  {
+   "code": "camellia",
+   "name": "동백",
+   "speciesName": "Camellia japonica",
+   "icon": "🌺",
+   "rarity": 2,
+   "summary": "한겨울에 피어 눈 속에서도 붉은 꽃을 유지하는 남부 해안의 상록수"
   },
-  "entities": [
-    { "code": "camellia", "name": "동백", "speciesName": "Camellia japonica", "icon": "🌺", "rarity": 2, "summary": "한겨울에 피어 눈 속에서도 붉은 꽃을 유지하는 남부 해안의 상록수" },
-    { "code": "plum-blossom", "name": "매화", "speciesName": "Prunus mume", "icon": "💮", "rarity": 2, "summary": "봄을 가장 먼저 알리는 꽃. 잎보다 꽃이 먼저 핀다" },
-    { "code": "cornelian-cherry", "name": "산수유", "speciesName": "Cornus officinalis", "icon": "🌼", "rarity": 2, "summary": "이른 봄 산기슭을 노랗게 물들이는 작은 꽃" },
-    { "code": "king-cherry", "name": "왕벚꽃", "speciesName": "Prunus × yedoensis", "icon": "🌸", "rarity": 1, "summary": "남쪽에서 시작해 약 3주에 걸쳐 북상하는 대한민국의 봄" },
-    { "code": "canola", "name": "유채꽃", "speciesName": "Brassica napus", "icon": "🌻", "rarity": 1, "summary": "제주와 남해안 들판을 노랗게 덮는 봄꽃" },
-    { "code": "azalea", "name": "진달래", "speciesName": "Rhododendron mucronulatum", "icon": "🏵️", "rarity": 1, "summary": "잎이 나기 전 산 전체를 분홍으로 물들이는 봄꽃" },
-    { "code": "royal-azalea", "name": "철쭉", "speciesName": "Rhododendron schlippenbachii", "icon": "🌸", "rarity": 2, "summary": "진달래가 진 뒤 고산 능선에서 이어 피는 늦봄의 꽃" },
-    { "code": "tulip", "name": "튤립", "speciesName": "Tulipa", "icon": "🌷", "rarity": 1, "summary": "봄 축제와 함께 조성되는 군락. 정원과 공원에서 볼 수 있다" },
-    { "code": "lotus", "name": "연꽃", "speciesName": "Nelumbo nucifera", "icon": "🪷", "rarity": 2, "summary": "한여름 새벽에 피었다 낮에 오므라드는 수생식물" },
-    { "code": "crape-myrtle", "name": "배롱나무꽃", "speciesName": "Lagerstroemia indica", "icon": "🪻", "rarity": 2, "summary": "백일 가까이 피고 지기를 반복해 백일홍이라 불린다" },
-    { "code": "buckwheat", "name": "메밀꽃", "speciesName": "Fagopyrum esculentum", "icon": "💮", "rarity": 3, "summary": "초가을 고원을 하얗게 덮는 꽃밭" },
-    { "code": "cosmos", "name": "코스모스", "speciesName": "Cosmos bipinnatus", "icon": "🌼", "rarity": 1, "summary": "가을 초입 길가와 하천변을 채우는 꽃" },
-    { "code": "reed", "name": "갈대", "speciesName": "Phragmites australis", "icon": "🌾", "rarity": 2, "summary": "가을 습지에서 은빛으로 물결치는 군락" },
-    { "code": "green-barley", "name": "청보리", "speciesName": "Hordeum vulgare", "icon": "🌿", "rarity": 3, "summary": "초봄 섬 전체가 초록 물결이 되는 보리밭" }
-  ],
-  "occurrences": [
-    { "code": "camellia-jeju", "entity": "camellia", "regions": ["제주"], "locations": ["seogwipo", "jeju-city"], "start": "12-20", "end": "03-10", "peakStart": "01-20", "peakEnd": "02-20", "weight": 0.8 },
-    { "code": "plum-gwangyang", "entity": "plum-blossom", "regions": ["전남"], "locations": ["gwangyang"], "start": "03-05", "end": "03-25", "peakStart": "03-12", "peakEnd": "03-20", "weight": 0.85 },
-    { "code": "cornelian-gurye", "entity": "cornelian-cherry", "regions": ["전남"], "locations": ["gurye"], "start": "03-13", "end": "04-02", "peakStart": "03-20", "peakEnd": "03-28", "weight": 0.8 },
-    { "code": "cherry-jeju", "entity": "king-cherry", "regions": ["제주"], "locations": ["jeju-city"], "start": "03-22", "end": "04-03", "peakStart": "03-26", "peakEnd": "03-31", "weight": 0.9 },
-    { "code": "cherry-busan", "entity": "king-cherry", "regions": ["부산", "경남"], "locations": ["busan", "jinhae"], "start": "03-25", "end": "04-07", "peakStart": "03-30", "peakEnd": "04-04", "weight": 0.95 },
-    { "code": "cherry-seoul", "entity": "king-cherry", "regions": ["서울"], "locations": ["yeouido"], "start": "04-03", "end": "04-16", "peakStart": "04-07", "peakEnd": "04-12", "weight": 1.0 },
-    { "code": "cherry-gangwon", "entity": "king-cherry", "regions": ["강원"], "locations": ["gangneung"], "start": "04-08", "end": "04-22", "peakStart": "04-12", "peakEnd": "04-18", "weight": 0.75 },
-    { "code": "canola-jeju", "entity": "canola", "regions": ["제주"], "locations": ["seogwipo", "gapado"], "start": "03-15", "end": "04-30", "peakStart": "03-28", "peakEnd": "04-15", "weight": 0.85 },
-    { "code": "azalea-nationwide", "entity": "azalea", "regions": ["전국"], "locations": ["bukhansan", "jirisan"], "start": "04-01", "end": "04-25", "peakStart": "04-08", "peakEnd": "04-18", "weight": 0.7 },
-    { "code": "royal-azalea-jirisan", "entity": "royal-azalea", "regions": ["경남"], "locations": ["jirisan"], "start": "05-01", "end": "05-25", "peakStart": "05-08", "peakEnd": "05-18", "weight": 0.8 },
-    { "code": "royal-azalea-sobaeksan", "entity": "royal-azalea", "regions": ["충북"], "locations": ["sobaeksan"], "start": "05-18", "end": "06-08", "peakStart": "05-25", "peakEnd": "06-02", "weight": 0.75 },
-    { "code": "tulip-taean", "entity": "tulip", "regions": ["충남"], "locations": ["taean"], "start": "04-08", "end": "05-02", "peakStart": "04-15", "peakEnd": "04-25", "weight": 0.7 },
-    { "code": "tulip-seoulforest", "entity": "tulip", "regions": ["서울"], "locations": ["seoul-forest"], "start": "04-14", "end": "05-02", "peakStart": "04-19", "peakEnd": "04-27", "weight": 0.6 },
-    { "code": "lotus-buyeo", "entity": "lotus", "regions": ["충남"], "locations": ["buyeo-gungnamji"], "start": "07-05", "end": "08-15", "peakStart": "07-15", "peakEnd": "08-05", "weight": 0.75 },
-    { "code": "crape-myrtle-south", "entity": "crape-myrtle", "regions": ["전남", "경남"], "locations": ["gurye", "jirisan"], "start": "07-20", "end": "09-05", "peakStart": "08-01", "peakEnd": "08-20", "weight": 0.55 },
-    { "code": "buckwheat-pyeongchang", "entity": "buckwheat", "regions": ["강원"], "locations": ["pyeongchang"], "start": "08-28", "end": "09-22", "peakStart": "09-03", "peakEnd": "09-14", "weight": 0.8 },
-    { "code": "cosmos-nationwide", "entity": "cosmos", "regions": ["전국"], "locations": ["seoul-forest", "gyeongju"], "start": "09-08", "end": "10-15", "peakStart": "09-20", "peakEnd": "10-05", "weight": 0.6 },
-    { "code": "reed-suncheonbay", "entity": "reed", "regions": ["전남"], "locations": ["suncheonbay"], "start": "10-05", "end": "11-25", "peakStart": "10-20", "peakEnd": "11-10", "weight": 0.85 },
-    { "code": "green-barley-gapado", "entity": "green-barley", "regions": ["제주"], "locations": ["gapado"], "start": "03-20", "end": "05-05", "peakStart": "04-05", "peakEnd": "04-25", "weight": 0.7 }
-  ]
+  {
+   "code": "plum-blossom",
+   "name": "매화",
+   "speciesName": "Prunus mume",
+   "icon": "💮",
+   "rarity": 2,
+   "summary": "봄을 가장 먼저 알리는 꽃. 잎보다 꽃이 먼저 핀다"
+  },
+  {
+   "code": "cornelian-cherry",
+   "name": "산수유",
+   "speciesName": "Cornus officinalis",
+   "icon": "🌼",
+   "rarity": 2,
+   "summary": "이른 봄 산기슭을 노랗게 물들이는 작은 꽃"
+  },
+  {
+   "code": "forsythia",
+   "name": "개나리",
+   "speciesName": "Forsythia koreana",
+   "icon": "🌼",
+   "rarity": 1,
+   "summary": "담장과 산기슭을 노랗게 물들이며 봄을 먼저 알리는 꽃"
+  },
+  {
+   "code": "king-cherry",
+   "name": "왕벚꽃",
+   "speciesName": "Prunus × yedoensis",
+   "icon": "🌸",
+   "rarity": 1,
+   "summary": "남쪽에서 시작해 약 3주에 걸쳐 북상하는 대한민국의 봄"
+  },
+  {
+   "code": "canola",
+   "name": "유채꽃",
+   "speciesName": "Brassica napus",
+   "icon": "🌻",
+   "rarity": 1,
+   "summary": "제주와 남해안 들판을 노랗게 덮는 봄꽃"
+  },
+  {
+   "code": "azalea",
+   "name": "진달래",
+   "speciesName": "Rhododendron mucronulatum",
+   "icon": "🏵️",
+   "rarity": 1,
+   "summary": "잎이 나기 전 산 전체를 분홍으로 물들이는 봄꽃"
+  },
+  {
+   "code": "royal-azalea",
+   "name": "철쭉",
+   "speciesName": "Rhododendron schlippenbachii",
+   "icon": "🌸",
+   "rarity": 2,
+   "summary": "진달래가 진 뒤 고산 능선에서 이어 피는 늦봄의 꽃"
+  },
+  {
+   "code": "tulip",
+   "name": "튤립",
+   "speciesName": "Tulipa",
+   "icon": "🌷",
+   "rarity": 1,
+   "summary": "봄 축제와 함께 조성되는 군락. 정원과 공원에서 볼 수 있다"
+  },
+  {
+   "code": "lotus",
+   "name": "연꽃",
+   "speciesName": "Nelumbo nucifera",
+   "icon": "🪷",
+   "rarity": 2,
+   "summary": "한여름 새벽에 피었다 낮에 오므라드는 수생식물"
+  },
+  {
+   "code": "crape-myrtle",
+   "name": "배롱나무꽃",
+   "speciesName": "Lagerstroemia indica",
+   "icon": "🪻",
+   "rarity": 2,
+   "summary": "백일 가까이 피고 지기를 반복해 백일홍이라 불린다"
+  },
+  {
+   "code": "buckwheat",
+   "name": "메밀꽃",
+   "speciesName": "Fagopyrum esculentum",
+   "icon": "💮",
+   "rarity": 3,
+   "summary": "초가을 고원을 하얗게 덮는 꽃밭"
+  },
+  {
+   "code": "cosmos",
+   "name": "코스모스",
+   "speciesName": "Cosmos bipinnatus",
+   "icon": "🌼",
+   "rarity": 1,
+   "summary": "가을 초입 길가와 하천변을 채우는 꽃"
+  },
+  {
+   "code": "reed",
+   "name": "갈대",
+   "speciesName": "Phragmites australis",
+   "icon": "🌾",
+   "rarity": 2,
+   "summary": "가을 습지에서 은빛으로 물결치는 군락"
+  },
+  {
+   "code": "green-barley",
+   "name": "청보리",
+   "speciesName": "Hordeum vulgare",
+   "icon": "🌿",
+   "rarity": 3,
+   "summary": "초봄 섬 전체가 초록 물결이 되는 보리밭"
+  }
+ ],
+ "occurrences": [
+  {
+   "code": "forsythia-jeju",
+   "entity": "forsythia",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "jeju-city",
+    "seogwipo"
+   ],
+   "start": "03-06",
+   "end": "03-25",
+   "peakStart": "03-14",
+   "peakEnd": "03-18",
+   "weight": 1.0
+  },
+  {
+   "code": "forsythia-south-coast",
+   "entity": "forsythia",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "gwangyang",
+    "suncheonbay"
+   ],
+   "start": "03-08",
+   "end": "03-27",
+   "peakStart": "03-16",
+   "peakEnd": "03-20",
+   "weight": 0.98
+  },
+  {
+   "code": "forsythia-yeongnam",
+   "entity": "forsythia",
+   "regions": [
+    "부산",
+    "경남"
+   ],
+   "locations": [
+    "busan",
+    "jinhae"
+   ],
+   "start": "03-11",
+   "end": "03-30",
+   "peakStart": "03-19",
+   "peakEnd": "03-23",
+   "weight": 0.96
+  },
+  {
+   "code": "forsythia-honam",
+   "entity": "forsythia",
+   "regions": [
+    "전남",
+    "광주"
+   ],
+   "locations": [
+    "gurye",
+    "mudeungsan"
+   ],
+   "start": "03-12",
+   "end": "03-31",
+   "peakStart": "03-20",
+   "peakEnd": "03-24",
+   "weight": 0.95
+  },
+  {
+   "code": "forsythia-gyeongbuk",
+   "entity": "forsythia",
+   "regions": [
+    "경북",
+    "경남"
+   ],
+   "locations": [
+    "gyeongju",
+    "gayasan"
+   ],
+   "start": "03-15",
+   "end": "04-03",
+   "peakStart": "03-23",
+   "peakEnd": "03-27",
+   "weight": 0.93
+  },
+  {
+   "code": "forsythia-chungcheong",
+   "entity": "forsythia",
+   "regions": [
+    "충남"
+   ],
+   "locations": [
+    "buyeo-gungnamji",
+    "gyeryongsan"
+   ],
+   "start": "03-18",
+   "end": "04-06",
+   "peakStart": "03-26",
+   "peakEnd": "03-30",
+   "weight": 0.9
+  },
+  {
+   "code": "forsythia-capital",
+   "entity": "forsythia",
+   "regions": [
+    "서울"
+   ],
+   "locations": [
+    "yeouido",
+    "seoul-forest",
+    "bukhansan"
+   ],
+   "start": "03-21",
+   "end": "04-09",
+   "peakStart": "03-29",
+   "peakEnd": "04-02",
+   "weight": 0.88
+  },
+  {
+   "code": "forsythia-gangwon",
+   "entity": "forsythia",
+   "regions": [
+    "강원"
+   ],
+   "locations": [
+    "gangneung",
+    "pyeongchang"
+   ],
+   "start": "03-25",
+   "end": "04-13",
+   "peakStart": "04-02",
+   "peakEnd": "04-06",
+   "weight": 0.85
+  },
+  {
+   "code": "azalea-jeju",
+   "entity": "azalea",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "jeju-city",
+    "seogwipo"
+   ],
+   "start": "03-13",
+   "end": "04-01",
+   "peakStart": "03-21",
+   "peakEnd": "03-25",
+   "weight": 1.0
+  },
+  {
+   "code": "azalea-south-coast",
+   "entity": "azalea",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "gwangyang",
+    "suncheonbay"
+   ],
+   "start": "03-15",
+   "end": "04-03",
+   "peakStart": "03-23",
+   "peakEnd": "03-27",
+   "weight": 0.98
+  },
+  {
+   "code": "azalea-yeongnam",
+   "entity": "azalea",
+   "regions": [
+    "부산",
+    "경남"
+   ],
+   "locations": [
+    "busan",
+    "jinhae"
+   ],
+   "start": "03-18",
+   "end": "04-06",
+   "peakStart": "03-26",
+   "peakEnd": "03-30",
+   "weight": 0.96
+  },
+  {
+   "code": "azalea-honam",
+   "entity": "azalea",
+   "regions": [
+    "전남",
+    "광주"
+   ],
+   "locations": [
+    "gurye",
+    "mudeungsan"
+   ],
+   "start": "03-19",
+   "end": "04-07",
+   "peakStart": "03-27",
+   "peakEnd": "03-31",
+   "weight": 0.95
+  },
+  {
+   "code": "azalea-gyeongbuk",
+   "entity": "azalea",
+   "regions": [
+    "경북",
+    "경남"
+   ],
+   "locations": [
+    "gyeongju",
+    "gayasan"
+   ],
+   "start": "03-22",
+   "end": "04-10",
+   "peakStart": "03-30",
+   "peakEnd": "04-03",
+   "weight": 0.93
+  },
+  {
+   "code": "azalea-chungcheong",
+   "entity": "azalea",
+   "regions": [
+    "충남"
+   ],
+   "locations": [
+    "buyeo-gungnamji",
+    "gyeryongsan"
+   ],
+   "start": "03-25",
+   "end": "04-13",
+   "peakStart": "04-02",
+   "peakEnd": "04-06",
+   "weight": 0.9
+  },
+  {
+   "code": "azalea-capital",
+   "entity": "azalea",
+   "regions": [
+    "서울"
+   ],
+   "locations": [
+    "yeouido",
+    "seoul-forest",
+    "bukhansan"
+   ],
+   "start": "03-28",
+   "end": "04-16",
+   "peakStart": "04-05",
+   "peakEnd": "04-09",
+   "weight": 0.88
+  },
+  {
+   "code": "azalea-gangwon",
+   "entity": "azalea",
+   "regions": [
+    "강원"
+   ],
+   "locations": [
+    "gangneung",
+    "pyeongchang"
+   ],
+   "start": "04-01",
+   "end": "04-20",
+   "peakStart": "04-09",
+   "peakEnd": "04-13",
+   "weight": 0.85
+  },
+  {
+   "code": "king-cherry-jeju",
+   "entity": "king-cherry",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "jeju-city",
+    "seogwipo"
+   ],
+   "start": "03-21",
+   "end": "04-09",
+   "peakStart": "03-29",
+   "peakEnd": "04-02",
+   "weight": 1.0
+  },
+  {
+   "code": "king-cherry-south-coast",
+   "entity": "king-cherry",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "gwangyang",
+    "suncheonbay"
+   ],
+   "start": "03-23",
+   "end": "04-11",
+   "peakStart": "03-31",
+   "peakEnd": "04-04",
+   "weight": 0.98
+  },
+  {
+   "code": "king-cherry-yeongnam",
+   "entity": "king-cherry",
+   "regions": [
+    "부산",
+    "경남"
+   ],
+   "locations": [
+    "busan",
+    "jinhae"
+   ],
+   "start": "03-26",
+   "end": "04-14",
+   "peakStart": "04-03",
+   "peakEnd": "04-07",
+   "weight": 0.96
+  },
+  {
+   "code": "king-cherry-honam",
+   "entity": "king-cherry",
+   "regions": [
+    "전남",
+    "광주"
+   ],
+   "locations": [
+    "gurye",
+    "mudeungsan"
+   ],
+   "start": "03-27",
+   "end": "04-15",
+   "peakStart": "04-04",
+   "peakEnd": "04-08",
+   "weight": 0.95
+  },
+  {
+   "code": "king-cherry-gyeongbuk",
+   "entity": "king-cherry",
+   "regions": [
+    "경북",
+    "경남"
+   ],
+   "locations": [
+    "gyeongju",
+    "gayasan"
+   ],
+   "start": "03-30",
+   "end": "04-18",
+   "peakStart": "04-07",
+   "peakEnd": "04-11",
+   "weight": 0.93
+  },
+  {
+   "code": "king-cherry-chungcheong",
+   "entity": "king-cherry",
+   "regions": [
+    "충남"
+   ],
+   "locations": [
+    "buyeo-gungnamji",
+    "gyeryongsan"
+   ],
+   "start": "04-02",
+   "end": "04-21",
+   "peakStart": "04-10",
+   "peakEnd": "04-14",
+   "weight": 0.9
+  },
+  {
+   "code": "king-cherry-capital",
+   "entity": "king-cherry",
+   "regions": [
+    "서울"
+   ],
+   "locations": [
+    "yeouido",
+    "seoul-forest",
+    "bukhansan"
+   ],
+   "start": "04-05",
+   "end": "04-24",
+   "peakStart": "04-13",
+   "peakEnd": "04-17",
+   "weight": 0.88
+  },
+  {
+   "code": "king-cherry-gangwon",
+   "entity": "king-cherry",
+   "regions": [
+    "강원"
+   ],
+   "locations": [
+    "gangneung",
+    "pyeongchang"
+   ],
+   "start": "04-09",
+   "end": "04-28",
+   "peakStart": "04-17",
+   "peakEnd": "04-21",
+   "weight": 0.85
+  },
+  {
+   "code": "camellia-jeju",
+   "entity": "camellia",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "seogwipo",
+    "jeju-city"
+   ],
+   "start": "12-20",
+   "end": "03-10",
+   "peakStart": "01-20",
+   "peakEnd": "02-20",
+   "weight": 0.8
+  },
+  {
+   "code": "plum-gwangyang",
+   "entity": "plum-blossom",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "gwangyang"
+   ],
+   "start": "03-05",
+   "end": "03-25",
+   "peakStart": "03-12",
+   "peakEnd": "03-20",
+   "weight": 0.85
+  },
+  {
+   "code": "cornelian-gurye",
+   "entity": "cornelian-cherry",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "gurye"
+   ],
+   "start": "03-13",
+   "end": "04-02",
+   "peakStart": "03-20",
+   "peakEnd": "03-28",
+   "weight": 0.8
+  },
+  {
+   "code": "canola-jeju",
+   "entity": "canola",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "seogwipo",
+    "gapado"
+   ],
+   "start": "03-15",
+   "end": "04-30",
+   "peakStart": "03-28",
+   "peakEnd": "04-15",
+   "weight": 0.85
+  },
+  {
+   "code": "royal-azalea-jirisan",
+   "entity": "royal-azalea",
+   "regions": [
+    "경남"
+   ],
+   "locations": [
+    "jirisan"
+   ],
+   "start": "05-01",
+   "end": "05-25",
+   "peakStart": "05-08",
+   "peakEnd": "05-18",
+   "weight": 0.8
+  },
+  {
+   "code": "royal-azalea-sobaeksan",
+   "entity": "royal-azalea",
+   "regions": [
+    "충북"
+   ],
+   "locations": [
+    "sobaeksan"
+   ],
+   "start": "05-18",
+   "end": "06-08",
+   "peakStart": "05-25",
+   "peakEnd": "06-02",
+   "weight": 0.75
+  },
+  {
+   "code": "tulip-taean",
+   "entity": "tulip",
+   "regions": [
+    "충남"
+   ],
+   "locations": [
+    "taean"
+   ],
+   "start": "04-08",
+   "end": "05-02",
+   "peakStart": "04-15",
+   "peakEnd": "04-25",
+   "weight": 0.7
+  },
+  {
+   "code": "tulip-seoulforest",
+   "entity": "tulip",
+   "regions": [
+    "서울"
+   ],
+   "locations": [
+    "seoul-forest"
+   ],
+   "start": "04-14",
+   "end": "05-02",
+   "peakStart": "04-19",
+   "peakEnd": "04-27",
+   "weight": 0.6
+  },
+  {
+   "code": "lotus-buyeo",
+   "entity": "lotus",
+   "regions": [
+    "충남"
+   ],
+   "locations": [
+    "buyeo-gungnamji"
+   ],
+   "start": "07-05",
+   "end": "08-15",
+   "peakStart": "07-15",
+   "peakEnd": "08-05",
+   "weight": 0.75
+  },
+  {
+   "code": "crape-myrtle-south",
+   "entity": "crape-myrtle",
+   "regions": [
+    "전남",
+    "경남"
+   ],
+   "locations": [
+    "gurye",
+    "jirisan"
+   ],
+   "start": "07-20",
+   "end": "09-05",
+   "peakStart": "08-01",
+   "peakEnd": "08-20",
+   "weight": 0.55
+  },
+  {
+   "code": "buckwheat-pyeongchang",
+   "entity": "buckwheat",
+   "regions": [
+    "강원"
+   ],
+   "locations": [
+    "pyeongchang"
+   ],
+   "start": "08-28",
+   "end": "09-22",
+   "peakStart": "09-03",
+   "peakEnd": "09-14",
+   "weight": 0.8
+  },
+  {
+   "code": "cosmos-nationwide",
+   "entity": "cosmos",
+   "regions": [
+    "전국"
+   ],
+   "locations": [
+    "seoul-forest",
+    "gyeongju"
+   ],
+   "start": "09-08",
+   "end": "10-15",
+   "peakStart": "09-20",
+   "peakEnd": "10-05",
+   "weight": 0.6
+  },
+  {
+   "code": "reed-suncheonbay",
+   "entity": "reed",
+   "regions": [
+    "전남"
+   ],
+   "locations": [
+    "suncheonbay"
+   ],
+   "start": "10-05",
+   "end": "11-25",
+   "peakStart": "10-20",
+   "peakEnd": "11-10",
+   "weight": 0.85
+  },
+  {
+   "code": "green-barley-gapado",
+   "entity": "green-barley",
+   "regions": [
+    "제주"
+   ],
+   "locations": [
+    "gapado"
+   ],
+   "start": "03-20",
+   "end": "05-05",
+   "peakStart": "04-05",
+   "peakEnd": "04-25",
+   "weight": 0.7
+  }
+ ]
 }

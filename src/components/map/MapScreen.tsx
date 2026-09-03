@@ -6,14 +6,18 @@ import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
 import { EMPTY_MAP_COUNTS, buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
 import {
-  buildFoliageSpots,
-  countFoliage,
-  groupFoliageRegions,
-  summarizeFoliage,
-  waveSummary,
-  winterAmount,
-  type FoliageSpot,
+  FOLIAGE_STATE_LABEL,
+  freshAmount,
+  mountainColorAt,
 } from '@/services/foliage-service';
+import { FLOWER_STATE_LABEL, getFlowerPicks } from '@/services/flower-service';
+import { getFoliagePicks } from '@/services/foliage-service';
+import {
+  buildMountainNow,
+  buildTerrainNow,
+  type MountainNow,
+  type MountainPhase,
+} from '@/services/mountain-service';
 import {
   findNextLivelyDate,
   getZoneDetail,
@@ -21,6 +25,7 @@ import {
   type MarineMapItem,
 } from '@/services/marine-service';
 import { locationPosition } from '@/services/nature-service';
+import type { MapPosition } from '@/domain/projection';
 import { BASE_MAP_HEIGHT_CQW } from '@/lib/map-asset';
 import { useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
@@ -29,10 +34,14 @@ import { NatureDetailSheet } from '@/components/nature/NatureDetailSheet';
 import { MarineDetailSheet } from '@/components/marine/MarineDetailSheet';
 import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
-import { FoliageOverlay } from './FoliageOverlay';
-import { FoliagePicksSheet } from './FoliagePicksSheet';
-import { FoliageRegionList } from './FoliageRegionList';
-import { FoliageDetailSheet } from '@/components/nature/FoliageDetailSheet';
+import { TerrainOverlay } from './TerrainOverlay';
+import { FlowerOverlay } from './FlowerOverlay';
+import { MountainPicksSheet, type PickView } from './MountainPicksSheet';
+import { MountainRegionList, type RegionRow } from './MountainRegionList';
+import {
+  MountainDetailSheet,
+  type MountainSpotView,
+} from '@/components/nature/MountainDetailSheet';
 import { MarineFilterSheet } from './MarineFilterSheet';
 import { MarineMapHeader } from './MarineMapHeader';
 import { MapControls } from './MapControls';
@@ -86,6 +95,7 @@ export function MapScreen() {
   const focusSpecies = useMapStore((s) => s.focusSpecies);
   const layer = useMapStore((s) => s.layer);
   const foliageState = useMapStore((s) => s.foliageState);
+  const flowerSpecies = useMapStore((s) => s.flowerSpecies);
   const mode = useMapStore((s) => s.mode);
   const selectedId = useMapStore((s) => s.selectedOccurrenceId);
   const select = useMapStore((s) => s.selectOccurrence);
@@ -124,6 +134,24 @@ export function MapScreen() {
   }, [date, categories, isPlaying, selectedId]);
 
   /* ── 파생 데이터 ────────────────────────────────────────── */
+
+  /*
+   * 지금 산이 무슨 계절인지는 날짜가 정한다.
+   *
+   * 겨울에는 어느 카테고리를 보고 있든 산과 땅이 눈으로 덮이므로,
+   * 바다를 보는 중에도 지형은 계산한다 — 1월의 지도가 초여름처럼 초록이면
+   * 시간을 움직이는 지도가 아니다.
+   */
+  const terrain = useMemo(() => buildTerrainNow(date), [date]);
+  const mountain = useMemo(
+    () => buildMountainNow(date, terrain, layer === 'mountain'),
+    [date, terrain, layer],
+  );
+  const phase = mountain.phase;
+  const mountainPhase = phase;
+  const isFlower = layer === 'mountain' && phase === 'flower';
+  const isFoliage = layer === 'mountain' && phase === 'foliage';
+
   const layout = useMemo(
     () =>
       buildMapLayout({
@@ -135,6 +163,8 @@ export function MapScreen() {
         speciesSlug: focusedSpecies?.slug,
         layer,
         foliageState,
+        flowerSpecies,
+        mountainPhase,
         mode,
         detail,
         fast: isPlaying || isScrubbing,
@@ -148,6 +178,8 @@ export function MapScreen() {
       focusedSpecies,
       layer,
       foliageState,
+      flowerSpecies,
+      mountainPhase,
       mode,
       detail,
       isPlaying,
@@ -157,35 +189,13 @@ export function MapScreen() {
 
   /*
    * 어종 집계는 바다 화면에서만 센다.
-   * 날짜를 끄는 동안 매 프레임 도는 계산이라, 단풍을 보는 중에 어종 124건을
+   * 날짜를 끄는 동안 매 프레임 도는 계산이라, 산을 보는 중에 어종 124건을
    * 다시 훑으면 슬라이더가 그만큼 무거워진다 (모바일에서 화면이 죽었다).
    */
   const counts = useMemo(
-    () => (layer === 'foliage' ? EMPTY_MAP_COUNTS : countMap(date, mode)),
+    () => (layer === 'mountain' ? EMPTY_MAP_COUNTS : countMap(date, mode)),
     [layer, date, mode],
   );
-
-  /*
-   * 지도의 색은 sprite 가 아니라 권역이 정한다.
-   * 아직 초록인 곳도 함께 와야 지도 전체가 하나의 띠로 읽힌다.
-   * 명소 목록은 한 번만 만들고 개수·권역이 그것을 나눠 쓴다.
-   */
-  /*
-   * 겨울에는 어느 카테고리를 보고 있든 산과 땅이 눈으로 덮인다.
-   * 1월의 지도가 초여름처럼 초록이면 시간을 움직이는 지도가 아니다.
-   */
-  const winter = useMemo(() => winterAmount(date), [date]);
-  const terrainLive = layer === 'foliage' || winter > 0;
-
-  const foliageSpots = useMemo(
-    () => (terrainLive ? buildFoliageSpots(date) : []),
-    [terrainLive, date],
-  );
-  const foliage = useMemo(() => countFoliage(foliageSpots), [foliageSpots]);
-  const foliageRegions = useMemo(() => groupFoliageRegions(foliageSpots), [foliageSpots]);
-
-  /* 헤더 한 줄 — "강원 북부 절정 · 수도권 시작". 개수가 아니라 전선의 위치다. */
-  const foliageWave = useMemo(() => waveSummary(foliageRegions, winter), [foliageRegions, winter]);
 
   const selectedSprite = useMemo(
     () => layout.sprites.find((s) => s.selectionId === selectedId) ?? null,
@@ -196,20 +206,14 @@ export function MapScreen() {
     selectedSprite?.subject.kind === 'marine' ? selectedSprite.subject.item : null;
   const selectedNature: ResolvedOccurrence | null =
     selectedSprite?.subject.kind === 'nature' ? selectedSprite.subject.resolved : null;
+
   /*
-   * 단풍 상세는 sprite 가 아니라 명소 자체에서 찾는다.
+   * 산의 상세는 sprite 가 아니라 명소 자체에서 찾는다.
    *
    * 지역별 보기에는 지도에 sprite 가 없다. sprite 에서만 찾으면
    * 추천 시트의 '지도에서 보기' 와 좌측 권역 목록이 아무것도 열지 못한다.
    */
-  const selectedFoliage: FoliageSpot | null = useMemo(() => {
-    if (layer !== 'foliage' || !selectedId) return null;
-    for (const region of foliageRegions) {
-      const hit = region.spots.find((spot) => `foliage:${spot.location.slug}` === selectedId);
-      if (hit) return hit;
-    }
-    return null;
-  }, [layer, selectedId, foliageRegions]);
+  const selectedMountain = pickMountainSpot(layer, selectedId, mountain);
 
   /* ── 권역 시트 ──────────────────────────────────────────── */
   const openZoneSlug = useMapStore((s) => s.openZoneSlug);
@@ -299,8 +303,8 @@ export function MapScreen() {
   const [picksOpen, setPicksOpen] = useState(false);
 
   const filtered =
-    layer === 'foliage'
-      ? mode === 'species' && foliageState !== 'all'
+    layer === 'mountain'
+      ? mode === 'species' && (foliageState !== 'all' || flowerSpecies !== 'all')
       : mode === 'zone'
         ? legalOnly
         : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
@@ -322,14 +326,81 @@ export function MapScreen() {
     [focusSpecies, select, setOpenZone, resetViewport, play],
   );
 
-  /** 추천에서 고른 단풍 명소를 지도에서 집어 준다 */
-  const showFoliageOnMap = useCallback(
-    (spot: FoliageSpot) => {
-      select(`foliage:${spot.location.slug}`);
-      focusOn(spot.position, { scale: 1.5, anchorX: 0.36 });
+  /** 추천이나 목록에서 고른 산 명소를 지도에서 집어 준다 */
+  const showMountainOnMap = useCallback(
+    (selectionId: string, position: MapPosition) => {
+      select(selectionId);
+      focusOn(position, { scale: 1.5, anchorX: 0.36 });
     },
     [select, focusOn],
   );
+
+  /* ── 지역별 목록 · 추천 — 계절이 무엇을 보여줄지 정한다 ── */
+  const regionRows: RegionRow[] = useMemo(() => {
+    if (isFlower) {
+      return mountain.flowerRegions.map((region) => {
+        const top = region.blooms[0];
+        return {
+          id: region.id,
+          label: region.label,
+          stateLabel: FLOWER_STATE_LABEL[region.state],
+          color: top?.petal ?? 'var(--color-line)',
+          strongColor: top?.petal ?? 'var(--color-muted)',
+          detail: [region.lead.location.name, ...region.blooms.map((b) => b.name)]
+            .slice(0, 3)
+            .join(' · '),
+          active: `flower:${region.lead.location.slug}` === selectedId,
+          onSelect: () =>
+            showMountainOnMap(`flower:${region.lead.location.slug}`, region.lead.position),
+        };
+      });
+    }
+    if (isFoliage) {
+      return mountain.foliageRegions.map((region) => {
+        const color = mountainColorAt(region.wave);
+        return {
+          id: region.id,
+          label: region.label,
+          stateLabel: FOLIAGE_STATE_LABEL[region.state],
+          color: color.face,
+          strongColor: color.faceDark,
+          detail:
+            region.lead.nextChangeLabel && region.lead.daysToNextChange !== undefined
+              ? `${region.lead.location.name} · ${region.lead.nextChangeLabel} ${region.lead.daysToNextChange}일`
+              : region.lead.location.name,
+          active: `foliage:${region.lead.location.slug}` === selectedId,
+          onSelect: () =>
+            showMountainOnMap(`foliage:${region.lead.location.slug}`, region.lead.position),
+        };
+      });
+    }
+    return [];
+  }, [isFlower, isFoliage, mountain, selectedId, showMountainOnMap]);
+
+  const picks: PickView[] = useMemo(() => {
+    if (!picksOpen) return [];
+    if (isFlower) {
+      return getFlowerPicks(mountain.flowerSpots).map((spot) => ({
+        key: `flower:${spot.location.id}`,
+        location: spot.location,
+        entity: spot.entity,
+        stateLabel: FLOWER_STATE_LABEL[spot.state],
+        peak: spot.state === 'peak',
+        peakWindow: spot.peakWindow,
+      }));
+    }
+    if (isFoliage) {
+      return getFoliagePicks(date).map((spot) => ({
+        key: `foliage:${spot.location.id}`,
+        location: spot.location,
+        entity: spot.entity,
+        stateLabel: FOLIAGE_STATE_LABEL[spot.state],
+        peak: spot.state === 'peak',
+        peakWindow: spot.peakWindow,
+      }));
+    }
+    return [];
+  }, [picksOpen, isFlower, isFoliage, mountain, date]);
 
   /** 추천에서 고른 어종을 지도에서 집어 준다. 지금 지도에 없으면 아무것도 하지 않는다. */
   const showSpeciesOnMap = useCallback(
@@ -348,8 +419,8 @@ export function MapScreen() {
   const header = (stacked: boolean) => (
     <MarineMapHeader
       layer={layer}
-      foliage={foliage}
-      foliageWave={foliageWave}
+      mountainHeadline={mountain.headline}
+      phase={phase}
       mode={layout.mode}
       counts={counts}
       /* 조건에 맞는 대상 수. 과밀로 접힌 것을 뺀 '지금 그려진 수' 는 타임라인이 말한다. */
@@ -379,12 +450,11 @@ export function MapScreen() {
           {/* 자연 카테고리는 제목 자체(CategorySelector)가 고르므로 별도 칩 줄을 두지 않는다 */}
           {header(true)}
 
-          {/* 지역별 단풍에는 지도에 그림이 없다 — 목록이 지도의 색을 읽는 통로가 된다 */}
-          {layer === 'foliage' && layout.mode === 'zone' ? (
-            <FoliageRegionList
-              regions={foliageRegions}
-              selectedId={selectedId}
-              onSelect={showFoliageOnMap}
+          {/* 지역별 보기에는 지도에 그림이 없다 — 목록이 지도의 색을 읽는 통로가 된다 */}
+          {layer === 'mountain' && layout.mode === 'zone' ? (
+            <MountainRegionList
+              title={isFlower ? '남쪽부터 북쪽으로' : '북쪽부터 남쪽으로'}
+              rows={regionRows}
             />
           ) : (
             <MapSideList
@@ -415,14 +485,24 @@ export function MapScreen() {
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
             overlay={
-              terrainLive ? (
-                <FoliageOverlay
-                  regions={foliageRegions}
-                  winter={winter}
+              <>
+                {/* 계절이 지형을 칠한다 — 카테고리와 무관하다 (1월 바다 화면도 눈이다) */}
+                <TerrainOverlay
+                  regions={terrain.foliageRegions}
+                  winter={terrain.winter}
+                  freshAt={(offsetDays) => freshAmount(date, offsetDays)}
+                  detailed={layer === 'mountain'}
                   /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */
                   fast={isPlaying || isScrubbing}
                 />
-              ) : null
+                {/* 꽃은 지형 위에 무리로 얹힌다 */}
+                {phase === 'flower' && (
+                  <FlowerOverlay
+                    regions={mountain.flowerRegions}
+                    fast={isPlaying || isScrubbing}
+                  />
+                )}
+              </>
             }
           />
 
@@ -434,7 +514,15 @@ export function MapScreen() {
           <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <span />
             <WeeklyRecommendationCTA
-              label={layer === 'foliage' ? '이번 주 단풍 어디가 좋지?' : '이번 주 뭐 잡지?'}
+              label={
+                isFlower
+                  ? '이번 주 꽃 어디가 좋지?'
+                  : isFoliage
+                    ? '이번 주 단풍 어디가 좋지?'
+                    : layer === 'mountain'
+                      ? '이번 주 어디가 좋지?'
+                      : '이번 주 뭐 잡지?'
+              }
               onOpen={() => setPicksOpen(true)}
             />
             <div className="justify-self-end">
@@ -446,14 +534,14 @@ export function MapScreen() {
             재생 중에는 띄우지 않는다. 1년을 돌려 보는 동안 시즌이 비는 구간마다
             안내 카드가 깜빡이면 정작 지도의 변화를 못 본다.
           */}
-          {visible === 0 && !isPlaying && !(layer === 'foliage' && layout.mode === 'zone') && (
+          {visible === 0 && !isPlaying && !(layer === 'mountain' && layout.mode === 'zone') && (
             <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
               <div className="pointer-events-auto">
                 <QuietState
                   date={date}
                   filtered={filtered}
                   species={focusedSpecies?.name}
-                  foliage={layer === 'foliage'}
+                  mountain={layer === 'mountain' ? phase : null}
                 />
               </div>
             </div>
@@ -464,12 +552,12 @@ export function MapScreen() {
       <NatureTimeline
         date={date}
         /*
-         * 단풍에서 세어야 할 것은 마커 수가 아니라 지금 어떤 상태가 몇 곳인가다.
+         * 산에서 세어야 할 것은 마커 수가 아니라 지금 어떤 상태가 몇 곳인가다.
          * 지역별 보기에는 애초에 지도에 그림이 없어서 '표시 중' 이 뜻을 갖지 않는다.
          */
         caption={
-          layer === 'foliage'
-            ? summarizeFoliage(foliage, winter)
+          layer === 'mountain'
+            ? mountain.caption
             : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
         }
       />
@@ -478,17 +566,35 @@ export function MapScreen() {
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
         layer={layer}
+        phase={phase}
         mode={layout.mode}
         counts={counts}
-        foliage={foliage}
       />
 
-      {layer === 'foliage' ? (
-        <FoliagePicksSheet
+      {layer === 'mountain' ? (
+        <MountainPicksSheet
           open={picksOpen}
           onClose={() => setPicksOpen(false)}
           date={date}
-          onShowOnMap={showFoliageOnMap}
+          title={isFlower ? '이번 주, 꽃 어디가 좋지?' : '이번 주, 단풍 어디가 좋지?'}
+          emptyMessage={
+            isFlower
+              ? '이 날짜에는 절정이거나 볼 만한 곳이 없습니다. 슬라이더를 3~4월로 옮겨 보세요.'
+              : isFoliage
+                ? '이 날짜에는 절정이거나 볼 만한 곳이 없습니다. 슬라이더를 10월로 옮겨 보세요.'
+                : '지금 산은 조용합니다. 슬라이더를 봄이나 가을로 옮겨 보세요.'
+          }
+          disclaimer={
+            isFlower
+              ? '개화 시기는 개발용 DEMO 평년 참고값입니다. 그해 기온에 따라 크게 달라지니 방문 전 지자체·기상 정보를 확인하세요.'
+              : '단풍 시기는 개발용 DEMO 평년 참고값입니다. 그해 기온에 따라 1~2주씩 달라지니 방문 전 국립공원·지자체 정보를 확인하세요.'
+          }
+          picks={picks}
+          onShowOnMap={(pick) => {
+            const spots = isFlower ? mountain.flowerSpots : mountain.foliageSpots;
+            const hit = spots.find((sp) => sp.location.id === pick.location.id);
+            if (hit) showMountainOnMap(`${isFlower ? 'flower' : 'foliage'}:${hit.location.slug}`, hit.position);
+          }}
         />
       ) : (
         <WeeklyPicksSheet
@@ -499,11 +605,14 @@ export function MapScreen() {
         />
       )}
 
-      <FoliageDetailSheet
-        spot={selectedFoliage}
+      <MountainDetailSheet
+        spot={selectedMountain?.view ?? null}
+        kind={isFlower ? '꽃' : '단풍'}
         date={date}
         onClose={() => select(null)}
-        onFocusMap={(spot) => focusOn(spot.position, { scale: 1.6, anchorX: 0.36 })}
+        onFocusMap={() => {
+          if (selectedMountain) focusOn(selectedMountain.position, { scale: 1.6, anchorX: 0.36 });
+        }}
       />
 
       <MarineDetailSheet
@@ -546,28 +655,58 @@ export function MapScreen() {
  * 비어 보이는 날짜에도 탐험을 잇는다.
  * "없습니다" 로 끝내지 않고 언제 가면 되는지까지 말해 준다.
  */
+/**
+ * 고른 산 명소를 꽃·단풍 어느 쪽에서든 찾아 준다.
+ * 명소가 수십 개뿐이라 훑는 값이 싸다 — 메모까지 걸 일이 아니다.
+ */
+function pickMountainSpot(
+  layer: string,
+  selectedId: string | null,
+  mountain: MountainNow,
+): { view: MountainSpotView; position: MapPosition } | null {
+  if (layer !== 'mountain' || !selectedId) return null;
+
+  for (const spot of mountain.flowerSpots) {
+    if (`flower:${spot.location.slug}` === selectedId) {
+      return { position: spot.position, view: { ...spot, stateLabel: FLOWER_STATE_LABEL[spot.state] } };
+    }
+  }
+  for (const spot of mountain.foliageSpots) {
+    if (`foliage:${spot.location.slug}` === selectedId) {
+      return { position: spot.position, view: { ...spot, stateLabel: FOLIAGE_STATE_LABEL[spot.state] } };
+    }
+  }
+  return null;
+}
+
 function QuietState({
   date,
   filtered,
   species,
-  foliage = false,
+  mountain,
 }: {
   date: string;
   filtered: boolean;
   /** 어종 하나만 보고 있다면 그 이름 — 안내를 그 어종의 말로 한다 */
   species?: string;
-  /** 단풍 화면인가 — 빈 화면의 뜻이 다르다 */
-  foliage?: boolean;
+  /** 산 화면이면 지금 계절. 빈 화면의 뜻이 계절마다 다르다. */
+  mountain: MountainPhase | null;
 }) {
   const setDate = useTimeStore((s) => s.setDate);
   const next = useMemo(() => (filtered ? null : findNextLivelyDate(date)), [date, filtered]);
 
   const title = species
     ? `지금은 ${species} 시즌이 아니에요`
-    : foliage
+    : mountain
       ? filtered
-        ? '이 상태인 곳이 없어요'
-        : '아직 물든 곳이 없어요'
+        ? '조건에 맞는 곳이 없어요'
+        : mountain === 'flower'
+          ? '아직 핀 곳이 없어요'
+          : mountain === 'foliage'
+            ? '아직 물든 곳이 없어요'
+            : mountain === 'winter'
+              ? '겨울 산입니다'
+              : '지금 산은 초록입니다'
       : filtered
         ? '조건에 맞는 어종이 없어요'
         : '이 시기에는 볼 것이 적어요';
@@ -578,8 +717,8 @@ function QuietState({
       description={
         species
           ? '▶ 1년 재생을 누르면 언제 시즌인지 보입니다.'
-          : foliage
-            ? '아래 슬라이더를 10월로 옮기면 북쪽 산부터 물듭니다.'
+          : mountain
+            ? '아래 슬라이더를 3~4월로 옮기면 남쪽부터 꽃이 피고, 10월로 옮기면 북쪽부터 물듭니다.'
             : filtered
               ? '필터를 풀거나 날짜를 옮겨 보세요.'
               : '아래 슬라이더로 날짜를 옮기면 다른 계절의 바다가 보입니다.'

@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from 'react';
 import type { MapLayerId } from '@/domain/nature-categories';
-import type { FoliageCounts } from '@/services/foliage-service';
 import type { MapCounts, MapMode } from '@/services/map-service';
+import type { MountainPhase } from '@/services/mountain-service';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { CurrentStateSummary } from './CurrentStateSummary';
 import { FilterTrigger } from './FilterTrigger';
@@ -27,9 +27,10 @@ interface Props {
   layer: MapLayerId;
   mode: MapMode;
   counts: MapCounts;
-  foliage: FoliageCounts;
-  /** 단풍 전선 한 줄 ("강원 북부 절정 · 수도권 시작") */
-  foliageWave: string;
+  /** 지금 산 한 줄 ("남해안 절정 · 충청 시작") */
+  mountainHeadline: string;
+  /** 지금 산에서 무엇이 일어나고 있는가 */
+  phase: MountainPhase;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
   filtered: boolean;
@@ -42,8 +43,8 @@ export function MarineMapHeader({
   layer,
   mode,
   counts,
-  foliage,
-  foliageWave,
+  mountainHeadline,
+  phase,
   count,
   filtered,
   onOpenFilter,
@@ -67,18 +68,17 @@ export function MarineMapHeader({
   }, [onOpenFilter]);
 
   /*
-   * 지역별 단풍에는 좁힐 대상이 없다 (지도에 그림을 놓지 않는다).
+   * 지역별 보기에는 좁힐 대상이 없다 (지도에 그림을 놓지 않는다).
    * 눌러도 빈 시트가 열리는 버튼은 두지 않는다.
    */
-  const showFilter = !(layer === 'foliage' && mode === 'zone');
+  const showFilter = !(layer === 'mountain' && mode === 'zone');
 
   return (
     <div ref={boxRef} className="relative">
       <div className="flex items-start gap-2">
         <CurrentStateSummary
           layer={layer}
-          foliage={foliage}
-          foliageWave={foliageWave}
+          mountainHeadline={mountainHeadline}
           mode={mode}
           count={count}
           filtered={filtered}
@@ -121,6 +121,7 @@ export function MarineMapHeader({
         open={legendOpen}
         onClose={closeLegend}
         layer={layer}
+        phase={phase}
         mode={mode}
         anchorRef={boxRef}
       />

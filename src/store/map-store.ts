@@ -38,6 +38,8 @@ interface MapState {
   focusedSpecies: { slug: string; name: string } | null;
   /** 단풍 상태 필터. 'all' 이면 물드는 중인 곳 전부. */
   foliageState: FoliageState | 'all';
+  /** 꽃 종류 필터 (slug). 'all' 이면 지금 피어 있는 곳 전부. */
+  flowerSpecies: string;
   /** 어종 중심 / 권역 중심 */
   mode: MapMode;
   selectedOccurrenceId: string | null;
@@ -50,6 +52,7 @@ interface MapState {
   /** 어종 하나만 남긴다. null 이면 해제 */
   focusSpecies: (species: { slug: string; name: string } | null) => void;
   setFoliageState: (state: FoliageState | 'all') => void;
+  setFlowerSpecies: (slug: string) => void;
   /** 자연 카테고리를 바꾼다. 앞 카테고리의 선택과 필터는 전부 내려놓는다. */
   setLayer: (layer: MapLayerId) => void;
   /** 필터를 전부 기본값으로 — 칩의 ✕ 와 시트의 '초기화' 가 같이 쓴다 */
@@ -102,6 +105,7 @@ export const useMapStore = create<MapState>((set) => ({
   legalOnly: false,
   focusedSpecies: null,
   foliageState: 'all',
+  flowerSpecies: 'all',
   mode: 'species',
   selectedOccurrenceId: null,
   openZoneSlug: null,
@@ -115,6 +119,7 @@ export const useMapStore = create<MapState>((set) => ({
   focusSpecies: (species) => set({ focusedSpecies: species, selectedOccurrenceId: null }),
 
   setFoliageState: (state) => set({ foliageState: state, selectedOccurrenceId: null }),
+  setFlowerSpecies: (slug) => set({ flowerSpecies: slug, selectedOccurrenceId: null }),
 
   /*
    * 카테고리를 바꾸면 앞의 것은 전부 내려놓는다.
@@ -128,14 +133,15 @@ export const useMapStore = create<MapState>((set) => ({
       openZoneSlug: null,
       /*
        * 카테고리마다 먼저 보여야 할 것이 다르다.
-       * 바다는 어종이 주인공이고, 단풍은 지형의 색이 주인공이다.
+       * 바다는 어종이 주인공이고, 산은 지형의 색이 주인공이다.
        */
-      mode: layer === 'foliage' ? 'zone' : 'species',
+      mode: layer === 'mountain' ? 'zone' : 'species',
       seasonFilter: 'all',
       startingOnly: false,
       legalOnly: false,
       focusedSpecies: null,
       foliageState: 'all',
+      flowerSpecies: 'all',
       viewport: DEFAULT_VIEWPORT,
     }),
 
@@ -146,6 +152,7 @@ export const useMapStore = create<MapState>((set) => ({
       legalOnly: false,
       focusedSpecies: null,
       foliageState: 'all',
+      flowerSpecies: 'all',
       selectedOccurrenceId: null,
     }),
 
@@ -164,8 +171,9 @@ export const useMapStore = create<MapState>((set) => ({
       seasonFilter: 'all',
       startingOnly: false,
       focusedSpecies: null,
-      /* 지역별 단풍에는 걸 곳이 없다 — 남겨 두면 칩만 떠 있고 지도는 그대로다 */
+      /* 지역별 보기에는 걸 곳이 없다 — 남겨 두면 칩만 떠 있고 지도는 그대로다 */
       foliageState: 'all',
+      flowerSpecies: 'all',
     }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),
 

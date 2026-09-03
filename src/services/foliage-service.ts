@@ -1,4 +1,10 @@
-import { diffDays, getYear, toDateKey, type DateKey } from '@/domain/date';
+import { dayOfYear, type DateKey } from '@/domain/date';
+import {
+  WAVE_AT_PEAK_END,
+  WAVE_AT_PEAK_START,
+  alreadyPassed,
+  waveOf,
+} from './season-wave';
 import { FOLIAGE_REGIONS, REGION_BY_LOCATION } from '@/domain/foliage-regions';
 import { locationPosition, resolveAll } from './nature-service';
 import type { MapPosition } from '@/domain/projection';
@@ -91,6 +97,39 @@ const SNOW = {
   land: '#eef5fb',
 };
 
+/* ── 봄 ───────────────────────────────────────────────────────
+ * 눈이 걷힌 뒤 여름의 짙은 녹음까지, 산은 한 번 더 색이 바뀐다.
+ * base map 이 그린 초록은 여름의 것이므로 봄은 그보다 밝고 노란 쪽이다.
+ * 이것이 없으면 3월부터 8월까지 지도가 한 장으로 멈춰 있다.
+ * ──────────────────────────────────────────────────────────── */
+
+const FRESH = {
+  face: '#8fd06a',
+  faceDark: '#63a844',
+  tree: '#63ab3f',
+  treeTop: '#96d768',
+  land: '#dcf094',
+};
+
+/**
+ * 신록이 얼마나 올라왔는가 (0~1).
+ *
+ * 꽃과 마찬가지로 남쪽이 먼저다 — offsetDays 로 권역마다 늦춘다.
+ * 4월에 올라와 5월에 가장 연하고, 6월 말이면 여름의 짙은 녹음(= base map)이 된다.
+ */
+export function freshAmount(date: DateKey, offsetDays = 0): number {
+  const day = dayOfYear(date) - offsetDays;
+  const ramp = (from: number, to: number) => (day - from) / (to - from);
+  const RISE_FROM = 78; // 3월 19일
+  const FULL_FROM = 108; // 4월 18일
+  const FULL_TO = 145; // 5월 25일
+  const FADE_TO = 176; // 6월 25일
+  if (day < RISE_FROM || day > FADE_TO) return 0;
+  if (day < FULL_FROM) return Math.min(1, Math.max(0, ramp(RISE_FROM, FULL_FROM)));
+  if (day <= FULL_TO) return 1;
+  return Math.min(1, Math.max(0, 1 - ramp(FULL_TO, FADE_TO)));
+}
+
 /** 겨울이 얼마나 깊은가 (0~1). 11월 말부터 오르고 3월 중순에 0 이 된다. */
 export function winterAmount(date: DateKey): number {
   const md = date.slice(5); // 'MM-DD'
@@ -139,13 +178,15 @@ function rampAt(progress: number): RampStop {
 }
 
 /** 산 색 — 진행도 그대로. winter 를 주면 눈으로 덮인다. */
-export function mountainColorAt(progress: number, winter = 0): FoliageColor {
+export function mountainColorAt(progress: number, winter = 0, fresh = 0): FoliageColor {
   const stop = rampAt(progress);
+  const layer = (autumn: string, spring: string, snow: string) =>
+    mixHex(mixHex(autumn, spring, fresh), snow, winter);
   return {
-    face: mixHex(stop.face, SNOW.face, winter),
-    faceDark: mixHex(stop.faceDark, SNOW.faceDark, winter),
-    tree: mixHex(stop.tree, SNOW.tree, winter),
-    treeTop: mixHex(stop.treeTop, SNOW.treeTop, winter),
+    face: layer(stop.face, FRESH.face, SNOW.face),
+    faceDark: layer(stop.faceDark, FRESH.faceDark, SNOW.faceDark),
+    tree: layer(stop.tree, FRESH.tree, SNOW.tree),
+    treeTop: layer(stop.treeTop, FRESH.treeTop, SNOW.treeTop),
   };
 }
 
@@ -155,12 +196,16 @@ export function mountainColorAt(progress: number, winter = 0): FoliageColor {
  * 산만 물들고 땅은 그대로면 가을이 산에서만 일어나는 일처럼 보인다.
  * 다만 아주 옅게 얹는다 — 강 · 호수 · 해안 모래는 그대로 읽혀야 한다.
  */
-export function landWashAt(progress: number, winter = 0): { color: string; opacity: number } {
+export function landWashAt(
+  progress: number,
+  winter = 0,
+  fresh = 0,
+): { color: string; opacity: number } {
   const stop = rampAt(progress);
   return {
-    color: mixHex(stop.land, SNOW.land, winter),
+    color: mixHex(mixHex(stop.land, FRESH.land, fresh), SNOW.land, winter),
     // 겨울에는 눈이 땅을 덮으므로 훨씬 짙게 깔린다
-    opacity: Math.max(stop.landMix, winter * 0.82),
+    opacity: Math.max(stop.landMix, fresh * 0.3, winter * 0.82),
   };
 }
 
@@ -174,11 +219,17 @@ export function landWashAt(progress: number, winter = 0): { color: string; opaci
  * 절정에서도 산 색의 절반이 채 되지 않게 둔다.
  * 숲까지 주황이 되면 지도에서 산이 사라지고 지역이 통째로 칠해진 것이 된다.
  */
-export function forestColorAt(progress: number, winter = 0): { tree: string; treeTop: string } {
+export function forestColorAt(
+  progress: number,
+  winter = 0,
+  fresh = 0,
+): { tree: string; treeTop: string } {
   const stop = rampAt(progress);
+  const layer = (base: string, autumn: string, mix: number, spring: string, snow: string) =>
+    mixHex(mixHex(mixHex(base, autumn, mix), spring, fresh), snow, winter);
   return {
-    tree: mixHex(mixHex(FOREST_BASE.tree, stop.tree, stop.forestMix), SNOW.tree, winter),
-    treeTop: mixHex(mixHex(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix), SNOW.treeTop, winter),
+    tree: layer(FOREST_BASE.tree, stop.tree, stop.forestMix, FRESH.tree, SNOW.tree),
+    treeTop: layer(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix, FRESH.treeTop, SNOW.treeTop),
   };
 }
 
@@ -208,18 +259,6 @@ export const STATE_PROGRESS: Record<FoliageState, number> = {
   ending: 0.9,
   ended: 1,
 };
-
-/**
- * 올해 단풍이 이미 지나간 뒤인가.
- *
- * occurrence 엔진은 끝난 지 2주가 지나면 '다음 주기의 upcoming' 으로 넘긴다
- * — "다음 시즌은 언제" 를 말해 주기 위한 것이라 목록에서는 맞다.
- * 그런데 지도에서는 그 값이 '아직 초록' 이 되어, 11월 말 설악산이 다시
- * 새잎이 난 것처럼 보인다. 넘어간 창이 내년 것이면 올해는 끝난 것으로 읽는다.
- */
-function alreadyPassed(status: OccurrenceStatus, ref: DateKey, window: { start: Date }): boolean {
-  return status === 'upcoming' && window.start.getUTCFullYear() > getYear(ref);
-}
 
 const STATE_ORDER: Record<FoliageState, number> = {
   ended: 0,
@@ -253,50 +292,6 @@ const SPOT_LEADS = new Set(['maple', 'ginkgo']);
  * 늦게까지 물든 것처럼 보인다 — 전선이 끊긴다.
  */
 const TERRAIN_PAINTERS = new Set(['maple']);
-
-/** 잎이 다 진 뒤 겨울 산 색으로 잦아드는 데 걸리는 시간 */
-const WINTER_FADE_DAYS = 14;
-
-/*
- * 색 띠 위의 구간.
- * 절정을 좁게 잡아 두어야 절정의 색이 '북 → 남으로 지나가는 파도' 로 보인다.
- */
-const WAVE_AT_PEAK_START = 0.45;
-const WAVE_AT_PEAK_END = 0.78;
-const WAVE_AT_END = 0.92;
-
-function waveOf(
-  date: DateKey,
-  window: { start: Date; end: Date },
-  peak: { start: Date; end: Date } | undefined,
-): { wave: number; wavePerDay: number } {
-  const start = toDateKey(window.start);
-  const end = toDateKey(window.end);
-  const peakStart = peak ? toDateKey(peak.start) : null;
-  const peakEnd = peak ? toDateKey(peak.end) : null;
-
-  const span = diffDays(start, end) + 1 + WINTER_FADE_DAYS;
-  const wavePerDay = span > 0 ? 1 / span : 0;
-
-  const segment = (from: DateKey, to: DateKey, lo: number, hi: number) => {
-    const total = Math.max(1, diffDays(from, to));
-    return lo + ((hi - lo) * diffDays(from, date)) / total;
-  };
-
-  if (date < start) return { wave: 0, wavePerDay };
-  if (date > end) {
-    const after = diffDays(end, date);
-    return { wave: Math.min(1, WAVE_AT_END + (1 - WAVE_AT_END) * (after / WINTER_FADE_DAYS)), wavePerDay };
-  }
-  if (!peakStart || !peakEnd) {
-    return { wave: segment(start, end, 0, WAVE_AT_END), wavePerDay };
-  }
-  if (date < peakStart) return { wave: segment(start, peakStart, 0, WAVE_AT_PEAK_START), wavePerDay };
-  if (date <= peakEnd) {
-    return { wave: segment(peakStart, peakEnd, WAVE_AT_PEAK_START, WAVE_AT_PEAK_END), wavePerDay };
-  }
-  return { wave: segment(peakEnd, end, WAVE_AT_PEAK_END, WAVE_AT_END), wavePerDay };
-}
 
 export interface FoliageSpot {
   /** 명소 = 지도 위 단위 */
@@ -442,6 +437,8 @@ export interface FoliageRegion {
   id: string;
   label: string;
   shortLabel: string;
+  /** 설악산보다 며칠 늦게 물드는가. 지형 레이어가 봄의 순서를 뒤집을 때도 쓴다. */
+  offsetDays: number;
   /** 지도에서 이 권역의 중심. 산·숲을 어느 권역에 붙일지 이 점으로 정한다. */
   anchor: MapPosition;
   /** 그 권역에서 지금 가장 앞선 상태 — "여기 가면 절정인 산이 있다" */
@@ -492,6 +489,7 @@ export function groupFoliageRegions(spots: FoliageSpot[]): FoliageRegion[] {
       id: config.id,
       label: config.label,
       shortLabel: config.shortLabel,
+      offsetDays: config.offsetDays,
       anchor: {
         x: group.reduce((sum, s) => sum + s.position.x, 0) / group.length,
         y: group.reduce((sum, s) => sum + s.position.y, 0) / group.length,

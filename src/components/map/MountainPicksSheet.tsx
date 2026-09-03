@@ -1,42 +1,54 @@
 'use client';
 
-import { useMemo } from 'react';
 import { formatKoreanDate, toDateKey, type DateKey } from '@/domain/date';
 import { Sheet } from '@/components/common/Sheet';
-import {
-  FOLIAGE_STATE_LABEL,
-  getFoliagePicks,
-  type FoliageSpot,
-} from '@/services/foliage-service';
+import type { Location, NatureEntity } from '@/domain/types';
 
 /* ────────────────────────────────────────────────────────────
- * 이번 주 단풍 어디가 좋지.
+ * 이번 주 어디가 좋지 — 꽃과 단풍이 같은 시트를 쓴다.
  *
- * 추천은 단순하게 둔다 — 절정 먼저, 그다음 좋음, 그리고 북쪽부터.
+ * 추천은 단순하게 둔다 — 절정 먼저, 그다음 좋음.
+ * 순서는 전선이 지나가는 방향 그대로다 (봄은 남쪽부터, 가을은 북쪽부터).
  * 거리 · 날씨 · 교통은 이번 단계에서 보지 않는다.
  * ──────────────────────────────────────────────────────────── */
 
-export function FoliagePicksSheet({
+export interface PickView {
+  key: string;
+  location: Location;
+  entity: NatureEntity;
+  stateLabel: string;
+  peak: boolean;
+  peakWindow?: { start: Date; end: Date };
+}
+
+export function MountainPicksSheet({
   open,
   onClose,
   date,
+  title,
+  emptyMessage,
+  disclaimer,
+  picks,
   onShowOnMap,
 }: {
   open: boolean;
   onClose: () => void;
   date: DateKey;
-  onShowOnMap: (spot: FoliageSpot) => void;
+  title: string;
+  emptyMessage: string;
+  disclaimer: string;
+  picks: PickView[];
+  onShowOnMap: (pick: PickView) => void;
 }) {
-  const picks = useMemo(() => (open ? getFoliagePicks(date, 6) : []), [open, date]);
 
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      label="이번 주 단풍"
+      label="이번 주 추천"
       header={
         <div>
-          <h2 className="text-[16px] font-semibold tracking-tight">이번 주, 단풍 어디가 좋지?</h2>
+          <h2 className="text-[16px] font-semibold tracking-tight">{title}</h2>
           <p className="mt-0.5 text-[12px] text-[color:var(--color-muted)]">
             {formatKoreanDate(date)} 기준 · 절정인 곳부터
           </p>
@@ -45,13 +57,13 @@ export function FoliagePicksSheet({
     >
       {picks.length === 0 ? (
         <p className="rounded-xl bg-[color:var(--color-line-soft)] px-3 py-3 text-[13px] leading-relaxed text-[color:var(--color-muted)]">
-          이 날짜에는 절정이거나 볼 만한 곳이 없습니다. 아래 슬라이더를 10월로 옮겨 보세요.
+          {emptyMessage}
         </p>
       ) : (
         <ul className="space-y-1.5">
           {picks.map((spot) => (
             <li
-              key={spot.location.id}
+              key={spot.key}
               className="flex items-start gap-3 rounded-xl border border-[color:var(--color-line)] p-3"
             >
               <span
@@ -66,12 +78,12 @@ export function FoliagePicksSheet({
                   <span className="text-[14.5px] font-semibold">{spot.location.name}</span>
                   <span
                     className={`text-[12px] font-medium ${
-                      spot.state === 'peak'
+                      spot.peak
                         ? 'text-[color:var(--color-peak)]'
                         : 'text-[color:var(--color-accent-strong)]'
                     }`}
                   >
-                    {FOLIAGE_STATE_LABEL[spot.state]}
+                    {spot.stateLabel}
                   </span>
                 </div>
                 <p className="mt-0.5 truncate text-[12.5px] text-[color:var(--color-muted)]">
@@ -96,10 +108,7 @@ export function FoliagePicksSheet({
         </ul>
       )}
 
-      <p className="text-[11.5px] leading-relaxed text-[color:var(--color-faint)]">
-        단풍 시기는 개발용 DEMO 평년 참고값입니다. 그해 기온에 따라 1~2주씩 달라지니
-        방문 전 국립공원·지자체 정보를 확인하세요.
-      </p>
+      <p className="text-[11.5px] leading-relaxed text-[color:var(--color-faint)]">{disclaimer}</p>
     </Sheet>
   );
 }
