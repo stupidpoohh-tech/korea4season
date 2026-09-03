@@ -1,3 +1,4 @@
+import { OG_BASE } from '@/domain/site';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -41,7 +42,8 @@ export async function generateMetadata({
     title: `${species.name} 시즌`,
     description: `${species.name}${species.aliases?.length ? `(${species.aliases[0]})` : ''} 시즌과 만나기 좋은 권역${where ? `: ${where}` : ''}. 금어기와 금지체장도 함께 확인하세요.`,
     alternates: { canonical: `/species/${slug}` },
-    openGraph: { title: `${species.name} 시즌 · 지금日지도`, type: 'article' },
+    /* OG_BASE 를 함께 펴지 않으면 이 화면에서만 미리보기 그림이 사라진다 */
+    openGraph: { ...OG_BASE, title: `${species.name} 시즌 · 지금日지도`, type: 'article' },
   };
 }
 

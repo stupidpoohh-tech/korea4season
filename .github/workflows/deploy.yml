@@ -52,3 +52,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NEXT_PUBLIC_COMMIT_SHA: ${{ github.sha }}
           NEXT_PUBLIC_BUILD_AT: ${{ github.event.head_commit.timestamp || github.run_started_at }}
+          # og:image 는 절대 주소여야 한다 — 카카오톡은 상대 경로를 무시한다.
+          # 도메인을 바꾸면 저장소 변수(Settings → Secrets and variables → Actions
+          # → Variables)에 SITE_URL 을 두면 되고, 없으면 아래 기본값을 쓴다.
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://korea4season.stupidpoohh.workers.dev' }}

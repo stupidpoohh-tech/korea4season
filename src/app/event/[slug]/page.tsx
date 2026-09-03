@@ -1,3 +1,4 @@
+import { OG_BASE } from '@/domain/site';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -45,7 +46,9 @@ export async function generateMetadata({
     title,
     description: `${places} ${item.entity.name} ${kind} ${period}. ${item.entity.summary}`,
     alternates: { canonical: `/event/${slug}` },
+    /* OG_BASE 를 함께 펴지 않으면 이 화면에서만 미리보기 그림이 사라진다 */
     openGraph: {
+      ...OG_BASE,
       title: `${title} · 지금日지도`,
       description: `${period} · ${places}`,
       type: 'article',

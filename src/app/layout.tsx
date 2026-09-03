@@ -6,21 +6,35 @@ import { SiteFooter } from '@/components/layout/SiteFooter';
 import { DebugPanel } from '@/components/common/DebugPanel';
 import { todayKey } from '@/domain/date';
 import { hasDemoData } from '@/services/nature-service';
+import { OG_BASE, OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/domain/site';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://example.com'),
+  /*
+   * 실제 운영 주소여야 한다. 여기가 example.com 이면 og:image 가
+   * https://example.com/og.png 로 나가고, 카카오톡은 그것을 받아 오지 못해
+   * 미리보기에 그림 없이 제목만 뜬다.
+   */
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: '지금日지도 — 대한민국 자연의 지금',
-    template: '%s · 지금日지도',
+    default: `${SITE_NAME} — 대한민국 자연의 지금`,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    '지금 대한민국의 자연에서는 무슨 일이 일어나고 있을까. 금어기, 개화, 단풍, 철새를 하나의 살아있는 지도 위에서 시간과 함께 봅니다.',
+  description: SITE_DESCRIPTION,
   keywords: ['금어기', '개화시기', '단풍 절정', '철새 도래', '제철', '지금日지도'],
   openGraph: {
+    ...OG_BASE,
     type: 'website',
-    locale: 'ko_KR',
-    siteName: '지금日지도',
+    url: SITE_URL,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
+  /* 카카오는 OG 만 읽지만, 트위터·슬랙은 이쪽을 먼저 본다 */
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE.url],
   },
 };
 
