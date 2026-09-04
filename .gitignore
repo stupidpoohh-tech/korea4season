@@ -15,3 +15,6 @@ public/map/__check.svg
 .wrangler/
 .dev.vars
 cloudflare-env.d.ts
+
+# 검증 하네스가 찍은 화면
+verify-shots/

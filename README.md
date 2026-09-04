@@ -33,6 +33,18 @@ npm run lint
 npm run build
 ```
 
+이 셋은 '코드가 성립하는가' 만 말합니다. **지도가 계절을 제대로 말하는지는
+따로 봐야 합니다** — 프로덕션 빌드를 띄운 뒤:
+
+```bash
+npx next start -p 3031
+npm run verify                 # 7개 검사 (꽃 자리 · 입력 경로 · sprite · 넘침 · 드래그 · 재생 · 힙)
+npm run verify:shot out/       # 대표 날짜 화면 찍기
+```
+
+무엇을 왜 재는지는 `scripts/verify/README.md` 에 있습니다.
+여기 있는 검사는 전부 한 번씩 실제로 깨졌던 것입니다.
+
 ---
 
 ## 자연 카테고리 — 넷을 위해 설계하고, 하나씩 완성한다
