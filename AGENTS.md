@@ -20,6 +20,28 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - "이 명령어를 실행하세요" 형태의 안내를 쓰지 않는다.
   대신 실행하고, 무엇을 했고 결과가 어땠는지 보고한다.
 
+## 배포까지가 한 작업이다
+
+지시받은 일은 **머지와 배포까지 끝내고 보고한다.** 브랜치에 푸시해 두고
+"배포할까요?" 라고 묻지 않는다 — 화면에 반영되지 않은 것은 아직 끝난 것이 아니다.
+
+```
+작업 브랜치에 커밋 · 푸시
+  → 배포 브랜치로 fast-forward 머지
+  → GitHub Actions 배포 완료 확인
+  → 결과 보고
+```
+
+배포 브랜치는 `.github/workflows/deploy.yml` 의 `on.push.branches` 가 정한다.
+지금은 `claude/korea-seasonal-map-design-rlw8mk` 다 (이 저장소에 `main` 은 없다).
+
+되돌려야 할 위험이 있는 것 — 이력을 다시 쓰는 머지, 남의 커밋을 덮는 강제 푸시,
+운영 데이터를 지우는 변경 — 만 먼저 묻는다.
+
+배포는 여기서 확인까지 한다. 다만 운영 주소(`*.workers.dev`)는 egress proxy 가
+막고 있어 **화면 자체는 열 수 없다.** 배포 성공 여부는 GitHub Actions 실행
+결과로 확인하고, 화면 확인이 필요하면 그것만 따로 부탁한다.
+
 ## 사용자 계정으로만 가능한 일
 
 Cloudflare 대시보드, Firebase 콘솔, GitHub 저장소 설정처럼
