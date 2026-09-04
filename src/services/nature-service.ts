@@ -313,6 +313,20 @@ export function getLocation(id: string) {
   return getNatureIndex().locationById.get(id) ?? null;
 }
 
+/**
+ * slug 로 장소를 찾는다.
+ *
+ * 권역 설정(foliage-regions · flower-regions)이 장소를 slug 로 가리키므로,
+ * '이 권역이 지도의 어디인가' 를 날짜와 무관하게 구하려면 이 조회가 필요하다.
+ * 날짜로 걸러진 목록에서 평균을 내면 그날 자료에 따라 권역 자리가 움직인다.
+ */
+export function locationBySlug(slug: string): Location | null {
+  for (const location of getNatureIndex().locationById.values()) {
+    if (location.slug === slug) return location;
+  }
+  return null;
+}
+
 export function hasDemoData(): boolean {
   return getNatureIndex().hasDemoData;
 }

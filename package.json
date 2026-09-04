@@ -16,7 +16,9 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-build": "opennextjs-cloudflare build",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "sprites:build": "python3 scripts/build-species-sprites.py"
+    "sprites:build": "python3 scripts/build-species-sprites.py",
+    "verify": "node scripts/verify/run.mjs",
+    "verify:shot": "node scripts/verify/shot.mjs"
   },
   "dependencies": {
     "motion": "^13.1.1",

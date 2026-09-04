@@ -51,16 +51,19 @@ const springOffset = (foliageOffsetDays: number) => (34 - foliageOffsetDays) * 0
 
 export function TerrainOverlay({
   regions,
-  winter,
+  winterAt,
   freshAt,
+  bareAt,
   detailed = true,
   fast = false,
 }: {
   regions: FoliageRegion[];
-  /** 겨울이 얼마나 깊은가 (0~1) */
-  winter: number;
+  /** 권역 offset 을 받아 겨울이 얼마나 깊은지 돌려준다 (0~1) */
+  winterAt: (offsetDays: number) => number;
   /** 권역 offset 을 받아 신록의 정도를 돌려준다 */
   freshAt: (offsetDays: number) => number;
+  /** 권역 offset 을 받아 '아직 잎이 없는 정도' 를 돌려준다 (해가 바뀐 뒤 1~3월) */
+  bareAt: (offsetDays: number) => number;
   /**
    * 산마다 며칠씩 어긋나게 둘 것인가.
    *
@@ -81,33 +84,44 @@ export function TerrainOverlay({
   const transition = fast ? 'none' : COLOR_TRANSITION;
 
   /*
-   * 색은 단계로 끊어 쓴다.
+   * 색은 28 단계로 끊어 쓴다.
    *
    * 하루가 지날 때마다 요소 100여 개의 fill 을 새 값으로 바꾸면 1년 재생이나
    * 슬라이더 드래그에서 지도 전체를 매 프레임 다시 칠하게 된다. 눈으로는
    * 구분되지 않는 차이이므로 단계로 끊어 다시 칠하는 횟수를 줄인다.
    *
-   * 끄는 동안에는 더 굵게 끊는다. 손가락을 따라 1년을 지나가는 사이 지도
-   * 전체를 365번 다시 칠할 이유가 없다 — 움직이는 중에 보이는 것은
-   * 색이 어디로 흐르는가이지 오늘과 내일의 차이가 아니다.
+   * 끊는 폭은 재생 여부와 무관하게 고정이다. 여기가 fast 에 따라 달라지면
+   * 같은 날짜가 슬라이더를 끄는 중과 손을 뗀 뒤에 서로 다른 색이 된다 —
+   * 날짜가 같으면 어떤 경로로 왔든 같은 화면이어야 한다.
    */
-  const grain = fast ? 16 : 50;
-  const step = (v: number) => Math.round(v * grain) / grain;
-  const snow = step(winter);
+  const step = (v: number) => Math.round(v * 28) / 28;
+  const snow = regions.map((r) => step(winterAt(r.offsetDays)));
   const fresh = regions.map((r) => step(freshAt(springOffset(r.offsetDays))));
-  const paintKey = `${regions.map((r) => step(r.wave)).join(',')}|${fresh.join(',')}|${snow}`;
+  const bare = regions.map((r) => step(bareAt(springOffset(r.offsetDays))));
+  const paintKey =
+    `${regions.map((r) => step(r.wave)).join(',')}` +
+    `|${fresh.join(',')}|${snow.join(',')}|${bare.join(',')}`;
 
   const paint = useMemo(
     () =>
       shapes.map((s) => {
         const region = regions[s.regionIndex]!;
+        /*
+         * 산마다의 며칠 편차는 이미 물들기 시작한 뒤에만 준다.
+         * 아직 시작 전(wave 0)인 권역에 편차를 더하면 그만큼 파동이 앞당겨져
+         * 시즌이 오기도 전에 몇몇 산에 가을색이 먼저 생긴다.
+         */
         const wave = step(
-          Math.min(1, Math.max(0, region.wave + region.wavePerDay * s.shiftDays)),
+          region.wave <= 0
+            ? 0
+            : Math.min(1, Math.max(0, region.wave + region.wavePerDay * s.shiftDays)),
         );
         const spring = fresh[s.regionIndex] ?? 0;
+        const winter = snow[s.regionIndex] ?? 0;
+        const leafless = bare[s.regionIndex] ?? 0;
         return {
-          mountain: mountainColorAt(wave, snow, spring),
-          forest: forestColorAt(wave, snow, spring),
+          mountain: mountainColorAt(wave, winter, spring, leafless),
+          forest: forestColorAt(wave, winter, spring, leafless),
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,7 +137,7 @@ export function TerrainOverlay({
     const stops = regions
       .map((region, i) => ({
         offset: Math.min(1, Math.max(0, region.anchor.y)),
-        ...landWashAt(step(region.wave), snow, fresh[i] ?? 0),
+        ...landWashAt(step(region.wave), snow[i] ?? 0, fresh[i] ?? 0, bare[i] ?? 0),
       }))
       .sort((a, b) => a.offset - b.offset);
 
@@ -143,7 +157,10 @@ export function TerrainOverlay({
    * 덧그려도 달라지는 것이 없는데 요소 100여 개를 얹으면 그만큼만 무거워진다.
    */
   const nothingToPaint =
-    snow === 0 && fresh.every((f) => f === 0) && regions.every((r) => step(r.wave) === 0);
+    snow.every((v) => v === 0) &&
+    fresh.every((f) => f === 0) &&
+    bare.every((v) => v === 0) &&
+    regions.every((r) => step(r.wave) === 0);
 
   if (shapes.length === 0 || nothingToPaint) return null;
 

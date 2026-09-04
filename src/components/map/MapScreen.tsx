@@ -13,7 +13,9 @@ import {
 } from '@/services/map-service';
 import {
   FOLIAGE_STATE_LABEL,
+  bareAmount,
   freshAmount,
+  winterAt,
   mountainColorAt,
 } from '@/services/foliage-service';
 import { FLOWER_STATE_LABEL, getFlowerPicks } from '@/services/flower-service';
@@ -34,6 +36,7 @@ import {
 import { locationPosition } from '@/services/nature-service';
 import type { MapPosition } from '@/domain/projection';
 import { BASE_MAP_HEIGHT_CQW } from '@/lib/map-asset';
+import { SnowfallOverlay } from './SnowfallOverlay';
 import { useWideScreen } from '@/lib/use-wide-screen';
 import { useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
@@ -570,8 +573,11 @@ export function MapScreen() {
                 <>
                   <TerrainOverlay
                     regions={terrain.foliageRegions}
-                    winter={terrain.winter}
+                    /* 겨울은 신록처럼 권역마다 다르다 — 남쪽은 늦게 들어가고 얕게 지나간다 */
+                    winterAt={(offsetDays) => winterAt(date, offsetDays)}
                     freshAt={(offsetDays) => freshAmount(date, offsetDays)}
+                    /* 해가 바뀌어 단풍 파동이 0 으로 돌아간 1~3월을 잎 없는 상태로 붙든다 */
+                    bareAt={(offsetDays) => bareAmount(date, offsetDays)}
                     /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */
                     fast={isPlaying || isScrubbing}
                   />
@@ -582,6 +588,14 @@ export function MapScreen() {
                       fast={isPlaying || isScrubbing}
                     />
                   )}
+                  {/*
+                   * 눈은 겨울에만 내린다.
+                   *
+                   * 세기는 겨울의 앞머리(북부)를 따른다. 나라 전체 평균으로 두면
+                   * 강원이 이미 하얀 12월 초에 눈이 오지 않아, 화면이 '겨울' 이라고
+                   * 말하는 동안 하늘은 그렇지 않은 상태가 된다.
+                   */}
+                  {phase === 'winter' && <SnowfallOverlay amount={terrain.winterLead} />}
                 </>
               ) : null
             }
