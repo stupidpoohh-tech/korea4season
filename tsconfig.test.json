@@ -1,0 +1,16 @@
+{
+  "//": "테스트 전용 빌드. 새 테스트 프레임워크를 들이지 않고 이미 있는 tsc 로 컴파일해 node --test 로 돌린다.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "outDir": ".test-out",
+    "rootDir": ".",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src/domain/**/*.ts", "src/data-sources/**/*", "src/services/bird-service.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "scripts", ".next", ".test-out"]
+}

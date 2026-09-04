@@ -27,8 +27,12 @@ interface Props {
   layer: MapLayerId;
   mode: MapMode;
   counts: MapCounts;
-  /** 지금 산 한 줄 ("남해안 절정 · 충청 시작") */
-  mountainHeadline: string;
+  /**
+   * 개수 대신 한 줄로 말하는 카테고리의 상태.
+   * 산은 계절이 어디까지 왔는가("남해안 절정 · 충청 시작"),
+   * 철새는 지금 몇 곳에서 관찰되는가.
+   */
+  headline: string;
   /** 지금 산에서 무엇이 일어나고 있는가 */
   phase: MountainPhase;
   /** 지금 조건에 맞는 대상 수 */
@@ -43,7 +47,7 @@ export function MarineMapHeader({
   layer,
   mode,
   counts,
-  mountainHeadline,
+  headline,
   phase,
   count,
   filtered,
@@ -69,16 +73,17 @@ export function MarineMapHeader({
 
   /*
    * 지역별 보기에는 좁힐 대상이 없다 (지도에 그림을 놓지 않는다).
+   * 철새 Prototype 에도 아직 거를 축이 없다.
    * 눌러도 빈 시트가 열리는 버튼은 두지 않는다.
    */
-  const showFilter = !(layer === 'mountain' && mode === 'zone');
+  const showFilter = !(layer === 'mountain' && mode === 'zone') && layer !== 'bird';
 
   return (
     <div ref={boxRef} className="relative">
       <div className="flex items-start gap-2">
         <CurrentStateSummary
           layer={layer}
-          mountainHeadline={mountainHeadline}
+          headline={headline}
           mode={mode}
           count={count}
           filtered={filtered}

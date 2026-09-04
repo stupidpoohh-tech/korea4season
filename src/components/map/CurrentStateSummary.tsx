@@ -21,8 +21,11 @@ import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-ser
 
 interface Props {
   layer: MapLayerId;
-  /** 지금 산 한 줄 — 개수가 아니라 지금 계절이 어디까지 왔는가 */
-  mountainHeadline: string;
+  /**
+   * 어종 수 대신 한 줄로 말하는 카테고리의 상태.
+   * 산은 계절이 어디까지 왔는가, 철새는 지금 몇 곳에서 관찰되는가.
+   */
+  headline: string;
   mode: MapMode;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
@@ -40,7 +43,7 @@ interface Props {
 
 export function CurrentStateSummary({
   layer,
-  mountainHeadline,
+  headline,
   mode,
   count,
   filtered,
@@ -48,6 +51,8 @@ export function CurrentStateSummary({
   compact = false,
 }: Props) {
   const unit = layer === 'mountain' ? '곳' : mode === 'zone' ? '곳' : '종';
+  /* 산과 철새는 마커 수가 아니라 한 줄로 말한다 — 세어야 할 것이 개수가 아니다 */
+  const leadsWithHeadline = layer === 'mountain' || layer === 'bird';
 
   return (
     <div className="min-w-0">
@@ -58,16 +63,17 @@ export function CurrentStateSummary({
             <CategorySelector compact />
           </div>
           <p className="truncate text-[11.5px] leading-[15px] text-[color:var(--color-muted)]">
-            {layer === 'mountain' ? (
+            {leadsWithHeadline ? (
               /*
-               * 산은 마커 수를 세지 않는다.
-               * 지도에서 바뀌는 것은 표시의 개수가 아니라 계절이 어디까지 왔는가다.
+               * 산과 철새는 마커 수를 세지 않는다.
+               * 산에서 바뀌는 것은 계절이 어디까지 왔는가이고,
+               * 철새에서 바뀌는 것은 어느 지역에 머물고 있는가다.
                */
               <>
                 <span className="font-semibold text-[color:var(--color-ink-soft)]">
-                  {mountainHeadline}
+                  {headline}
                 </span>
-                {filtered && ` · 지도에 ${count}곳`}
+                {layer === 'mountain' && filtered && ` · 지도에 ${count}곳`}
               </>
             ) : (
               <>
@@ -86,9 +92,9 @@ export function CurrentStateSummary({
           {/* CategorySelector 가 div 를 그리므로 p 로 감싸면 안 된다 (HTML 위반 → hydration 오류) */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-[19px]">
             <CategorySelector />
-            {layer === 'mountain' ? (
+            {leadsWithHeadline ? (
               <span className="text-[13.5px] font-semibold text-[color:var(--color-ink)]">
-                {mountainHeadline}
+                {headline}
               </span>
             ) : (
               <span className="text-[13.5px] text-[color:var(--color-ink-soft)]">
@@ -101,7 +107,7 @@ export function CurrentStateSummary({
           {/*
             산은 아래 권역 목록이 곧 내역이다 — 같은 말을 숫자로 한 번 더 하지 않는다.
           */}
-          {layer !== 'mountain' && (
+          {!leadsWithHeadline && (
             <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
               <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
             </p>

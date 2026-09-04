@@ -6,6 +6,8 @@ const eslintConfig = [
   {
     ignores: [
       '.next/**',
+      // 테스트 전용 컴파일 결과 (npm test 가 만든다)
+      '.test-out/**',
       '.open-next/**',
       '.wrangler/**',
       'node_modules/**',
@@ -20,6 +22,11 @@ const eslintConfig = [
   {
     files: ['scripts/**/*.mjs'],
     rules: { 'no-console': 'off' },
+  },
+  {
+    // node --require 로 먼저 실려야 하는 파일이라 CommonJS 여야 한다
+    files: ['tests/**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 ];
 

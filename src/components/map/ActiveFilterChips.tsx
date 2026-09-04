@@ -44,6 +44,11 @@ export function ActiveFilterChips({
 
   const chips: { key: string; label: string; tone: 'season' | 'legal'; clear: () => void }[] = [];
 
+  if (layer === 'bird') {
+    // 철새 Prototype 에는 아직 거는 축이 없다 — 칩 줄 자체를 그리지 않는다
+    return null;
+  }
+
   if (layer === 'mountain') {
     if (foliageState !== 'all') {
       chips.push({

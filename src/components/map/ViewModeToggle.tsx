@@ -33,8 +33,14 @@ const OPTIONS: Record<MapLayerId, Option[]> = {
     { id: 'zone', label: '지역별', hint: '산과 숲이 계절을 타는 것을 봅니다' },
     { id: 'species', label: '명소별', hint: '대표 명소를 지도에 표시합니다' },
   ],
-  // 아직 지도에 올리지 않는 카테고리. 여기 값이 쓰이는 일은 없다.
-  bird: [{ id: 'species', label: '명소별', hint: '준비 중입니다', disabled: true }],
+  /*
+   * 철새에는 보기 방식이 하나뿐이다.
+   *
+   * 지역 안의 종을 보는 것과 종의 지역을 보는 것이 같은 화면이 된다 —
+   * 지도 단위가 애초에 종 × 지역이기 때문이다. 뜻이 같은 두 버튼을
+   * 나란히 두면 사용자는 다른 결과를 기대하고 누른다.
+   */
+  bird: [{ id: 'species', label: '지역별 관찰', hint: '지역마다 지금 만날 수 있는 새를 봅니다' }],
 };
 
 export function ViewModeToggle({ layer, full = false }: { layer: MapLayerId; full?: boolean }) {

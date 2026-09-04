@@ -16,6 +16,8 @@ export interface MapRendererProps {
   onSelect: (sprite: MapSprite) => void;
   reducedMotion: boolean;
   spriteScale?: number;
+  /** 넓은 화면인가. 철새 sprite 의 기본 크기가 여기에 걸린다. */
+  wide?: boolean;
   /** 재생·슬라이더 조작 중 — 전환을 짧게 끊는다 */
   fast?: boolean;
 }

@@ -13,6 +13,7 @@ import {
   type FoliageState,
 } from './foliage-service';
 import { buildFlowerSpots, isBlooming, type FlowerSpot } from './flower-service';
+import { buildBirdNow, type BirdPresence } from './bird-service';
 import type { MapLayerId } from '@/domain/nature-categories';
 import {
   buildMarineMapItems,
@@ -65,7 +66,8 @@ export type MapSubject =
   | { kind: 'marine'; item: MarineMapItem }
   | { kind: 'zone'; marker: ZoneMarker }
   | { kind: 'foliage'; spot: FoliageSpot }
-  | { kind: 'flower'; spot: FlowerSpot };
+  | { kind: 'flower'; spot: FlowerSpot }
+  | { kind: 'bird'; presence: BirdPresence };
 
 export interface MapSprite {
   key: string;
@@ -110,6 +112,14 @@ export interface MapLayout {
   mode: MapMode;
 }
 
+/** 이 화면에서 지도 조립이 뜻을 갖지 않을 때 쓰는 빈 값 */
+export const EMPTY_MAP_LAYOUT: MapLayout = {
+  sprites: [],
+  hiddenCount: 0,
+  totalCount: 0,
+  mode: 'species',
+};
+
 export interface MapQuery {
   date: DateKey;
   /** 비어 있으면 전체 */
@@ -133,6 +143,11 @@ export interface MapQuery {
    */
   mountainPhase?: 'flower' | 'green' | 'foliage' | 'winter';
   mode?: MapMode;
+  /**
+   * 넓은 화면인가. 철새 레이어의 전국 표시 예산이 여기에 걸린다
+   * (모바일 10 · 데스크톱 14). 다른 레이어는 쓰지 않는다.
+   */
+  wide?: boolean;
   /**
    * 0 = 기본, 1 = 확대. 확대하면 접어 두었던 sprite 를 더 펼친다.
    * 연속값을 그대로 받으면 핀치 중 매 프레임 재배치가 일어난다.
@@ -569,6 +584,18 @@ function flowerSprites(query: MapQuery): MapSprite[] {
 }
 
 export function buildMapLayout(query: MapQuery): MapLayout {
+  /*
+   * 철새는 자리가 고정이다.
+   *
+   * 아래 separate() 를 태우지 않는다. 그 완화는 '지금 화면에 있는 것들' 을 서로
+   * 밀어내는 계산이라, 날짜가 바뀌어 이웃이 사라지면 남은 sprite 가 제자리로
+   * 흘러간다. 지도 위에서 새가 움직이면 사용자는 그것을 이동으로 읽는데,
+   * 이 모델은 이동을 말하지 않는다. 겹침은 anchor 단계에서 이미 벌려 둔다.
+   */
+  if (query.layer === 'bird') {
+    return buildBirdNow({ date: query.date, viewport: query.wide ? 'desktop' : 'mobile' }).layout;
+  }
+
   // 산은 지역별이 기본이다 — 지도의 색이 먼저고 명소는 그다음이다
   const mode = query.mode ?? (query.layer === 'mountain' ? 'zone' : 'species');
   const detail = query.detail ?? 0;

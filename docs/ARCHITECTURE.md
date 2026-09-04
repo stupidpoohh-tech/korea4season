@@ -9,9 +9,9 @@
 ```
 
 **인터페이스는 넷을 위해 만들고, 기능은 하나씩 완성한다.**
-지금 동작하는 것은 바다(Phase 1)와 단풍(Phase 2)뿐이다.
-꽃 · 철새는 `src/domain/nature-categories.ts` 에 이름만 있다 —
-데이터도, 레이어도, 상세도, 추천도 없다.
+실데이터로 동작하는 것은 바다(Phase 1)와 꽃 · 단풍(Phase 2)이다.
+철새는 **합성 fixture 로 도는 Prototype** 이다 — 지도 · 상태 · 시간까지
+실제로 동작하지만 자료는 전부 mock 이고 production 공개는 잠겨 있다.
 
 | 무엇 | 어디 |
 |---|---|
@@ -28,7 +28,10 @@
 
 전용   marine   MarineDetailSheet · WeeklyPicksSheet · 규정 엔진 · 권역
        foliage  FoliageOverlay · FoliageDetailSheet · FoliagePicksSheet
+       bird     BirdSprite · BirdDetailSheet · 고정 anchor · 표시 예산
 ```
+
+철새만 sprite 분산(`separate()`)을 쓰지 않는다. 아래 '철새' 절을 보라.
 
 단풍의 지도 단위는 **명소(산)** 다. 바다가 어종 × 해역인 것과 다르다 —
 사용자가 묻는 것은 "설악산이 지금 어떤가" 이지 "설악산의 단풍나무" 가 아니다.
@@ -46,6 +49,120 @@ base map 이 그린 산과 **같은 자리에 같은 크기로** 가을색 산�
 거리 가중(반경 0.34, 제곱 감쇠)으로 섞어 각 산의 물든 정도(0~1)를 정한다.
 그래서 절정인 산 둘레부터 붉어지고, 시간이 흐르면 그 띠가 남쪽으로 내려간다.
 지도 위에 핀을 찍는 것이 아니라 산맥이 물드는 것으로 보여야 하기 때문이다.
+
+---
+
+## 철새 (Prototype)
+
+철새가 답하는 질문은 **"이 시기에 이 지역에서 이 새를 만날 수 있는가"** 다.
+"새가 한국 위를 어떻게 이동하는가" 가 아니다. 그래서 지도에 없는 것이 있다.
+
+```
+없다   이동 경로 · 무리(flock) · 비행 애니메이션 · 지속적인 float
+       날갯짓 loop · bounce · 빛무리 · 왕관 · 금색 테두리
+있다   지역에 머무는 한 마리 · 상태에 따른 존재감 · 아주 약한 접지 그림자
+```
+
+물고기는 **떠 있는 출현**이고 철새는 **머무는 존재**다. 같은 sprite 컴포넌트에
+상태를 더 얹지 않고 `BirdSprite` 를 따로 둔 것이 이 때문이다.
+
+### 자리는 고정, 변하는 것은 상태뿐
+
+```
+displayAnchor   speciesId × regionId × anchorVersion 이 정한다 (날짜가 들어오지 않는다)
+state           날짜가 정한다  STARTING → GOOD → PEAK → ENDING → OFF
+```
+
+`domain/bird-anchor.ts` 의 `birdDisplayAnchor` 에는 **date 인자가 없다.**
+그것이 이 모듈의 계약이다. 자리는 지역 중심 + 여섯 칸 고리 위의 한 칸이고,
+칸 번호는 seed 가 정하므로 언제 불러도 같다. 겹치면 다음 빈 칸으로
+결정적으로 밀어낸다 — 배정은 **지금 지도에 무엇이 그려지는가와 무관하게
+fixture 전체를 놓고 한 번** 한다. 날짜가 바뀌어 이웃이 사라져도 남은 새가
+제자리를 지켜야 하기 때문이다.
+
+같은 이유로 철새는 `map-service` 의 `separate()` 를 태우지 않는다.
+그 완화는 '지금 화면에 있는 것들' 을 서로 밀어내는 계산이라,
+날짜가 바뀔 때마다 sprite 가 흘러간다. 지도 위에서 새가 움직이면
+사용자는 그것을 이동으로 읽는데, 이 모델은 이동을 말하지 않는다.
+
+### 시기 해석은 기존 엔진을 그대로 쓴다
+
+`domain/bird.ts` 는 `occurrence.ts` 의 `resolveWindow` · `computeStatus` 를
+그대로 부른다. 새 날짜 시스템을 만들지 않았으므로 슬라이더 · 1년 재생 ·
+직접 날짜 선택이 같은 날짜에 같은 답을 준다. 연말 넘김과 윤년(02-29)도
+그 엔진이 이미 처리하던 것이다.
+
+한 종 × 지역은 **한 해에 여러 활성 구간**을 가질 수 있다 (봄 통과 · 가을 통과).
+`startDate + endDate` 하나로 고정하지 않는다. 여러 구간이 겹치는 날에는
+가장 강한 구간이 그 날의 상태가 된다.
+
+### null 과 OFF 를 절대 합치지 않는다
+
+```
+state = null   UNVERIFIED · INSUFFICIENT · STALE · MISSING · NOT_SURVEYED · SOURCE_ERROR
+               → 판단할 수 없다
+state = OFF    검증된 seasonal model 에서 활성 시즌 밖이라고 판단됐다
+               → 지금 없다
+```
+
+자료가 없는 것을 OFF 로 바꾸면 우리가 모르는 것을 안다고 말하는 것이 된다.
+그래서 화면도 둘을 따로 센다 — 타임라인 한 줄이 "판단 불가 N건" 을 밝힌다.
+
+### 전국 화면은 새로 채우지 않는다
+
+```
+mobile   최대 10
+desktop  최대 14
+같은 종   기본 화면에서 최대 2개 지역
+```
+
+우선순위는 PEAK → GOOD → STARTING → ENDING 이고, 한 지역이 화면을
+독차지하지 않게 지역별 상한을 먼저 건 뒤 남는 자리를 채운다.
+같은 종이 세 지역 이상에서 활성이면 상태가 강한 곳을 먼저 잡고,
+그다음은 이미 잡은 곳에서 **가장 멀리 떨어진** 지역을 잡는다.
+
+여기서 잘린 것은 **표시되지 않은 것**이지 OFF 가 아니다.
+
+```
+not rendered because of display budget  !=  OFF
+```
+
+빈 공간은 정상이다. 예쁘게 채우려고 새를 전국에 균등 배치하지 않는다.
+
+### mock 격리
+
+```
+domain/bird-config.ts   BIRD_PROTOTYPE_ENABLED     지도에 그릴 것인가 (켜짐)
+                        BIRD_PRODUCTION_PUBLICATION 실제 자연 정보로 공개할 것인가 (꺼짐)
+domain/bird-guard.ts    isMock | sourceType==='MOCK' | evidenceStatus==='MOCK'
+                        셋 중 하나라도 걸리면 prototype 자료다
+```
+
+fixture 는 `data-sources/index.ts` 레지스트리에 **등록하지 않는다.**
+등록하면 `nature-repository` 를 통해 도감 · 이번 주 추천 · `/event` 상세 ·
+홈까지 합성 자료가 흘러 들어간다. Prototype 은 지도 레이어 하나만 필요하므로
+그 경로 하나만 따로 냈다 — 격리가 규칙이 아니라 구조가 되도록.
+
+`NEXT_PUBLIC_BIRD_PRODUCTION=1` 을 켜면 mock 이 전부 차단되고, 검증된
+기록이 0건이므로 레이어는 아무것도 그리지 않은 채 "확인된 기록이 없습니다"
+라고 말한다. 그것이 지금의 사실이다.
+
+`data-sources/bird/` (실제 종 이름이 들어 있는 예전 DEMO 파일)는 건드리지
+않았고 `enabled: false` 그대로다. Prototype 은 `data-sources/bird-prototype/`
+의 `TEST_BIRD_*` × `TEST_REGION_*` 만 쓴다.
+
+### 계약 테스트
+
+`npm test` — `tsc` 로 컴파일해 Node 내장 test runner 로 돌린다
+(테스트 프레임워크를 새로 들이지 않았다). 지키는 것은 다섯이다.
+
+1. 같은 입력이면 같은 답인가
+2. 날짜가 바뀌어도 자리가 그대로인가
+3. null 과 OFF 가 끝까지 갈라져 있는가
+4. 합성 자료가 production 으로 새지 않는가
+5. 전국 화면이 새로 뒤덮이지 않는가
+
+화면 증거는 `docs/prototype-evidence/` 에 있다.
 
 ---
 
@@ -609,8 +726,10 @@ placeholder 이며 `lastVerifiedAt` 이 비어 있습니다. 공공기관·연�
 남은 일은 기상청 개화 예보 / 국립공원 단풍 정보 연동입니다.
 
 ### Phase 3 — 살아있는 대한민국
-철새·해양생물·자연현상 데이터는 들어가 있습니다.
-남은 일은 철새 이동 경로 애니메이션과 Observation Network 강화 —
+철새는 Prototype 이 지도 위에서 동작합니다 (아래 '철새' 절).
+남은 일은 **검증된 종 × 지역 × 월 기록**입니다 — 지금 0건이고
+`production_data_status` 는 `NOT_READY` 입니다.
+해양생물·자연현상 데이터는 들어가 있으나 소스가 꺼져 있습니다.
 sprite 수가 늘면 `MapRendererProps` 를 만족하는 canvas 렌더러로 교체합니다.
 
 ### Phase 4 — 개인화

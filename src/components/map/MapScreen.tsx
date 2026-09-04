@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useSearchParams } from 'next/navigation';
 import { formatKoreanDate, isValidDateKey } from '@/domain/date';
 import { NATURE_CATEGORIES, type NatureCategory, type ResolvedOccurrence } from '@/domain/types';
-import { EMPTY_MAP_COUNTS, buildMapLayout, countMap, type MapSprite } from '@/services/map-service';
+import {
+  EMPTY_MAP_COUNTS,
+  EMPTY_MAP_LAYOUT,
+  buildMapLayout,
+  countMap,
+  type MapSprite,
+} from '@/services/map-service';
 import {
   FOLIAGE_STATE_LABEL,
   freshAmount,
@@ -18,6 +24,7 @@ import {
   type MountainNow,
   type MountainPhase,
 } from '@/services/mountain-service';
+import { buildBirdNow } from '@/services/bird-service';
 import {
   findNextLivelyDate,
   getZoneDetail,
@@ -33,6 +40,7 @@ import { useTimeStore } from '@/store/time-store';
 import { NatureTimeline } from '@/components/timeline/NatureTimeline';
 import { NatureDetailSheet } from '@/components/nature/NatureDetailSheet';
 import { MarineDetailSheet } from '@/components/marine/MarineDetailSheet';
+import { BirdDetailSheet } from '@/components/nature/BirdDetailSheet';
 import { ZoneSheet } from '@/components/marine/ZoneSheet';
 import { EmptyState } from '@/components/common/EmptyState';
 import { TerrainOverlay } from './TerrainOverlay';
@@ -177,23 +185,41 @@ export function MapScreen() {
   const isFlower = layer === 'mountain' && phase === 'flower';
   const isFoliage = layer === 'mountain' && phase === 'foliage';
 
-  const layout = useMemo(
+  /*
+   * 철새는 지도 조립을 따로 돈다.
+   *
+   * buildMapLayout 도 layer === 'bird' 를 알지만, 화면에는 sprite 말고도
+   * '판단 불가 몇 건' · '상한으로 몇 마리 접힘' 같은 것이 필요하다.
+   * 그 값들을 다시 세지 않도록 여기서 한 번만 만들고 layout 을 꺼내 쓴다.
+   */
+  const bird = useMemo(
     () =>
-      buildMapLayout({
-        date,
-        categories,
-        season: seasonFilter,
-        startingOnly,
-        legalOnly,
-        speciesSlug: focusedSpecies?.slug,
-        layer,
-        foliageState,
-        flowerSpecies,
-        mountainPhase,
-        mode,
-        detail,
-        fast: isPlaying || isScrubbing,
-      }),
+      layer === 'bird'
+        ? buildBirdNow({ date, viewport: wideScreen === true ? 'desktop' : 'mobile' })
+        : null,
+    [layer, date, wideScreen],
+  );
+
+  /* 철새 화면에서는 이 계산을 아예 돌리지 않는다 — 위에서 이미 만들었다 */
+  const otherLayout = useMemo(
+    () =>
+      layer === 'bird'
+        ? EMPTY_MAP_LAYOUT
+        : buildMapLayout({
+            date,
+            categories,
+            season: seasonFilter,
+            startingOnly,
+            legalOnly,
+            speciesSlug: focusedSpecies?.slug,
+            layer,
+            foliageState,
+            flowerSpecies,
+            mountainPhase,
+            mode,
+            detail,
+            fast: isPlaying || isScrubbing,
+          }),
     [
       date,
       categories,
@@ -212,13 +238,15 @@ export function MapScreen() {
     ],
   );
 
+  const layout = bird?.layout ?? otherLayout;
+
   /*
    * 어종 집계는 바다 화면에서만 센다.
    * 날짜를 끄는 동안 매 프레임 도는 계산이라, 산을 보는 중에 어종 124건을
    * 다시 훑으면 슬라이더가 그만큼 무거워진다 (모바일에서 화면이 죽었다).
    */
   const counts = useMemo(
-    () => (layer === 'mountain' ? EMPTY_MAP_COUNTS : countMap(date, mode)),
+    () => (layer === 'mountain' || layer === 'bird' ? EMPTY_MAP_COUNTS : countMap(date, mode)),
     [layer, date, mode],
   );
 
@@ -231,6 +259,8 @@ export function MapScreen() {
     selectedSprite?.subject.kind === 'marine' ? selectedSprite.subject.item : null;
   const selectedNature: ResolvedOccurrence | null =
     selectedSprite?.subject.kind === 'nature' ? selectedSprite.subject.resolved : null;
+  const selectedBird =
+    selectedSprite?.subject.kind === 'bird' ? selectedSprite.subject.presence : null;
 
   /*
    * 산의 상세는 sprite 가 아니라 명소 자체에서 찾는다.
@@ -327,12 +357,15 @@ export function MapScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [picksOpen, setPicksOpen] = useState(false);
 
+  /* 철새 Prototype 에는 거는 축이 아직 없다 */
   const filtered =
-    layer === 'mountain'
-      ? mode === 'species' && (foliageState !== 'all' || flowerSpecies !== 'all')
-      : mode === 'zone'
-        ? legalOnly
-        : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
+    layer === 'bird'
+      ? false
+      : layer === 'mountain'
+        ? mode === 'species' && (foliageState !== 'all' || flowerSpecies !== 'all')
+        : mode === 'zone'
+          ? legalOnly
+          : seasonFilter !== 'all' || startingOnly || legalOnly || Boolean(focusedSpecies);
 
   const openFilter = useCallback(() => setFilterOpen(true), []);
 
@@ -444,7 +477,7 @@ export function MapScreen() {
   const header = (stacked: boolean) => (
     <MarineMapHeader
       layer={layer}
-      mountainHeadline={mountain.headline}
+      headline={bird ? bird.headline : mountain.headline}
       phase={phase}
       mode={layout.mode}
       counts={counts}
@@ -488,6 +521,13 @@ export function MapScreen() {
               selectedId={selectedId}
               openZoneSlug={openZoneSlug}
               onSelect={onSelectSprite}
+              emptyMessage={
+                bird
+                  ? bird.unknown.length > 0
+                    ? `이 날짜에 확인된 기록이 없습니다. 상태를 판단할 수 없는 기록이 ${bird.unknown.length}건 있습니다.`
+                    : '이 날짜에 확인된 기록이 없습니다. 날짜를 옮겨 보세요.'
+                  : undefined
+              }
             />
           )}
         </div>
@@ -540,18 +580,27 @@ export function MapScreen() {
           */}
           <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <span />
-            <WeeklyRecommendationCTA
-              label={
-                isFlower
-                  ? '이번 주 꽃 어디가 좋지?'
-                  : isFoliage
-                    ? '이번 주 단풍 어디가 좋지?'
-                    : layer === 'mountain'
-                      ? '이번 주 어디가 좋지?'
-                      : '이번 주 뭐 잡지?'
-              }
-              onOpen={() => setPicksOpen(true)}
-            />
+            {/*
+              철새 Prototype 에는 추천이 없다.
+              추천을 만들려면 어디로 가면 좋은지 말해야 하는데, 지금 들고 있는 것은
+              합성 자료다. 빈 시트를 여는 버튼을 두는 대신 자리를 비워 둔다.
+            */}
+            {layer === 'bird' ? (
+              <span />
+            ) : (
+              <WeeklyRecommendationCTA
+                label={
+                  isFlower
+                    ? '이번 주 꽃 어디가 좋지?'
+                    : isFoliage
+                      ? '이번 주 단풍 어디가 좋지?'
+                      : layer === 'mountain'
+                        ? '이번 주 어디가 좋지?'
+                        : '이번 주 뭐 잡지?'
+                }
+                onOpen={() => setPicksOpen(true)}
+              />
+            )}
             <div className="justify-self-end">
               <MapControls />
             </div>
@@ -561,18 +610,21 @@ export function MapScreen() {
             재생 중에는 띄우지 않는다. 1년을 돌려 보는 동안 시즌이 비는 구간마다
             안내 카드가 깜빡이면 정작 지도의 변화를 못 본다.
           */}
-          {visible === 0 && !isPlaying && !(layer === 'mountain' && layout.mode === 'zone') && (
-            <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
-              <div className="pointer-events-auto">
-                <QuietState
-                  date={date}
-                  filtered={filtered}
-                  species={focusedSpecies?.name}
-                  mountain={layer === 'mountain' ? phase : null}
-                />
+          {visible === 0 &&
+            !isPlaying &&
+            !(layer === 'mountain' && layout.mode === 'zone') &&
+            layer !== 'bird' && (
+              <div className="pointer-events-none absolute inset-x-3 bottom-16 z-20 lg:hidden">
+                <div className="pointer-events-auto">
+                  <QuietState
+                    date={date}
+                    filtered={filtered}
+                    species={focusedSpecies?.name}
+                    mountain={layer === 'mountain' ? phase : null}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
 
@@ -583,9 +635,11 @@ export function MapScreen() {
          * 지역별 보기에는 애초에 지도에 그림이 없어서 '표시 중' 이 뜻을 갖지 않는다.
          */
         caption={
-          layer === 'mountain'
-            ? mountain.caption
-            : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
+          bird
+            ? bird.caption
+            : layer === 'mountain'
+              ? mountain.caption
+              : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
         }
       />
 
@@ -649,6 +703,8 @@ export function MapScreen() {
         onOpenZone={openZoneAndFocus}
         onPlayYear={playSpeciesYear}
       />
+
+      <BirdDetailSheet presence={selectedBird} onClose={() => select(null)} />
 
       <NatureDetailSheet
         item={selectedNature}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <title>test-bird-h (synthetic prototype sprite)</title>
+  <g stroke="#333b42" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46.2 66.8 L34.66076898795117 63.69459271066772 L23.1 66.4 Z" fill="#333b42" />
+    <line x1="43.4" y1="77.0" x2="43.4" y2="90" stroke-width="2.2" />
+    <line x1="52.9" y1="77.0" x2="52.9" y2="90" stroke-width="2.2" />
+    <ellipse cx="50" cy="65" rx="19" ry="12" fill="#b0b7bd" />
+    <ellipse cx="47.7" cy="63.8" rx="11.8" ry="6.6" fill="#333b42" opacity="0.85" stroke="none" />
+    <line x1="63.7" y1="54.0" x2="58.5" y2="60.8" stroke-width="5.8" stroke="#b0b7bd" />
+    <circle cx="63.7" cy="54.0" r="7.8" fill="#333b42" />
+    <path d="M63.7 51.7 L75.7 55.4 L63.7 56.3 Z" fill="#b0b7bd" />
+  </g>
+</svg>

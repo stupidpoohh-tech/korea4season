@@ -21,6 +21,8 @@ export function useActiveFilterCount(): number {
   const foliageState = useMapStore((s) => s.foliageState);
   const flowerSpecies = useMapStore((s) => s.flowerSpecies);
 
+  // 철새 Prototype 에는 아직 거를 축이 없다 (필터 트리거 자체를 그리지 않는다)
+  if (layer === 'bird') return 0;
   // 산은 계절이 정하는 축(단풍 상태 · 꽃 종류)만 거른다
   if (layer === 'mountain') {
     return (foliageState === 'all' ? 0 : 1) + (flowerSpecies === 'all' ? 0 : 1);

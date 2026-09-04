@@ -49,6 +49,18 @@ const FOLIAGE_HINT: Record<(typeof FOLIAGE_STATES)[number], string> = {
   ended: '겨울 산으로 넘어갑니다',
 };
 
+/*
+ * 철새는 같은 그림의 존재감만 바뀐다 — 상태마다 다른 캐릭터로 갈아 끼우지 않는다.
+ * 그래서 범례도 색이 아니라 크기와 진하기로 설명한다.
+ */
+const BIRD_LEGEND: { state: string; label: string; hint: string; scale: number; opacity: number }[] =
+  [
+    { state: 'PEAK', label: '가장 많은 시기', hint: '또렷하고 조금 큽니다', scale: 1.05, opacity: 1 },
+    { state: 'GOOD', label: '머무는 중', hint: '기본 크기입니다', scale: 1, opacity: 0.9 },
+    { state: 'STARTING', label: '도래 시작', hint: '한 단계 옅습니다', scale: 0.92, opacity: 0.7 },
+    { state: 'ENDING', label: '떠나는 중', hint: '더 옅고 색이 빠집니다', scale: 0.96, opacity: 0.6 },
+  ];
+
 export function LegendTrigger({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <button
@@ -109,6 +121,45 @@ export function MarkerLegendPopover({
   }, [open, onClose, anchorRef]);
 
   if (!open) return null;
+
+  if (layer === 'bird') {
+    return (
+      <div
+        role="dialog"
+        aria-label="지도 보는 법"
+        className="absolute inset-x-0 top-full z-30 mt-1.5 space-y-2 rounded-xl border border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-3.5 py-3 text-[11.5px] leading-relaxed shadow-[var(--shadow-soft)]"
+      >
+        <p className="text-[13px] font-semibold tracking-tight">지도 보는 법</p>
+
+        <ul className="space-y-1">
+          {BIRD_LEGEND.map((row) => (
+            <li key={row.state} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-ink-soft)]"
+                style={{ opacity: row.opacity, transform: `scale(${row.scale})` }}
+              />
+              <span className="font-medium text-[color:var(--color-ink-soft)]">{row.label}</span>
+              <span className="text-[color:var(--color-faint)]">{row.hint}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
+          새 한 마리는 <span className="text-[color:var(--color-ink-soft)]">그 지역에서 만날 수 있다</span>는
+          뜻입니다. 날짜를 옮기면 자리는 그대로 있고 존재감만 바뀝니다 —
+          이 지도는 이동 경로도, 무리도 그리지 않습니다.
+        </p>
+
+        <p className="text-[color:var(--color-faint)]">
+          전국 화면에는 모든 기록을 올리지 않습니다. 접힌 것은 지금 없는 것이 아니라
+          이번 화면에 올리지 않은 것입니다. 상태를 판단할 수 없는 기록은 아예
+          <span className="text-[color:var(--color-ink-soft)]"> 그리지 않습니다</span> —
+          &lsquo;모른다&rsquo;와 &lsquo;지금 없다&rsquo;는 다른 말이기 때문입니다.
+        </p>
+      </div>
+    );
+  }
 
   if (layer === 'mountain' && phase === 'flower') {
     return (

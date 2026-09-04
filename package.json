@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "tsc -p tsconfig.test.json && node --require ./tests/alias.cjs --test '.test-out/tests/*.test.js'",
     "typecheck": "tsc --noEmit",
     "map:generate": "node scripts/generate-base-map.mjs",
     "map:coastline": "node scripts/extract-coastline.mjs",

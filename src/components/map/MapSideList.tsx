@@ -10,6 +10,12 @@ interface Props {
   selectedId: string | null;
   openZoneSlug: string | null;
   onSelect: (sprite: MapSprite) => void;
+  /**
+   * 비었을 때 할 말.
+   * 기본값은 필터를 가진 화면의 것이다 — 필터가 없는 레이어에서 그대로 쓰면
+   * 있지도 않은 필터를 풀어 보라고 말하게 된다.
+   */
+  emptyMessage?: string;
 }
 
 /**
@@ -18,7 +24,13 @@ interface Props {
  *
  * 여기서도 시즌(별)과 규정(배지)을 다른 자리에 둔다.
  */
-export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Props) {
+export function MapSideList({
+  sprites,
+  selectedId,
+  openZoneSlug,
+  onSelect,
+  emptyMessage = '조건에 맞는 것이 없습니다. 필터를 풀거나 날짜를 옮겨 보세요.',
+}: Props) {
   return (
     <aside aria-label="지도 위 목록" className="hidden min-h-0 flex-col lg:flex">
       <h2 className="mb-2 px-0.5 text-[12px] font-medium tracking-wide text-[color:var(--color-faint)]">
@@ -27,7 +39,7 @@ export function MapSideList({ sprites, selectedId, openZoneSlug, onSelect }: Pro
 
       {sprites.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[color:var(--color-line)] px-3 py-4 text-[12.5px] leading-relaxed text-[color:var(--color-muted)]">
-조건에 맞는 것이 없습니다. 필터를 풀거나 날짜를 옮겨 보세요.
+          {emptyMessage}
         </p>
       ) : (
         /*

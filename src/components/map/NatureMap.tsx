@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image';
 import { useReducedMotion } from 'motion/react';
 import { BASE_MAP_ASPECT, BASE_MAP_SRC } from '@/lib/map-asset';
+import { useWideScreen } from '@/lib/use-wide-screen';
 import type { MapLayout, MapSprite } from '@/services/map-service';
 import { clampViewport, useMapStore } from '@/store/map-store';
 import { useTimeStore } from '@/store/time-store';
@@ -31,6 +32,8 @@ interface Props {
  */
 export function NatureMap({ layout, onSelectSprite, preview = false, className, overlay }: Props) {
   const reducedMotion = useReducedMotion() ?? false;
+  // 철새 sprite 의 기본 크기가 화면 폭에 걸린다 (전국 모바일 32~38 · 데스크톱 34~42)
+  const wide = useWideScreen() === true;
   // 1년 재생 중에는 스프링을 기다릴 시간이 없다
   const isPlaying = useTimeStore((s) => s.isPlaying);
   const viewport = useMapStore((s) => s.viewport);
@@ -195,6 +198,7 @@ export function NatureMap({ layout, onSelectSprite, preview = false, className, 
           selectedId={selectedId}
           onSelect={onSelectSprite}
           reducedMotion={reducedMotion}
+          wide={wide}
           fast={isPlaying}
           spriteScale={preview ? 0.7 : 1}
         />
@@ -209,7 +213,16 @@ export function NatureMap({ layout, onSelectSprite, preview = false, className, 
           <span className="font-semibold text-[color:var(--color-ink-soft)]">
             +{layout.hiddenCount}
           </span>{' '}
-          {layout.mode === 'zone' ? '권역' : '어종'} 더 있어요 · 확대하면 보입니다
+          {layout.sprites[0]?.subject.kind === 'bird' ? (
+            /*
+             * 철새는 확대해도 더 펼치지 않는다. 접어 둔 이유가 과밀이 아니라
+             * '전국 화면에 몇 마리까지 올릴 것인가' 라는 예산이기 때문이다.
+             * 접힌 것은 지금 없는 것이 아니라 이번 화면에 안 올린 것이다.
+             */
+            <>마리 더 관찰 중 · 화면 상한으로 접었습니다</>
+          ) : (
+            <>{layout.mode === 'zone' ? '권역' : '어종'} 더 있어요 · 확대하면 보입니다</>
+          )}
         </p>
       )}
     </div>

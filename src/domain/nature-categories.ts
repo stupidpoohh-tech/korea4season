@@ -1,3 +1,4 @@
+import { BIRD_PROTOTYPE_ENABLED } from './bird-config';
 import type { NatureCategory } from './types';
 
 /* ────────────────────────────────────────────────────────────
@@ -12,7 +13,10 @@ import type { NatureCategory } from './types';
  * 일어나는 일이라, 사용자가 "지금 뭘 보러 갈까" 를 물을 때 고를 것이 아니다.
  * 날짜가 정하면 된다 — 봄에는 꽃, 가을에는 단풍, 여름은 녹음, 겨울은 눈.
  *
- * 철새는 여기 이름만 있다. 준비되면 enabled 를 올리고 레이어만 붙인다.
+ * 철새는 셋째 축이다. 바다가 어종 × 해역, 산이 명소 단위인 것과 달리
+ * 철새의 단위는 **종 × 지역의 계절 출현**이다 — 묻는 것이 "어디로 이동하는가"가
+ * 아니라 "이 시기에 이 지역에서 만날 수 있는가" 이기 때문이다.
+ * 지금은 합성 fixture 로 도는 Prototype 이며 production 공개는 잠겨 있다.
  * ──────────────────────────────────────────────────────────── */
 
 export const MAP_LAYERS = ['marine', 'mountain', 'bird'] as const;
@@ -50,10 +54,16 @@ export const NATURE_CATEGORIES: NatureCategoryConfig[] = [
     headline: '지금, 산',
   },
   {
+    /*
+     * Prototype 실행 승인됨. 지금 그려지는 것은 합성 fixture 이고,
+     * production 공개(BIRD_PRODUCTION_PUBLICATION)는 따로 잠겨 있다.
+     * 공개를 켜면 검증된 기록이 0건이라 이 레이어는 아무것도 그리지 않는다.
+     */
     id: 'bird',
     label: '철새',
     icon: '🐦',
-    enabled: false,
+    enabled: BIRD_PROTOTYPE_ENABLED,
+    dataCategories: ['bird'],
     headline: '지금, 철새',
     comingSoonMessage: '철새 지도는 준비 중이에요.',
   },
