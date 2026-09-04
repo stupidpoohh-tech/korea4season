@@ -73,14 +73,36 @@ interface RampStop extends FoliageColor {
   landMix: number;
 }
 
+/* ── 잎을 떨군 산 ─────────────────────────────────────────────
+ * 단풍이 지나간 뒤이자 눈이 오기 전. 색 띠의 끝이면서, 해가 바뀌어
+ * 파동이 0 으로 돌아간 1~3월의 산이기도 하다.
+ *
+ * 초록이 아니다. 이 자리를 초록으로 두면 '단풍이 지고 다시 잎이 났다' 가 된다.
+ * ──────────────────────────────────────────────────────────── */
+
+const BARE = {
+  face: '#a3937f',
+  faceDark: '#7c6d5c',
+  tree: '#8b8a76',
+  treeTop: '#a5a48d',
+  land: '#c8c1ab',
+};
+
 const RAMP: RampStop[] = [
   { at: 0, face: '#5cb968', faceDark: '#3b9349', tree: '#3f9e46', treeTop: '#5cb84f', forestMix: 0, land: '#bbe264', landMix: 0 },
   { at: 0.1, face: '#a2c453', faceDark: '#769736', tree: '#84a43b', treeTop: '#a2c453', forestMix: 0.16, land: '#c8d559', landMix: 0.14 },
   { at: 0.3, face: '#e2bb43', faceDark: '#b58c27', tree: '#c39a30', treeTop: '#e2bb43', forestMix: 0.32, land: '#e0c25c', landMix: 0.26 },
   { at: 0.5, face: '#dd8b34', faceDark: '#b0621f', tree: '#bc7028', treeTop: '#dd8b34', forestMix: 0.42, land: '#dda75a', landMix: 0.3 },
   { at: 0.72, face: '#d06034', faceDark: '#a04120', tree: '#ad4c26', treeTop: '#d06034', forestMix: 0.46, land: '#d18f58', landMix: 0.32 },
-  { at: 0.9, face: '#b3784a', faceDark: '#885530', tree: '#976139', treeTop: '#b3784a', forestMix: 0.34, land: '#c9a473', landMix: 0.28 },
-  { at: 1, face: '#8b8f6b', faceDark: '#666e4f', tree: '#737b58', treeTop: '#8b8f6b', forestMix: 0.22, land: '#bcbe95', landMix: 0.22 },
+  { at: 0.9, face: '#b3784a', faceDark: '#885530', tree: '#976139', treeTop: '#b3784a', forestMix: 0.42, land: '#c9a473', landMix: 0.28 },
+  /*
+   * 끝은 '잎을 떨군 산' 이다. 여기를 올리브로 두었더니 11월 중순 북쪽 산이
+   * 다시 초록으로 보였다 — 단풍이 지나간 자리가 새잎이 난 것처럼 읽혔다.
+   *
+   * forestMix 도 여기서는 높다. 낮게 두면 단풍이 끝날수록 숲이 base 초록으로
+   * 되돌아간다(0.85 #62853f → 1.0 #4a964a). 잎이 떨어지는데 숲만 짙어지는 셈이다.
+   */
+  { at: 1, face: BARE.face, faceDark: BARE.faceDark, tree: BARE.tree, treeTop: BARE.treeTop, forestMix: 1, land: BARE.land, landMix: 0.42 },
 ];
 
 /* ── 겨울 ─────────────────────────────────────────────────────
@@ -92,20 +114,18 @@ const RAMP: RampStop[] = [
  * 얕게 지나간다 — 단풍이 쓰는 권역 offset 을 그대로 쓴다.
  * ──────────────────────────────────────────────────────────── */
 
-/*
- * 겨울색은 '흰색' 이 아니라 '서리 낀 자연색' 이다.
- *
- * 순백에 가깝게 덮으면 산 앞면과 그늘면의 차이가 사라지고 숲 · 강 · 해안선이
- * 한 장의 흰 종이가 된다. 그러면 계절이 바뀐 것이 아니라 화면이 꺼진 것처럼
- * 보인다. 관측하지 않은 적설을 사실처럼 그리지 않기 위해서도 이쪽이 맞다 —
- * 그리는 것은 눈이 아니라 잎을 떨군 겨울 산의 색이다.
- */
+/* ── 눈 덮인 산 ───────────────────────────────────────────────
+ * 앞면은 희고 그늘면은 푸른 회색이다. 둘을 같은 밝기로 두면 산의 부피가
+ * 사라져 지도가 한 장의 흰 종이가 된다 — 눈이 쌓인 것이 아니라 화면이
+ * 지워진 것으로 보인다. 강 · 호수 · 해안선도 그 아래로 읽혀야 한다.
+ * ──────────────────────────────────────────────────────────── */
+
 const SNOW = {
-  face: '#d6e0d8',
-  faceDark: '#a4b5ab',
-  tree: '#6f8a76',
-  treeTop: '#93ab97',
-  land: '#dcded0',
+  face: '#f2f7fa',
+  faceDark: '#cfdce6',
+  tree: '#b9c9c6',
+  treeTop: '#e2edeb',
+  land: '#eef4f8',
 };
 
 /* ── 봄 ───────────────────────────────────────────────────────
@@ -139,6 +159,26 @@ export function freshAmount(date: DateKey, offsetDays = 0): number {
   if (day < FULL_FROM) return Math.min(1, Math.max(0, ramp(RISE_FROM, FULL_FROM)));
   if (day <= FULL_TO) return 1;
   return Math.min(1, Math.max(0, 1 - ramp(FULL_TO, FADE_TO)));
+}
+
+/**
+ * 아직 잎이 나지 않았는가 (0~1).
+ *
+ * 단풍 파동은 해가 바뀌면 0 으로 돌아간다 — occurrence 엔진에게 1월의
+ * '올해 단풍' 은 아직 오지 않은 일이기 때문이다. 목록에서는 맞는 말이지만
+ * 지도에서는 12월 31일에 잎을 떨군 산이 1월 1일에 초록이 된다.
+ * (측정: 2026-12-31 wave 1.00 → 2027-01-01 wave 0.00, 전 권역)
+ *
+ * 그 구멍을 메운다. 1월 1일부터 신록이 오르기 전까지 산은 잎이 없다.
+ * 신록과 같은 기준일을 쓰므로 남쪽이 먼저 잎을 낸다.
+ */
+export function bareAmount(date: DateKey, offsetDays = 0): number {
+  const day = dayOfYear(date) - offsetDays;
+  const RISE_FROM = 78; // 3월 19일 — freshAmount 와 같은 날
+  const FULL_FROM = 108; // 4월 18일
+  if (day <= RISE_FROM) return 1;
+  if (day >= FULL_FROM) return 0;
+  return 1 - (day - RISE_FROM) / (FULL_FROM - RISE_FROM);
 }
 
 /* 11-25 부터 03-20 까지. 연말을 넘어가므로 '11-25 로부터 며칠' 로 센다. */
@@ -224,16 +264,27 @@ function rampAt(progress: number): RampStop {
   return RAMP[RAMP.length - 1]!;
 }
 
-/** 산 색 — 진행도 그대로. winter 를 주면 눈으로 덮인다. */
-export function mountainColorAt(progress: number, winter = 0, fresh = 0): FoliageColor {
+/**
+ * 산 색.
+ *
+ * 네 축을 이 순서로 겹친다.
+ *
+ *   단풍 진행도  초록 → 황금 → 주황 → 붉은 주황 → 잎을 떨군 산
+ *   bare        해가 바뀌어 진행도가 0 으로 돌아간 구간을 잎 없는 상태로 붙든다
+ *   fresh       봄에 잎이 나면 그 위를 신록이 덮는다
+ *   winter      눈이 쌓이면 그 위를 다시 덮는다
+ *
+ * 순서가 뜻이다 — 잎이 없는 산 위에 신록이 나고, 그 위에 눈이 쌓인다.
+ */
+export function mountainColorAt(progress: number, winter = 0, fresh = 0, bare = 0): FoliageColor {
   const stop = rampAt(progress);
-  const layer = (autumn: string, spring: string, snow: string) =>
-    mixHex(mixHex(autumn, spring, fresh), snow, winter);
+  const layer = (autumn: string, bareColor: string, spring: string, snow: string) =>
+    mixHex(mixHex(mixHex(autumn, bareColor, bare), spring, fresh), snow, winter);
   return {
-    face: layer(stop.face, FRESH.face, SNOW.face),
-    faceDark: layer(stop.faceDark, FRESH.faceDark, SNOW.faceDark),
-    tree: layer(stop.tree, FRESH.tree, SNOW.tree),
-    treeTop: layer(stop.treeTop, FRESH.treeTop, SNOW.treeTop),
+    face: layer(stop.face, BARE.face, FRESH.face, SNOW.face),
+    faceDark: layer(stop.faceDark, BARE.faceDark, FRESH.faceDark, SNOW.faceDark),
+    tree: layer(stop.tree, BARE.tree, FRESH.tree, SNOW.tree),
+    treeTop: layer(stop.treeTop, BARE.treeTop, FRESH.treeTop, SNOW.treeTop),
   };
 }
 
@@ -247,16 +298,21 @@ export function landWashAt(
   progress: number,
   winter = 0,
   fresh = 0,
+  bare = 0,
 ): { color: string; opacity: number } {
   const stop = rampAt(progress);
   return {
-    color: mixHex(mixHex(stop.land, FRESH.land, fresh), SNOW.land, winter),
+    color: mixHex(
+      mixHex(mixHex(stop.land, BARE.land, bare), FRESH.land, fresh),
+      SNOW.land,
+      winter,
+    ),
     /*
      * 겨울에도 땅을 덮어 버리지 않는다. 이 칠이 짙으면 강 · 호수 · 해안 모래와
      * 지역별 단풍·개화가 그 아래로 사라진다 — 배경 tint 가 자연현상보다
      * 세지는 순간 지도는 계절을 말하는 것이 아니라 테마를 바꾼 것이 된다.
      */
-    opacity: Math.max(stop.landMix, fresh * 0.3, winter * 0.42),
+    opacity: Math.max(stop.landMix, bare * 0.42, fresh * 0.3, winter * 0.78),
   };
 }
 
@@ -274,13 +330,32 @@ export function forestColorAt(
   progress: number,
   winter = 0,
   fresh = 0,
+  bare = 0,
 ): { tree: string; treeTop: string } {
   const stop = rampAt(progress);
-  const layer = (base: string, autumn: string, mix: number, spring: string, snow: string) =>
-    mixHex(mixHex(mixHex(base, autumn, mix), spring, fresh), snow, winter);
+  const layer = (
+    base: string,
+    autumn: string,
+    mix: number,
+    bareColor: string,
+    spring: string,
+    snow: string,
+  ) =>
+    mixHex(
+      mixHex(mixHex(mixHex(base, autumn, mix), bareColor, bare), spring, fresh),
+      snow,
+      winter,
+    );
   return {
-    tree: layer(FOREST_BASE.tree, stop.tree, stop.forestMix, FRESH.tree, SNOW.tree),
-    treeTop: layer(FOREST_BASE.treeTop, stop.treeTop, stop.forestMix, FRESH.treeTop, SNOW.treeTop),
+    tree: layer(FOREST_BASE.tree, stop.tree, stop.forestMix, BARE.tree, FRESH.tree, SNOW.tree),
+    treeTop: layer(
+      FOREST_BASE.treeTop,
+      stop.treeTop,
+      stop.forestMix,
+      BARE.treeTop,
+      FRESH.treeTop,
+      SNOW.treeTop,
+    ),
   };
 }
 

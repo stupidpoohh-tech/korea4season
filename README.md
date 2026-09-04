@@ -38,7 +38,7 @@ npm run build
 
 ```bash
 npx next start -p 3031
-npm run verify                 # 7개 검사 (꽃 자리 · 입력 경로 · sprite · 넘침 · 드래그 · 재생 · 힙)
+npm run verify                 # 8개 검사 (꽃 자리 · 계절 앞뒤 · 입력 경로 · sprite · 넘침 · 드래그 · 재생 · 힙)
 npm run verify:shot out/       # 대표 날짜 화면 찍기
 ```
 

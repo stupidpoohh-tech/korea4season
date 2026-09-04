@@ -15,6 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const CHECKS = [
   ['꽃 자리 안정성', 'flower-stability.mjs'],
+  ['계절 앞뒤', 'season-colors.mjs'],
   ['입력 경로 일치', 'consistency.mjs'],
   ['바다 sprite 배치', 'map-sprites.mjs'],
   ['뷰포트 넘침', 'viewports.mjs'],

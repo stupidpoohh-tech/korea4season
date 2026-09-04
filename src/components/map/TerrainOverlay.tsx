@@ -53,6 +53,7 @@ export function TerrainOverlay({
   regions,
   winterAt,
   freshAt,
+  bareAt,
   detailed = true,
   fast = false,
 }: {
@@ -61,6 +62,8 @@ export function TerrainOverlay({
   winterAt: (offsetDays: number) => number;
   /** 권역 offset 을 받아 신록의 정도를 돌려준다 */
   freshAt: (offsetDays: number) => number;
+  /** 권역 offset 을 받아 '아직 잎이 없는 정도' 를 돌려준다 (해가 바뀐 뒤 1~3월) */
+  bareAt: (offsetDays: number) => number;
   /**
    * 산마다 며칠씩 어긋나게 둘 것인가.
    *
@@ -94,7 +97,10 @@ export function TerrainOverlay({
   const step = (v: number) => Math.round(v * 28) / 28;
   const snow = regions.map((r) => step(winterAt(r.offsetDays)));
   const fresh = regions.map((r) => step(freshAt(springOffset(r.offsetDays))));
-  const paintKey = `${regions.map((r) => step(r.wave)).join(',')}|${fresh.join(',')}|${snow.join(',')}`;
+  const bare = regions.map((r) => step(bareAt(springOffset(r.offsetDays))));
+  const paintKey =
+    `${regions.map((r) => step(r.wave)).join(',')}` +
+    `|${fresh.join(',')}|${snow.join(',')}|${bare.join(',')}`;
 
   const paint = useMemo(
     () =>
@@ -112,9 +118,10 @@ export function TerrainOverlay({
         );
         const spring = fresh[s.regionIndex] ?? 0;
         const winter = snow[s.regionIndex] ?? 0;
+        const leafless = bare[s.regionIndex] ?? 0;
         return {
-          mountain: mountainColorAt(wave, winter, spring),
-          forest: forestColorAt(wave, winter, spring),
+          mountain: mountainColorAt(wave, winter, spring, leafless),
+          forest: forestColorAt(wave, winter, spring, leafless),
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,7 +137,7 @@ export function TerrainOverlay({
     const stops = regions
       .map((region, i) => ({
         offset: Math.min(1, Math.max(0, region.anchor.y)),
-        ...landWashAt(step(region.wave), snow[i] ?? 0, fresh[i] ?? 0),
+        ...landWashAt(step(region.wave), snow[i] ?? 0, fresh[i] ?? 0, bare[i] ?? 0),
       }))
       .sort((a, b) => a.offset - b.offset);
 
@@ -152,6 +159,7 @@ export function TerrainOverlay({
   const nothingToPaint =
     snow.every((v) => v === 0) &&
     fresh.every((f) => f === 0) &&
+    bare.every((v) => v === 0) &&
     regions.every((r) => step(r.wave) === 0);
 
   if (shapes.length === 0 || nothingToPaint) return null;
