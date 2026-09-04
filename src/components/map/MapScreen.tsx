@@ -169,21 +169,31 @@ export function MapScreen() {
   /* ── 파생 데이터 ────────────────────────────────────────── */
 
   /*
-   * 지금 산이 무슨 계절인지는 날짜가 정한다.
+   * 지형의 계절색은 산에서만 칠한다.
    *
-   * 겨울에는 어느 카테고리를 보고 있든 산과 땅이 눈으로 덮이므로,
-   * 바다를 보는 중에도 지형은 계산한다 — 1월의 지도가 초여름처럼 초록이면
-   * 시간을 움직이는 지도가 아니다.
+   * 예전에는 어느 카테고리를 보고 있든 눈과 단풍을 덧그렸다. 그런데
+   * 바다와 철새에서 지도는 배경이다. 그 배경이 날짜마다 초록에서 주황으로,
+   * 다시 흰색으로 넘어가면 정작 읽어야 할 것 — 어느 바다에 무엇이 있는가,
+   * 어느 지역에 새가 머무는가 — 이 계속 다른 바탕 위에 놓인다.
+   * 배경이 움직이면 그 위의 변화가 안 읽힌다.
+   *
+   * 그래서 바다·철새에서는 base map 이 그린 색 그대로 고정한다.
+   * 계절이 지도를 칠하는 것은 산의 일이다 — 거기서는 그것이 주인공이다.
+   *
+   * 산이 아닐 때는 계산 자체를 돌리지 않는다. 이 값들은 오직 칠하기 위한
+   * 것이었고, 날짜를 끄는 동안 매 프레임 도는 계산이다.
    */
-  const terrain = useMemo(() => buildTerrainNow(date), [date]);
+  const isMountain = layer === 'mountain';
+  const terrain = useMemo(() => (isMountain ? buildTerrainNow(date) : null), [isMountain, date]);
   const mountain = useMemo(
-    () => buildMountainNow(date, terrain, layer === 'mountain'),
-    [date, terrain, layer],
+    () => (terrain ? buildMountainNow(date, terrain) : null),
+    [date, terrain],
   );
-  const phase = mountain.phase;
+  /* 산이 아니면 계절 국면은 쓰이지 않는다. 자리를 채우는 값일 뿐이다. */
+  const phase: MountainPhase = mountain?.phase ?? 'green';
   const mountainPhase = phase;
-  const isFlower = layer === 'mountain' && phase === 'flower';
-  const isFoliage = layer === 'mountain' && phase === 'foliage';
+  const isFlower = isMountain && phase === 'flower';
+  const isFoliage = isMountain && phase === 'foliage';
 
   /*
    * 철새는 지도 조립을 따로 돈다.
@@ -395,7 +405,7 @@ export function MapScreen() {
 
   /* ── 지역별 목록 · 추천 — 계절이 무엇을 보여줄지 정한다 ── */
   const regionRows: RegionRow[] = useMemo(() => {
-    if (isFlower) {
+    if (isFlower && mountain) {
       return mountain.flowerRegions.map((region) => {
         const top = region.blooms[0];
         return {
@@ -413,7 +423,7 @@ export function MapScreen() {
         };
       });
     }
-    if (isFoliage) {
+    if (isFoliage && mountain) {
       return mountain.foliageRegions.map((region) => {
         const color = mountainColorAt(region.wave);
         return {
@@ -437,7 +447,7 @@ export function MapScreen() {
 
   const picks: PickView[] = useMemo(() => {
     if (!picksOpen) return [];
-    if (isFlower) {
+    if (isFlower && mountain) {
       return getFlowerPicks(mountain.flowerSpots).map((spot) => ({
         key: `flower:${spot.location.id}`,
         location: spot.location,
@@ -477,7 +487,7 @@ export function MapScreen() {
   const header = (stacked: boolean) => (
     <MarineMapHeader
       layer={layer}
-      headline={bird ? bird.headline : mountain.headline}
+      headline={bird?.headline ?? mountain?.headline ?? ''}
       phase={phase}
       mode={layout.mode}
       counts={counts}
@@ -552,24 +562,28 @@ export function MapScreen() {
             onSelectSprite={onSelectSprite}
             className="h-[min(100cqh,var(--map-max-h))] w-auto"
             overlay={
-              <>
-                {/* 계절이 지형을 칠한다 — 카테고리와 무관하다 (1월 바다 화면도 눈이다) */}
-                <TerrainOverlay
-                  regions={terrain.foliageRegions}
-                  winter={terrain.winter}
-                  freshAt={(offsetDays) => freshAmount(date, offsetDays)}
-                  detailed={layer === 'mountain'}
-                  /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */
-                  fast={isPlaying || isScrubbing}
-                />
-                {/* 꽃은 지형 위에 무리로 얹힌다 */}
-                {phase === 'flower' && (
-                  <FlowerOverlay
-                    regions={mountain.flowerRegions}
+              /*
+               * 산에서만 지형을 덧칠한다. 바다·철새에서는 아무것도 얹지 않으므로
+               * base map 이 그린 색이 그대로 남고, 날짜를 아무리 옮겨도 바탕은 같다.
+               */
+              terrain && mountain ? (
+                <>
+                  <TerrainOverlay
+                    regions={terrain.foliageRegions}
+                    winter={terrain.winter}
+                    freshAt={(offsetDays) => freshAmount(date, offsetDays)}
+                    /* 끄는 동안에는 전환을 걸지 않는다 — 모바일에서 화면이 죽는다 */
                     fast={isPlaying || isScrubbing}
                   />
-                )}
-              </>
+                  {/* 꽃은 지형 위에 무리로 얹힌다 */}
+                  {phase === 'flower' && (
+                    <FlowerOverlay
+                      regions={mountain.flowerRegions}
+                      fast={isPlaying || isScrubbing}
+                    />
+                  )}
+                </>
+              ) : null
             }
           />
 
@@ -637,9 +651,8 @@ export function MapScreen() {
         caption={
           bird
             ? bird.caption
-            : layer === 'mountain'
-              ? mountain.caption
-              : `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`
+            : (mountain?.caption ??
+              `지도에 ${visible}${layout.mode === 'zone' ? '곳' : '종'} 표시 중`)
         }
       />
 
@@ -672,6 +685,7 @@ export function MapScreen() {
           }
           picks={picks}
           onShowOnMap={(pick) => {
+            if (!mountain) return;
             const spots = isFlower ? mountain.flowerSpots : mountain.foliageSpots;
             const hit = spots.find((sp) => sp.location.id === pick.location.id);
             if (hit) showMountainOnMap(`${isFlower ? 'flower' : 'foliage'}:${hit.location.slug}`, hit.position);
@@ -745,9 +759,10 @@ export function MapScreen() {
 function pickMountainSpot(
   layer: string,
   selectedId: string | null,
-  mountain: MountainNow,
+  /* 산이 아니면 애초에 계산하지 않는다 — 그때는 고를 명소도 없다 */
+  mountain: MountainNow | null,
 ): { view: MountainSpotView; position: MapPosition } | null {
-  if (layer !== 'mountain' || !selectedId) return null;
+  if (layer !== 'mountain' || !selectedId || !mountain) return null;
 
   for (const spot of mountain.flowerSpots) {
     if (`flower:${spot.location.slug}` === selectedId) {

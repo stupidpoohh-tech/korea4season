@@ -72,9 +72,9 @@ const PHASE_CAPTION: Record<'green' | 'winter', string> = {
 /**
  * 지형을 칠하는 데 필요한 것만.
  *
- * 겨울 눈과 신록은 어느 카테고리를 보고 있든 지도에 나타나야 하므로
- * 바다 화면에서도 계산한다. 다만 꽃까지 세지는 않는다 —
- * 날짜를 끄는 동안 매 프레임 도는 계산이라 쓰지 않을 것을 세면 그만큼 무겁다.
+ * 이 값들은 산 화면에서만 쓴다. 바다와 철새에서는 지도를 덧칠하지 않으므로
+ * (MapScreen 의 '지형의 계절색은 산에서만 칠한다' 참고) 아예 부르지 않는다 —
+ * 날짜를 끄는 동안 매 프레임 도는 계산이라, 칠하지도 않을 것을 세면 그만큼 무겁다.
  */
 export interface TerrainNow {
   winter: number;
@@ -96,21 +96,17 @@ export function buildTerrainNow(date: DateKey): TerrainNow {
 }
 
 /**
- * withFlowers 는 산 화면에서만 켠다.
+ * 지금 산.
  *
- * 바다를 보는 중에도 지형(눈 · 신록 · 단풍색)은 그려야 하지만 꽃은 쓰이지
- * 않는다. 날짜를 끄는 동안 매 프레임 도는 계산이라, 쓰지 않을 것을 세면
- * 그만큼 슬라이더가 무거워진다.
+ * 산 화면에서만 부른다. 예전에는 바다를 보는 중에도 지형색 때문에 이 계산이
+ * 필요해서 꽃만 끄는 스위치(withFlowers)를 두었는데, 지금은 바다·철새가
+ * 지도를 덧칠하지 않으므로 그 스위치가 있을 자리가 없다.
  */
-export function buildMountainNow(
-  date: DateKey,
-  terrain: TerrainNow,
-  withFlowers = true,
-): MountainNow {
+export function buildMountainNow(date: DateKey, terrain: TerrainNow): MountainNow {
   const { winter, fresh, foliageSpots, foliageRegions, foliageCounts } = terrain;
 
-  const flowerSpots = withFlowers ? buildFlowerSpots(date) : [];
-  const flowerRegions = withFlowers ? groupFlowerRegions(flowerSpots) : [];
+  const flowerSpots = buildFlowerSpots(date);
+  const flowerRegions = groupFlowerRegions(flowerSpots);
   const flowerCounts = countFlowers(flowerSpots);
 
   /*

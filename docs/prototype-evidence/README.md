@@ -18,7 +18,21 @@
 | `10-selected.webp` | 하나를 골랐을 때. 기존 Bottom Sheet 를 그대로 쓴다 |
 | `11-production-guard.webp` | `NEXT_PUBLIC_BIRD_PRODUCTION=1` — mock 이 전부 차단되어 0마리 |
 | `8-marine-regression.webp` | 지금 바다 — 그대로 동작한다 |
-| `9-mountain-regression.webp` | 지금 산(단풍) — 그대로 동작한다 |
+| `9-mountain-regression.webp` | 지금 산(단풍) — 계절이 지형을 칠하는 것은 그대로다 |
+
+## 지도 바탕은 고정이다
+
+바다와 철새에서는 지형에 계절색을 얹지 않는다. 위 화면들이 1월인데도
+지도가 눈이 아니라 base map 그대로인 것이 그 때문이다 — 배경이 날짜마다
+바뀌면 그 위에 놓인 변화가 안 읽힌다.
+
+1월 15일과 7월 20일을 견주면(지도 영역에서 sprite 자리를 뺀 배경):
+
+```
+바다    비교 178,016px   차이 0
+철새    비교 192,303px   차이 0
+산      비교 271,124px   차이 91,602   ← 산은 계속 계절을 탄다
+```
 
 ## anchor 고정 증거
 
