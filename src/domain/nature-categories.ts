@@ -60,12 +60,17 @@ export const NATURE_CATEGORIES: NatureCategoryConfig[] = [
      * 공개를 켜면 검증된 기록이 0건이라 이 레이어는 아무것도 그리지 않는다.
      */
     id: 'bird',
-    label: '철새',
+    /*
+     * 상위 구분의 이름은 장소다 — 바다 · 산 · 하늘.
+     * 그 안에서 일어나는 일의 이름(어종 · 꽃 · 단풍 · 철새)과 구분한다.
+     * 하늘에 다른 현상이 더해져도 이름을 다시 바꾸지 않아도 된다.
+     */
+    label: '하늘',
     icon: '🐦',
     enabled: BIRD_PROTOTYPE_ENABLED,
     dataCategories: ['bird'],
-    headline: '지금, 철새',
-    comingSoonMessage: '철새 지도는 준비 중이에요.',
+    headline: '지금, 하늘',
+    comingSoonMessage: '하늘 지도는 준비 중이에요.',
   },
 ];
 

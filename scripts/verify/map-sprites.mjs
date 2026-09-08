@@ -37,6 +37,9 @@ async function sweep(page, label, viewport) {
   for (let m = 1; m <= 12; m += 1) {
     const date = `2026-${String(m).padStart(2, '0')}-15`;
     await page.openMap(`?date=${date}`);
+    /* 어느 화면을 재는지 밝혀 둔다 — 기본 화면에 기대면 기본값이 바뀔 때
+       검사가 조용히 다른 것을 재고도 통과한다 */
+    if (!(await page.chooseLayer('바다'))) throw new Error('바다 화면으로 가지 못했습니다');
     const v = await page.eval(READ);
     if (!v) continue;
     box = v.map;
@@ -62,7 +65,8 @@ async function sweep(page, label, viewport) {
       `  최악 간격 ${worst.toFixed(3)} (${worstAt})`,
       `  최대 동시 ${maxAtOnce}개`,
     ],
-    pass: land.length === 0 && worst >= 0.06 && maxAtOnce <= 30,
+    /* maxAtOnce 가 0 이면 애초에 아무것도 재지 못한 것이다 */
+    pass: land.length === 0 && worst >= 0.06 && maxAtOnce > 0 && maxAtOnce <= 30,
   };
 }
 

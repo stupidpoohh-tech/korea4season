@@ -98,7 +98,14 @@ export function clampViewport({ scale, x, y }: Viewport): Viewport {
 }
 
 export const useMapStore = create<MapState>((set) => ({
-  layer: 'marine',
+  /*
+   * 첫 화면은 산이다.
+   *
+   * 이 서비스가 먼저 말하려는 것은 '지금 대한민국 자연이 이렇게 움직이고
+   * 있구나' 이고, 그것이 가장 잘 보이는 것이 계절이 지도를 칠하는 산이다.
+   * 바다는 sprite 의 개수가 바뀌지만 산은 지도 자체가 바뀐다.
+   */
+  layer: 'mountain',
   selectedCategories: [],
   seasonFilter: 'all',
   startingOnly: false,
@@ -106,7 +113,8 @@ export const useMapStore = create<MapState>((set) => ({
   focusedSpecies: null,
   foliageState: 'all',
   flowerSpecies: 'all',
-  mode: 'species',
+  /* 산의 기본 보기는 지역별이다 — setLayer 의 규칙과 같은 값이어야 한다 */
+  mode: 'zone',
   selectedOccurrenceId: null,
   openZoneSlug: null,
   viewport: DEFAULT_VIEWPORT,

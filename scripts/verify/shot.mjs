@@ -34,7 +34,7 @@ try {
   await page.viewport(viewport);
   for (const date of dates.length ? dates : DEFAULT_DATES) {
     await page.openMap(`?date=${date}`);
-    if (layer !== '바다') await page.chooseLayer(layer);
+    await page.chooseLayer(layer);
     const { data } = await page.send('Page.captureScreenshot', { format: 'png' });
     const file = join(outDir, `${date}-${layer}.png`);
     writeFileSync(file, Buffer.from(data, 'base64'));

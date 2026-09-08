@@ -28,7 +28,7 @@ const FRAMES = `new Promise((res) => {
 
 async function measure(page, layer) {
   await page.openMap('?date=2026-10-01');
-  if (layer === '산' && !(await page.chooseLayer('산'))) {
+  if (!(await page.chooseLayer(layer))) {
     return { lines: [`${layer}: 카테고리를 바꾸지 못했습니다`], pass: false };
   }
 

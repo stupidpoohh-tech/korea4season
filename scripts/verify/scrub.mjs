@@ -21,6 +21,8 @@ const result = await check('드래그 안전성 (주소 갱신 · 오류)', asyn
   await page.touch(true);
   await page.throttle(CPU_THROTTLE);
   await page.openMap();
+  /* 바다에서 잰다 — 지금까지 기록한 수치가 이 화면의 것이다 */
+  await page.chooseLayer('바다');
 
   await page.eval(`(() => {
     window.__historyWrites = 0;

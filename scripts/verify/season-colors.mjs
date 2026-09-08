@@ -100,7 +100,7 @@ const result = await check('계절 앞뒤 — 잎 없는 계절의 초록 · 눈
 
   for (const { date, layer, want } of SNOW_CASES) {
     await page.openMap(`?date=${date}`);
-    if (layer === '산') await page.chooseLayer('산');
+    await page.chooseLayer(layer);
     const n = await page.eval(HAS_SNOW);
     const ok = want ? n > 0 : n === 0;
     if (!ok) pass = false;

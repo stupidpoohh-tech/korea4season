@@ -14,7 +14,7 @@ const LEAK_MB = 12;
 
 async function sweep(page, layer) {
   await page.openMap('?date=2026-10-01');
-  if (layer === '산') await page.chooseLayer('산');
+  await page.chooseLayer(layer);
 
   const box = await page.slider();
   await page.gc();
