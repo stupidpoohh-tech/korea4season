@@ -6,6 +6,8 @@
 //   node run.mjs --real                진짜 Typecast + 최종 렌더  (0-A 에서는 부르지 않는다)
 //   ... --safe                         검수용 safe-area 오버레이를 영상에 얹는다
 //   ... --check                        TTS·렌더 없이 대본과 준비 상태만 본다
+//   ... --plain                        ★자막·표·소리 없이★ 화면만 (직접 편집할 때)
+//   ... --clips                        장면마다 mp4 를 따로 (--plain 을 켠다)
 //
 // 하는 일: 대본 → TTS 전처리 → (캐시를 거쳐) Timestamp TTS → 시각 검사
 //          → 소리 길이로 장면 시간 계산 → 자막 → Remotion 렌더 → 1080×1920 mp4
@@ -14,7 +16,7 @@ import { join, relative } from 'node:path'
 
 import { HERE } from './lib/paths.mjs'
 import { redact, voiceConfig, hasKey, keySource } from './lib/env.mjs'
-import { loadScript, missingShots, applyShotAvailability } from './lib/script.mjs'
+import { loadScript, missingShots, applyShotAvailability, resolveSequences } from './lib/script.mjs'
 import { brandTheme, TOKENS_PATH } from './lib/brand.mjs'
 import { buildScenes } from './lib/build.mjs'
 import { buildTimeline, checkTimeline } from './lib/timeline.mjs'
@@ -22,7 +24,7 @@ import { mockSpeakWithTimestamps } from './lib/mockTts.mjs'
 import { speakWithTimestamps } from './lib/typecast.mjs'
 import { createRunDir, listRuns } from './lib/runDir.mjs'
 import { findChrome } from './lib/chrome.mjs'
-import { renderShort } from './lib/render.mjs'
+import { renderShort, releaseBundle } from './lib/render.mjs'
 import { stats as cacheStats } from './lib/ttsCache.mjs'
 
 const say = (...m) => console.log(...m)
@@ -58,6 +60,8 @@ function parseArgs(argv) {
   const mode = has('--real') ? 'real' : has('--preview') ? 'preview' : 'mock'
   return {
     mode, safe: has('--safe'), check: has('--check'),
+    plain: has('--plain') || has('--clips'),
+    clips: has('--clips'),
     // ★ 유료 호출은 손이 미끄러져 나가지 않는다. --real 만으로는 부족하고
     //   --돈나감 (또는 --spend) 을 같이 적어야 Typecast 를 부른다.
     //   이 작업 환경에는 키가 이미 들어와 있어서, 이 빗장이 없으면 오타 한 번에 값이 나간다.
@@ -75,17 +79,21 @@ function cacheOnlySpeaker() {
 }
 
 async function main() {
-  const { mode, safe, check, spend } = parseArgs(process.argv.slice(2))
+  const { mode, safe, check, spend, plain, clips } = parseArgs(process.argv.slice(2))
   const conf = MODES[mode]
 
   say('')
   say('━━ 지금日지도 홍보 영상 ━━')
   say(`  모드   ${mode} — ${conf.label}`)
+  if (plain) {
+    say('  화면만 ★자막·표·소리를 빼고 화면만★ 냅니다 (직접 편집용).')
+    say(`         장면 길이는 음성이 정한 그대로라 ${clips ? '클립을 ' : ''}편집기에서 그 자리에 놓으면 맞습니다.`)
+  }
   say(`  키     ${keySource()}`)
 
   // ── ① 대본 확인 (값이 나가기 ★전에★) ─────────────────────
   const scriptRaw = loadScript()
-  const script = applyShotAvailability(scriptRaw) // 없는 캡처는 자리표로
+  const script = resolveSequences(applyShotAvailability(scriptRaw)) // 없는 캡처는 자리표로
   const theme = brandTheme()
   say(`  대본   ${script.id} · 장면 ${script.scenes.length}개`)
   say(`  색     ${rel(TOKENS_PATH)} 에서 읽음 (도구에 hex 를 따로 적지 않는다)`)
@@ -172,6 +180,14 @@ async function main() {
     builtAt: new Date().toISOString(),
   }, built)
 
+  if (plain) {
+    // ★ 길이는 건드리지 않는다 ★ — 음성이 정한 장면 길이 그대로여야
+    //   사용자가 자기 음성 위에 그대로 얹을 수 있다.
+    timeline.watermark = null
+    timeline.plain = true
+    for (const s of timeline.scenes) { s.captions = []; s.audio = null }
+  }
+
   const problems = checkTimeline(timeline)
   if (problems.length) {
     throw new Error('만들어 낸 timeline 이 성하지 않습니다:\n  ' + problems.join('\n  '))
@@ -238,18 +254,46 @@ async function main() {
     stills.push({ name: `${s.id}-safe`, frame: stillFrame(s), safeArea: true })
   }
 
-  const outputName = `${conf.prefix}${script.id}${safe ? '-safe' : ''}.mp4`
+  const outputName = `${conf.prefix}${script.id}${plain ? '-화면만' : ''}${safe ? '-safe' : ''}.mp4`
+  const reuse = clips ? {} : null   // 클립을 여럿 낼 때만 묶음을 붙들고 있는다
   const { output, stills: stillPaths } = await renderShort({
     runDir, timeline, outputName, browserExecutable, safeArea: safe,
-    scale: conf.scale, stills, log: say,
+    scale: conf.scale, stills, log: say, reuse,
   })
 
+  // ★ 장면마다 따로 — 편집기에서 순서를 바꾸거나 길이를 다시 잡기 쉽게.
+  const clipPaths = []
+  if (clips) {
+    say('      장면별 클립')
+    const dir = join(runDir, 'clips')
+    mkdirSync(dir, { recursive: true })
+    for (let i = 0; i < timeline.scenes.length; i++) {
+      const s = timeline.scenes[i]
+      // 장면 하나만 든 timeline 을 새로 만든다 (startFrame 을 0 으로 옮긴다)
+      const one = {
+        ...timeline,
+        totalFrames: s.durationInFrames,
+        scenes: [{ ...s, startFrame: 0 }],
+      }
+      const name = `${String(i + 1).padStart(2, '0')}-${s.id}.mp4`
+      await renderShort({
+        runDir, timeline: one, outputName: join('clips', name),
+        browserExecutable, safeArea: false, scale: conf.scale, stills: [], reuse,
+      })
+      const secs = (s.durationInFrames / timeline.fps).toFixed(2)
+      say(`        ${name}  ${secs}초`)
+      clipPaths.push(join(dir, name))
+    }
+  }
+
+  releaseBundle(reuse)
   say('[4/4] 안내문 쓰는 중')
   writeFileSync(join(runDir, 'README.txt'), readme({ timeline, mode, engine, conf, outputName, stillPaths, need }))
 
   say('')
   say(`완성 — ${rel(output)}`)
   say(`      스틸 ${stillPaths.length}장 (${rel(join(runDir, 'stills'))})`)
+  if (clipPaths.length) say(`      클립 ${clipPaths.length}개 (${rel(join(runDir, 'clips'))})`)
   say(`      실행 폴더 ${rel(runDir)}  ★기존 결과는 지우지 않았습니다★`)
   const runs = listRuns(mode)
   say(`      ${mode} 실행 기록 ${runs.length}개 — 가장 최근 것이 ${runName}`)

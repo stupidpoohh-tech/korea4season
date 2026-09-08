@@ -25,7 +25,9 @@
     "화면은 전부 실제 MVP 캡처다 (capture/shots/). 목업이 아니다.",
     "여는 장면의 검색창은 ★특정 포털을 흉내 내지 않는다★ — 실재하는 회사의 UI·로고를 그리면 그 회사가 만든 것처럼 보인다. 브랜드 없는 일반 검색창으로 '검색하는 느낌'만 낸다.",
     "하늘(철새)은 이 저장소 기준 Prototype 이고 지금 그려지는 것은 합성 fixture 다 (src/domain/nature-categories.ts). 화면은 실제 MVP 그대로이지만, 공개 전에 그 점을 표시할지 사람이 정한다.",
-    "'날짜를 움직이면 자연도 함께 움직인다' 는 실제 동작이다 — ?date= 로 날짜를 바꾸면 지도가 통째로 바뀐다 (봄 벚꽃 → 여름 녹음 → 가을 단풍 → 겨울 눈)."
+    "'날짜를 움직이면 자연도 함께 움직인다' 는 실제 동작이다 — ?date= 로 날짜를 바꾸면 지도가 통째로 바뀐다 (봄 벚꽃 → 여름 녹음 → 가을 단풍 → 겨울 눈).",
+    "계절 장면은 정지 캡처가 아니라 ★연속 촬영본★ 이다 — 날짜를 2일씩 밟으며 찍은 183장을 이어 붙여 지도가 실제로 흐른다 (capture/sequence.mjs). 프레임 수는 meta.json 이 정하고 대본에 적지 않는다.",
+    "연속 촬영본 장면에는 계절 라벨을 따로 붙이지 않는다 — 앱 화면이 이미 날짜와 계절 칩을 보여 주고, 내가 붙인 라벨이 그것과 어긋날 수 있다 (실제로 '봄' 라벨 옆에 '여름·산이 짙어졌습니다' 가 뜬 적 있다)."
   ],
   "scenes": [
     {
@@ -80,14 +82,11 @@
       ],
       "screen": {
         "kind": "phone",
-        "shots": [
-          "spring.png",
-          "summer.png"
-        ],
-        "labels": [
-          "봄",
-          "여름"
-        ],
+        "sequence": {
+          "folder": "year-mountain",
+          "from": 0.14,
+          "to": 0.58
+        },
         "holdSeconds": 3.6
       }
     },
@@ -100,17 +99,11 @@
       ],
       "screen": {
         "kind": "phone",
-        "shots": [
-          "autumn.png",
-          "winter.png"
-        ],
-        "labels": [
-          "가을",
-          "겨울"
-        ],
-        "anchorPhrases": [
-          "자연도"
-        ],
+        "sequence": {
+          "folder": "year-mountain",
+          "from": 0.58,
+          "to": 1.0
+        },
         "holdSeconds": 3.6
       }
     },
@@ -151,10 +144,11 @@
       ],
       "screen": {
         "kind": "phone",
-        "shots": [
-          "map-now.png"
-        ],
-        "pan": -30,
+        "sequence": {
+          "folder": "year-mountain",
+          "from": 0.0,
+          "to": 1.0
+        },
         "holdSeconds": 2.3
       }
     },

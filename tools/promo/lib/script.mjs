@@ -38,10 +38,14 @@ export function assertScript(script) {
     if (!SCREEN_KINDS.includes(kind)) {
       throw new Error(`${s.id}: 모르는 화면 종류입니다: ${kind} (아는 것: ${SCREEN_KINDS.join(', ')})`)
     }
-    if (kind === 'phone' && !s.screen.shot && !(s.screen.shots || []).length) {
+    if (kind === 'phone' && !s.screen.shot && !(s.screen.shots || []).length
+        && !s.screen.sequence?.folder) {
       throw new Error(`${s.id}: phone 화면인데 shot(캡처 파일 이름)이 없습니다.`)
     }
-    if (Array.isArray(s.screen.labels) && s.screen.labels.length !== (s.screen.shots || []).length) {
+    // 정지 캡처를 갈아 끼우는 장면은 label 과 shot 이 짝이어야 한다.
+    // 연속 촬영본은 label 개수만큼 구간을 고르게 나누므로 짝을 따지지 않는다.
+    if (Array.isArray(s.screen.labels) && !s.screen.sequence
+        && s.screen.labels.length !== (s.screen.shots || []).length) {
       throw new Error(`${s.id}: labels 가 ${s.screen.labels.length}개인데 shots 는 ` +
         `${(s.screen.shots || []).length}개입니다 — 짝이 맞아야 합니다.`)
     }
@@ -63,6 +67,31 @@ export function missingShots(script, shotsDir = SHOTS) {
     }
   }
   return need
+}
+
+/**
+ * 연속 촬영본의 프레임 수를 채운다.
+ * ★ 대본에 손으로 적지 않는다 ★ — 다시 찍으면 장수가 바뀌는데 대본이 옛 숫자를
+ *   들고 있으면 마지막 장에서 멈추거나 없는 장을 부른다. meta.json 이 진실이다.
+ * @returns 새 script. 촬영본이 없는 장면은 sequence 를 지우고 무엇이 없는지 남긴다.
+ */
+export function resolveSequences(script, shotsDir = SHOTS) {
+  return {
+    ...script,
+    scenes: script.scenes.map((s) => {
+      const seq = s.screen?.sequence
+      if (!seq?.folder) return s
+      const metaPath = join(shotsDir, seq.folder, 'meta.json')
+      if (!existsSync(metaPath)) {
+        return { ...s, screen: { ...s.screen, sequence: null, sequenceMissing: seq.folder } }
+      }
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8'))
+      if (!(meta.frames > 1)) {
+        throw new Error(`${s.id}: ${seq.folder}/meta.json 의 frames 가 ${meta.frames} 입니다.`)
+      }
+      return { ...s, screen: { ...s.screen, sequence: { ...seq, frames: meta.frames } } }
+    }),
+  }
 }
 
 /**
