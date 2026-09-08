@@ -1,0 +1,175 @@
+{
+  "id": "jigeum-il-jido-intro",
+  "title": "지금日지도 서비스 소개",
+  "message": "오늘, 대한민국 자연은 어디까지 왔을까요?",
+  "cta": {
+    "label": "지금日지도",
+    "url": ""
+  },
+  "target": {
+    "minSeconds": 40,
+    "maxSeconds": 70,
+    "_메모": "시나리오는 50초를 잡았다. 실제 길이는 음성이 정하므로 그 근처가 되면 된다."
+  },
+  "voice": {
+    "_고른 이유": "앞서 고른 목소리와 같다 — 여성·young_adult, Conversational·Ads/Promotion·TikTok/Reels/Shorts.",
+    "voice_id": "tc_624ccc04adcd568510764d3f",
+    "model": "ssfm-v30",
+    "language": "kor",
+    "tempo": 0.95,
+    "pitch": 0,
+    "volume": 100,
+    "seed": 42
+  },
+  "_주의": [
+    "화면은 전부 실제 MVP 캡처다 (capture/shots/). 목업이 아니다.",
+    "여는 장면의 검색창은 ★특정 포털을 흉내 내지 않는다★ — 실재하는 회사의 UI·로고를 그리면 그 회사가 만든 것처럼 보인다. 브랜드 없는 일반 검색창으로 '검색하는 느낌'만 낸다.",
+    "하늘(철새)은 이 저장소 기준 Prototype 이고 지금 그려지는 것은 합성 fixture 다 (src/domain/nature-categories.ts). 화면은 실제 MVP 그대로이지만, 공개 전에 그 점을 표시할지 사람이 정한다.",
+    "'날짜를 움직이면 자연도 함께 움직인다' 는 실제 동작이다 — ?date= 로 날짜를 바꾸면 지도가 통째로 바뀐다 (봄 벚꽃 → 여름 녹음 → 가을 단풍 → 겨울 눈)."
+  ],
+  "scenes": [
+    {
+      "id": "01-search",
+      "type": "OPENING",
+      "narration": "봄에는 벚꽃을 검색하고, 가을에는 단풍을 또 검색합니다.",
+      "emphasis": [
+        "또"
+      ],
+      "screen": {
+        "kind": "search",
+        "holdFrames": 34,
+        "queries": [
+          {
+            "text": "벚꽃 개화 시기",
+            "tint": "flower"
+          },
+          {
+            "text": "단풍 절정 시기",
+            "tint": "foliage"
+          },
+          {
+            "text": "철새 도래지",
+            "tint": "bird"
+          }
+        ],
+        "holdSeconds": 1.2
+      }
+    },
+    {
+      "id": "02-question",
+      "type": "OPENING",
+      "narration": "그런데 우리가 궁금한 건 사실 하나입니다. 지금 어디에 가면 무엇을 만날 수 있을까?",
+      "emphasis": [
+        "하나"
+      ],
+      "screen": {
+        "kind": "phone",
+        "shots": [
+          "map-now.png"
+        ],
+        "pan": -40,
+        "holdSeconds": 0.6
+      }
+    },
+    {
+      "id": "03-timeline",
+      "type": "PRODUCT",
+      "narration": "지금日지도는, 대한민국 자연의 시간을 지도 위에 올렸습니다.",
+      "emphasis": [
+        "자연의 시간"
+      ],
+      "screen": {
+        "kind": "phone",
+        "shots": [
+          "spring.png",
+          "summer.png"
+        ],
+        "labels": [
+          "봄",
+          "여름"
+        ],
+        "holdSeconds": 3.6
+      }
+    },
+    {
+      "id": "04-move",
+      "type": "PRODUCT",
+      "narration": "날짜를 움직이면, 자연도 함께 움직입니다.",
+      "emphasis": [
+        "함께 움직입니다"
+      ],
+      "screen": {
+        "kind": "phone",
+        "shots": [
+          "autumn.png",
+          "winter.png"
+        ],
+        "labels": [
+          "가을",
+          "겨울"
+        ],
+        "anchorPhrases": [
+          "자연도"
+        ],
+        "holdSeconds": 3.6
+      }
+    },
+    {
+      "id": "05-three",
+      "type": "PRODUCT",
+      "narration": "바다에서 만날 수 있는 생물, 산의 꽃과 단풍, 하늘의 철새까지.",
+      "emphasis": [
+        "바다",
+        "산",
+        "하늘"
+      ],
+      "screen": {
+        "kind": "phone",
+        "shots": [
+          "sea.png",
+          "mountain.png",
+          "sky.png"
+        ],
+        "labels": [
+          "바다",
+          "산",
+          "하늘"
+        ],
+        "anchorPhrases": [
+          "산의",
+          "하늘의"
+        ],
+        "holdSeconds": 3.7
+      }
+    },
+    {
+      "id": "06-one-map",
+      "type": "PRODUCT",
+      "narration": "흩어진 자연 정보를, 하나의 살아있는 지도에서 만납니다.",
+      "emphasis": [
+        "살아있는 지도"
+      ],
+      "screen": {
+        "kind": "phone",
+        "shots": [
+          "map-now.png"
+        ],
+        "pan": -30,
+        "holdSeconds": 2.3
+      }
+    },
+    {
+      "id": "07-logo",
+      "type": "CLOSING",
+      "narration": "지금日지도. 오늘, 대한민국 자연은 어디까지 왔을까요?",
+      "emphasis": [
+        "어디까지"
+      ],
+      "screen": {
+        "kind": "logo",
+        "holdSeconds": 1.6,
+        "captionTone": "onDark"
+      }
+    }
+  ]
+}

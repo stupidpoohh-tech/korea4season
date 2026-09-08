@@ -1,0 +1,10 @@
+node_modules/
+.env
+.cache/
+out/
+
+# capture/shots/ 는 ★커밋한다★ — 이것이 없으면 다른 사람이 프로덕션 빌드를 띄우지
+# 않는 한 제품 화면을 그릴 수 없다. 앱 화면이 바뀌면 다시 찍는다
+# (찍은 때는 capture/shots/README.txt 에 적혀 있다):
+#   npm run build && npx next start -p 3031
+#   node tools/promo/capture/capture.mjs
