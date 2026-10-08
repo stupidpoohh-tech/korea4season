@@ -5,6 +5,8 @@ import type { MapLayerId } from '@/domain/nature-categories';
 import type { MapCounts, MapMode } from '@/services/map-service';
 import type { MountainPhase } from '@/services/mountain-service';
 import { ActiveFilterChips } from './ActiveFilterChips';
+import { ForecastPointsToggle } from './ForecastPointsToggle';
+import { TreeGroupToggle } from './TreeGroupToggle';
 import { CurrentStateSummary } from './CurrentStateSummary';
 import { FilterTrigger } from './FilterTrigger';
 import { LegendTrigger, MarkerLegendPopover } from './MarkerLegendPopover';
@@ -33,8 +35,20 @@ interface Props {
    * 철새는 지금 몇 곳에서 관찰되는가.
    */
   headline: string;
+  /**
+   * 요약 아랫줄. 산의 단풍에서는 공식 예측을 센 결과다
+   * ("오늘 2곳 · 7일 안 5곳") — 자연 상태가 아니라 날짜에서 센 수다.
+   */
+  caption?: string;
+  /** 무엇에 근거한 화면인지 한 줄. 단풍에서는 공식 예측의 기준을 밝힌다. */
+  sourceNote?: string;
   /** 지금 산에서 무엇이 일어나고 있는가 */
   phase: MountainPhase;
+  /**
+   * 공식 단풍절정 예측을 앞세우는 화면인가.
+   * 그때는 primary control 이 보기 방식이 아니라 수종이다.
+   */
+  forecastLeads?: boolean;
   /** 지금 조건에 맞는 대상 수 */
   count: number;
   filtered: boolean;
@@ -48,7 +62,10 @@ export function MarineMapHeader({
   mode,
   counts,
   headline,
+  caption,
+  sourceNote,
   phase,
+  forecastLeads = false,
   count,
   filtered,
   onOpenFilter,
@@ -78,6 +95,15 @@ export function MarineMapHeader({
    */
   const showFilter = !(layer === 'mountain' && mode === 'zone') && layer !== 'bird';
 
+  /*
+   * 단풍에서는 primary control 이 보기 방식이 아니라 수종이다.
+   *
+   * 공식 예측지도가 수종마다 따로 나오고 날짜도 서로 다르므로,
+   * 사용자가 먼저 고를 것은 '지역별이냐 명소별이냐' 가 아니라
+   * '어느 나무의 예측을 보는가' 다. 두 토글을 같이 두면 primary 가 둘이 된다.
+   */
+  const foliage = layer === 'mountain' && forecastLeads;
+
   return (
     <div ref={boxRef} className="relative">
       <div className="flex items-start gap-2">
@@ -88,6 +114,8 @@ export function MarineMapHeader({
           count={count}
           filtered={filtered}
           counts={counts}
+          caption={caption}
+          sourceNote={sourceNote}
           compact={!stacked}
         />
         <div className="ml-auto shrink-0">
@@ -99,14 +127,22 @@ export function MarineMapHeader({
       <div className={stacked ? 'mt-2 space-y-1.5' : 'mt-1 flex items-center gap-2'}>
         {stacked ? (
           <>
-            <ViewModeToggle layer={layer} full />
-            {showFilter && <FilterTrigger onOpen={openFilter} full />}
+            {foliage ? <TreeGroupToggle full /> : <ViewModeToggle layer={layer} full />}
+            {foliage ? (
+              <ForecastPointsToggle full />
+            ) : (
+              showFilter && <FilterTrigger onOpen={openFilter} full />
+            )}
           </>
         ) : (
           <>
-            {showFilter && <FilterTrigger onOpen={openFilter} />}
+            {foliage ? (
+              <ForecastPointsToggle />
+            ) : (
+              showFilter && <FilterTrigger onOpen={openFilter} />
+            )}
             <div className="ml-auto">
-              <ViewModeToggle layer={layer} />
+              {foliage ? <TreeGroupToggle /> : <ViewModeToggle layer={layer} />}
             </div>
           </>
         )}

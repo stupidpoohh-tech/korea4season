@@ -2,7 +2,6 @@
 
 import { Sheet } from '@/components/common/Sheet';
 import type { MapLayerId } from '@/domain/nature-categories';
-import { FOLIAGE_STATE_LABEL, type FoliageState } from '@/services/foliage-service';
 import { FLOWER_WAVE_LABEL } from '@/domain/flower-labels';
 import type { MountainPhase } from '@/services/mountain-service';
 import { SEASON_FILTERS, type MapCounts, type MapMode } from '@/services/map-service';
@@ -31,9 +30,6 @@ interface Props {
   phase: MountainPhase;
 }
 
-/** 단풍 상태 필터. 바다의 시즌 강도와 같은 자리, 같은 어휘를 쓴다. */
-const FOLIAGE_FILTERS: (FoliageState | 'all')[] = ['all', 'peak', 'good', 'starting', 'ending'];
-
 export function MarineFilterSheet({ open, onClose, layer, phase, mode, counts }: Props) {
   const seasonFilter = useMapStore((s) => s.seasonFilter);
   const setSeason = useMapStore((s) => s.setSeasonFilter);
@@ -43,8 +39,6 @@ export function MarineFilterSheet({ open, onClose, layer, phase, mode, counts }:
   const toggleLegal = useMapStore((s) => s.toggleLegalOnly);
   const reset = useMapStore((s) => s.resetFilters);
 
-  const foliageState = useMapStore((s) => s.foliageState);
-  const setFoliageState = useMapStore((s) => s.setFoliageState);
   const flowerSpecies = useMapStore((s) => s.flowerSpecies);
   const setFlowerSpecies = useMapStore((s) => s.setFlowerSpecies);
 
@@ -113,40 +107,6 @@ export function MarineFilterSheet({ open, onClose, layer, phase, mode, counts }:
       )}
 
       {/* 지역별 보기에는 지도에 그림이 없다 — 좁힐 대상 자체가 없으므로 내보내지 않는다 */}
-      {layer === 'mountain' && phase === 'foliage' && mode === 'species' && (
-        <fieldset>
-          <legend className="mb-1.5 text-[12px] font-medium text-[color:var(--color-faint)]">
-            단풍 상태
-          </legend>
-
-          <div className="space-y-0.5">
-            {FOLIAGE_FILTERS.map((state) => {
-              const on = foliageState === state;
-              return (
-                <label
-                  key={state}
-                  className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2.5 transition-colors ${
-                    on ? 'bg-[color:var(--color-accent-soft)]' : 'hover:bg-[color:var(--color-line-soft)]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="foliage-filter"
-                    checked={on}
-                    onChange={() => setFoliageState(state)}
-                    className="h-4 w-4 shrink-0 accent-[color:var(--color-accent-strong)]"
-                  />
-                  <span
-                    className={`flex-1 text-[14px] ${on ? 'font-semibold text-[color:var(--color-accent-strong)]' : 'text-[color:var(--color-ink-soft)]'}`}
-                  >
-                    {state === 'all' ? '전체' : FOLIAGE_STATE_LABEL[state]}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      )}
 
       {layer !== 'mountain' && mode === 'species' && (
         <fieldset>

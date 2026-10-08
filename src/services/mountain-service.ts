@@ -1,4 +1,5 @@
 import type { DateKey } from '@/domain/date';
+import type { FoliageTreeGroup } from '@/domain/official-foliage-forecast';
 import {
   bloomSummary,
   buildFlowerSpots,
@@ -11,33 +12,21 @@ import {
   type FlowerSpot,
 } from './flower-service';
 import {
-  buildFoliageSpots,
-  countFoliage,
-  freshAmount,
-  groupFoliageRegions,
-  isColoring,
-  summarizeFoliage,
-  waveSummary,
-  winterAmount,
-  winterAt,
-  type FoliageCounts,
-  type FoliageRegion,
-  type FoliageSpot,
-} from './foliage-service';
+  buildOfficialForecastNow,
+  type OfficialForecastNow,
+} from './official-foliage-service';
+import { freshAmount, winterAmount, winterAt } from './terrain-season';
 
 /* ────────────────────────────────────────────────────────────
  * 지금 산.
  *
- * 바다가 "무엇이 잡히는가" 라면 산은 "무엇이 피고 물드는가" 다.
- * 그 안에 꽃과 단풍이 함께 있지만, 사용자가 둘 중 하나를 고르지는 않는다 —
- * 같은 산에서 계절만 달리해 일어나는 일이므로 **날짜가 고른다.**
+ * 한 화면 안에 성격이 다른 두 가지가 산다.
  *
- *   봄   꽃      남 → 북으로 올라오는 개화
- *   여름 녹음    산이 짙어진다
- *   가을 단풍    북 → 남으로 내려오는 물듦
- *   겨울 눈      산과 땅이 하얗다
+ *   봄 꽃    서비스가 해석한 개화 파동 (아직 DEMO 자료다)
+ *   가을 단풍 공식 절정 예측일의 시간 흐름 (해석하지 않는다)
  *
- * 이 파일은 그 판정을 한곳에서 하고, 화면은 결과만 읽는다.
+ * 단풍 쪽은 상태를 만들지 않는다. 공식 자료가 주는 것은 날짜뿐이고,
+ * 화면이 하는 일은 "그 날짜가 선택한 날에 닿았는가" 를 묻는 것까지다.
  * ──────────────────────────────────────────────────────────── */
 
 export type MountainPhase = 'flower' | 'green' | 'foliage' | 'winter';
@@ -48,27 +37,26 @@ export interface MountainNow {
   winter: number;
   /** 겨울의 앞머리(북부) 깊이 (0~1) */
   winterLead: number;
-  /** 신록이 얼마나 올라왔는가 (0~1). 권역별 offset 은 지형 레이어가 따로 쓴다. */
   fresh: number;
   flowerSpots: FlowerSpot[];
   flowerRegions: FlowerRegion[];
   flowerCounts: FlowerCounts;
-  foliageSpots: FoliageSpot[];
-  foliageRegions: FoliageRegion[];
-  foliageCounts: FoliageCounts;
-  /** 헤더 첫 줄 — 지금 전선이 어디까지 왔는가 */
+  /** 공식 단풍절정 예측 — 선택한 수종 기준 */
+  forecast: OfficialForecastNow;
+  /**
+   * 이 화면이 공식 예측을 앞세우는가.
+   *
+   * 단풍 구간 안이거나, 아직 첫 예측일 전인 가을이다. 뒤쪽까지 포함하는
+   * 것은 10월 초의 지도가 할 말이 '여름' 이 아니기 때문이다 —
+   * 그때 사용자가 찾는 것은 '언제부터인가' 다.
+   */
+  forecastLeads: boolean;
   headline: string;
-  /** 타임라인 한 줄 — 상태 내역 */
   caption: string;
 }
 
 const PHASE_HEADLINE: Record<'green' | 'winter', string> = {
   green: '여름 · 산이 짙어졌습니다',
-  /*
-   * '눈이 쌓입니다' 라고 쓰지 않는다. 지도는 관측한 적설을 그리는 것이
-   * 아니라 잎을 떨군 겨울 산의 색을 그린다 — 글이 그림보다 앞서 나가면
-   * 사용자는 없는 정보를 읽는다.
-   */
   winter: '겨울 · 산이 쉬어 갑니다',
 };
 
@@ -80,86 +68,74 @@ const PHASE_CAPTION: Record<'green' | 'winter', string> = {
 /**
  * 지형을 칠하는 데 필요한 것만.
  *
- * 이 값들은 산 화면에서만 쓴다. 바다와 철새에서는 지도를 덧칠하지 않으므로
- * (MapScreen 의 '지형의 계절색은 산에서만 칠한다' 참고) 아예 부르지 않는다 —
- * 날짜를 끄는 동안 매 프레임 도는 계산이라, 칠하지도 않을 것을 세면 그만큼 무겁다.
+ * 산 화면에서만 부른다 — 바다와 하늘에서는 지도를 덧칠하지 않는다.
  */
 export interface TerrainNow {
-  /** 중부 기준 겨울 깊이 — 문구와 국면 판정에 쓰는 한 값 */
   winter: number;
-  /**
-   * 겨울의 앞머리(북부) 깊이.
-   *
-   * 겨울이 권역마다 다르게 오므로 '나라가 겨울인가' 를 중부 값 하나로 물으면
-   * 북쪽 산이 이미 겨울색인 12월 초에 화면이 '여름' 이라고 답한다.
-   */
   winterLead: number;
   fresh: number;
-  foliageSpots: FoliageSpot[];
-  foliageRegions: FoliageRegion[];
-  foliageCounts: FoliageCounts;
 }
 
 export function buildTerrainNow(date: DateKey): TerrainNow {
-  const foliageSpots = buildFoliageSpots(date);
   return {
     winter: winterAmount(date),
     winterLead: winterAt(date, 0),
     fresh: freshAmount(date),
-    foliageSpots,
-    foliageRegions: groupFoliageRegions(foliageSpots),
-    foliageCounts: countFoliage(foliageSpots),
   };
 }
 
-/**
- * 지금 산.
- *
- * 산 화면에서만 부른다. 예전에는 바다를 보는 중에도 지형색 때문에 이 계산이
- * 필요해서 꽃만 끄는 스위치(withFlowers)를 두었는데, 지금은 바다·철새가
- * 지도를 덧칠하지 않으므로 그 스위치가 있을 자리가 없다.
- */
-export function buildMountainNow(date: DateKey, terrain: TerrainNow): MountainNow {
-  const { winter, winterLead, fresh, foliageSpots, foliageRegions, foliageCounts } = terrain;
+export function buildMountainNow(
+  date: DateKey,
+  terrain: TerrainNow,
+  treeGroup: FoliageTreeGroup,
+): MountainNow {
+  const { winter, winterLead, fresh } = terrain;
 
   const flowerSpots = buildFlowerSpots(date);
   const flowerRegions = groupFlowerRegions(flowerSpots);
   const flowerCounts = countFlowers(flowerSpots);
+  const forecast = buildOfficialForecastNow(date, treeGroup);
+
+  const blooming = flowerRegions.some((r) => isBlooming(r.state));
 
   /*
-   * 꽃이 먼저다. 봄에는 단풍 데이터가 전부 '아직' 이라 겹칠 일이 없고,
-   * 가을에는 파동 3종이 전부 끝나 있어 꽃이 활성이 되지 않는다.
-   * 둘 다 조용한 때만 계절(녹음 · 눈)이 화면을 말한다.
+   * 단풍 국면은 공식 예측 구간 안이다.
+   *
+   * 시작일도 종료일도 지어내지 않는다 — 이 수종의 가장 이른 공식 절정
+   * 예측일부터 가장 늦은 날까지가 곧 구간이다. 그 앞이면 아직 녹음이고,
+   * 그 뒤는 겨울이 받아 간다.
    */
-  const blooming = flowerRegions.some((r) => isBlooming(r.state));
-  const coloring = foliageRegions.some((r) => isColoring(r.state));
+  const inForecastWindow =
+    forecast.season !== null && date >= forecast.season.first && date <= forecast.season.last;
 
   const phase: MountainPhase = blooming
     ? 'flower'
-    : coloring
+    : inForecastWindow
       ? 'foliage'
-      : /*
-         * 겨울이 **어디에서든** 시작되었는가로 판정한다.
-         * 중부 값 하나로 물으면 북쪽 산이 이미 겨울색인 12월 초 엿새 동안
-         * 화면이 '여름 · 산이 짙어졌습니다' 라고 말한다.
-         */
-        winterLead >= 0.12
+      : winterLead >= 0.12
         ? 'winter'
         : 'green';
+
+  /*
+   * 공식 예측 구간 밖이어도 가을에는 공식 날짜를 먼저 말한다.
+   * "여름 · 산이 짙어졌습니다" 는 10월 초의 지도가 할 말이 아니다.
+   */
+  const beforeSeason =
+    phase === 'green' && forecast.season !== null && date < forecast.season.first;
 
   const headline =
     phase === 'flower'
       ? bloomSummary(flowerRegions)
-      : phase === 'foliage'
-        ? waveSummary(foliageRegions, winter)
-        : PHASE_HEADLINE[phase];
+      : phase === 'foliage' || beforeSeason
+        ? forecast.headline
+        : PHASE_HEADLINE[phase === 'winter' ? 'winter' : 'green'];
 
   const caption =
     phase === 'flower'
       ? summarizeFlowers(flowerCounts)
-      : phase === 'foliage'
-        ? summarizeFoliage(foliageCounts, winter)
-        : PHASE_CAPTION[phase];
+      : phase === 'foliage' || beforeSeason
+        ? forecast.caption
+        : PHASE_CAPTION[phase === 'winter' ? 'winter' : 'green'];
 
   return {
     phase,
@@ -169,15 +145,14 @@ export function buildMountainNow(date: DateKey, terrain: TerrainNow): MountainNo
     flowerSpots,
     flowerRegions,
     flowerCounts,
-    foliageSpots,
-    foliageRegions,
-    foliageCounts,
+    forecast,
+    forecastLeads: phase === 'foliage' || beforeSeason,
     headline,
     caption,
   };
 }
 
-/** 지금 산에서 지도가 그릴 것이 있는가 (지역별 보기에서 빈 화면 안내를 띄울지) */
+/** 지금 산에서 지도가 그릴 것이 있는가 */
 export function mountainHasSubject(now: MountainNow): boolean {
   return now.phase === 'flower' || now.phase === 'foliage';
 }

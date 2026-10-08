@@ -31,6 +31,10 @@ interface Props {
   count: number;
   filtered: boolean;
   counts: MapCounts;
+  /** 요약 아랫줄 — 산에서만 쓴다 */
+  caption?: string;
+  /** 무엇에 근거한 화면인지 한 줄 */
+  sourceNote?: string;
   /**
    * 모바일에서는 내역 줄을 접고 제목을 서비스명으로 쓴다.
    *
@@ -48,6 +52,8 @@ export function CurrentStateSummary({
   count,
   filtered,
   counts,
+  caption,
+  sourceNote,
   compact = false,
 }: Props) {
   const unit = layer === 'mountain' ? '곳' : mode === 'zone' ? '곳' : '종';
@@ -73,6 +79,7 @@ export function CurrentStateSummary({
                 <span className="font-semibold text-[color:var(--color-ink-soft)]">
                   {headline}
                 </span>
+                {caption && ` · ${caption}`}
                 {layer === 'mountain' && filtered && ` · 지도에 ${count}곳`}
               </>
             ) : (
@@ -86,6 +93,11 @@ export function CurrentStateSummary({
               </>
             )}
           </p>
+          {sourceNote && (
+            <p className="truncate text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
+              {sourceNote}
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -110,6 +122,16 @@ export function CurrentStateSummary({
           {!leadsWithHeadline && (
             <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
               <Breakdown mode={mode} counts={counts} filtered={filtered} unit={unit} />
+            </p>
+          )}
+          {leadsWithHeadline && caption && (
+            <p className="truncate text-[11px] leading-[15px] text-[color:var(--color-muted)]">
+              {caption}
+            </p>
+          )}
+          {sourceNote && (
+            <p className="truncate text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
+              {sourceNote}
             </p>
           )}
           {layer === 'mountain' && filtered && (

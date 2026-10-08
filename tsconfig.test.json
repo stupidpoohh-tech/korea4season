@@ -11,6 +11,6 @@
     "jsx": "react-jsx",
     "types": ["node"]
   },
-  "include": ["src/domain/**/*.ts", "src/data-sources/**/*", "src/services/bird-service.ts", "tests/**/*.ts"],
+  "include": ["src/domain/**/*.ts", "src/data-sources/**/*", "src/services/bird-service.ts", "src/services/nature-service.ts", "src/services/official-foliage-service.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "scripts", ".next", ".test-out"]
 }

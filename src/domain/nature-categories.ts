@@ -50,7 +50,11 @@ export const NATURE_CATEGORIES: NatureCategoryConfig[] = [
     label: '산',
     icon: '⛰️',
     enabled: true,
-    dataCategories: ['flower', 'foliage'],
+    /*
+     * 단풍은 여기 없다. occurrence 로 표현되는 자료가 아니라
+     * 공식 절정 예측일이고, 지도에서 지형의 색으로만 나타난다.
+     */
+    dataCategories: ['flower'],
     headline: '지금, 산',
   },
   {

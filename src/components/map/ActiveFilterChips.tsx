@@ -1,7 +1,6 @@
 'use client';
 
 import type { MapLayerId } from '@/domain/nature-categories';
-import { FOLIAGE_STATE_LABEL } from '@/services/foliage-service';
 import { FLOWER_WAVE_LABEL } from '@/domain/flower-labels';
 import { SEASON_FILTERS, type MapMode } from '@/services/map-service';
 import { useMapStore } from '@/store/map-store';
@@ -37,8 +36,6 @@ export function ActiveFilterChips({
   const toggleLegal = useMapStore((s) => s.toggleLegalOnly);
   const focusedSpecies = useMapStore((s) => s.focusedSpecies);
   const focusSpecies = useMapStore((s) => s.focusSpecies);
-  const foliageState = useMapStore((s) => s.foliageState);
-  const setFoliageState = useMapStore((s) => s.setFoliageState);
   const flowerSpecies = useMapStore((s) => s.flowerSpecies);
   const setFlowerSpecies = useMapStore((s) => s.setFlowerSpecies);
 
@@ -50,14 +47,6 @@ export function ActiveFilterChips({
   }
 
   if (layer === 'mountain') {
-    if (foliageState !== 'all') {
-      chips.push({
-        key: 'foliage',
-        label: FOLIAGE_STATE_LABEL[foliageState],
-        tone: 'season',
-        clear: () => setFoliageState('all'),
-      });
-    }
     if (flowerSpecies !== 'all') {
       chips.push({
         key: 'flower',

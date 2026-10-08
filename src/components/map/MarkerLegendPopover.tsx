@@ -2,12 +2,8 @@
 
 import { useEffect, type RefObject } from 'react';
 import type { MapLayerId } from '@/domain/nature-categories';
-import {
-  FOLIAGE_STATE_LABEL,
-  FOLIAGE_STATES,
-  STATE_PROGRESS,
-  mountainColorAt,
-} from '@/services/foliage-service';
+import { PEAK_CRITERION } from '@/domain/official-foliage-forecast';
+import { PEAK_REACHED_PROGRESS, mountainColorAt } from '@/services/terrain-season';
 import { FLOWER_COLOR } from '@/services/flower-service';
 import { FLOWER_WAVE_LABEL } from '@/domain/flower-labels';
 import type { MountainPhase } from '@/services/mountain-service';
@@ -33,21 +29,6 @@ const ITEMS: { swatch: string; label: string; hint: string }[] = [
   { swatch: 'var(--color-sea)', label: '보통', hint: '있긴 있을 때' },
 ];
 
-/*
- * 단풍은 마커가 아니라 지형의 색으로 말한다. 그래서 범례도 다르다 —
- * 무슨 그림인지가 아니라 무슨 색인지를 설명한다.
- *
- * 색 조각 옆에 반드시 상태 이름을 적는다. 색만으로 뜻을 전하면
- * 색을 구분하기 어려운 사람에게는 지도가 아무 말도 하지 않는 셈이 된다.
- */
-const FOLIAGE_HINT: Record<(typeof FOLIAGE_STATES)[number], string> = {
-  pre: '아직 초록입니다',
-  starting: '물들기 시작했어요',
-  good: '지금 가도 좋아요',
-  peak: '가장 좋을 때',
-  ending: '잎이 지고 있어요',
-  ended: '겨울 산으로 넘어갑니다',
-};
 
 /*
  * 철새는 같은 그림의 존재감만 바뀐다 — 상태마다 다른 캐릭터로 갈아 끼우지 않는다.
@@ -206,30 +187,39 @@ export function MarkerLegendPopover({
         <p className="text-[13px] font-semibold tracking-tight">지도 보는 법</p>
 
         <ul className="space-y-1">
-          {FOLIAGE_STATES.map((state) => (
-            <li key={state} className="flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                style={{ background: mountainColorAt(STATE_PROGRESS[state]).face }}
-              />
-              <span className="font-medium text-[color:var(--color-ink-soft)]">
-                {FOLIAGE_STATE_LABEL[state]}
-              </span>
-              <span className="text-[color:var(--color-faint)]">{FOLIAGE_HINT[state]}</span>
-            </li>
-          ))}
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+              style={{ background: mountainColorAt(0).face }}
+            />
+            <span className="font-medium text-[color:var(--color-ink-soft)]">예측일 전</span>
+            <span className="text-[color:var(--color-faint)]">지도 원래 색 그대로</span>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+              style={{ background: mountainColorAt(PEAK_REACHED_PROGRESS).face }}
+            />
+            <span className="font-medium text-[color:var(--color-ink-soft)]">예측일 도달</span>
+            <span className="text-[color:var(--color-faint)]">공식 절정 예측일이 지났습니다</span>
+          </li>
         </ul>
 
+        {/*
+          신뢰 경계. 지도가 보여 주는 것이 '지금 단풍 현황' 이 아니라는 것을
+          여기서 분명히 말한다 — 공식 자료가 주는 것은 날짜뿐이다.
+        */}
         <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
-          지도의 산과 숲 색이 그 지역의 단풍 상태입니다. 날짜를 넘기면 색이 북쪽에서
-          남쪽으로 내려갑니다 — 봄의 꽃과 정확히 반대 방향입니다.
+          2026 공식 단풍절정 예측지도 기반. 각 수종의 {PEAK_CRITERION} 시점을 절정 기준으로
+          사용합니다. 지도 색 변화는 공식 절정 예측일의 시간적 흐름을 시각화한 것입니다.
         </p>
 
         <p className="text-[color:var(--color-faint)]">
-          지역별 보기에는 지도에 그림을 놓지 않습니다 — 단풍은 표시가 늘어나는 일이 아니라
-          <span className="text-[color:var(--color-ink-soft)]"> 산이 물드는 일</span>이기 때문입니다.
-          어느 산인지 짚어 보려면 명소별로 바꾸세요.
+          실시간 단풍 현황이 아닙니다. 시작일 · 종료일 · 현재 단풍률은 공식 자료에 없으므로
+          표시하지 않습니다. 공식 예측 지점이 없는 지역에는 단풍색을 입히지 않습니다
+          (겨울과 신록은 공식 예측과 별개 축이라 그 지역에도 나타납니다).
         </p>
       </div>
     );

@@ -5,7 +5,11 @@ import { Sheet } from '@/components/common/Sheet';
 import type { Location, NatureEntity, ResolvedOccurrence } from '@/domain/types';
 
 /* ────────────────────────────────────────────────────────────
- * 산 명소 상세 — 꽃과 단풍이 같은 카드를 쓴다.
+ * 산 명소 상세 — 지금은 꽃만 쓴다.
+ *
+ * 단풍은 이 카드를 쓰지 않는다. 시작일 · 절정 구간 · 종료일 세 칸을
+ * 채워야 하는 모양인데, 공식 자료에는 절정 예측일 하나뿐이다.
+ * 빈 칸을 메우려면 없는 날짜를 지어내야 한다.
  *
  * 이 단계에서 답하는 것은 넷뿐이다 —
  * 지금 어떤 상태인지, 언제 시작했는지, 절정이 언제인지, 지도 어디인지.
@@ -21,10 +25,7 @@ const TONE: Record<string, string> = {
   ended: 'text-[color:var(--color-faint)]',
 };
 
-/**
- * 꽃과 단풍은 같은 것을 묻는다 — 지금 어떤 상태이고, 언제 시작했고,
- * 절정이 언제이고, 지도 어디인가. 그래서 카드도 하나만 둔다.
- */
+/** 지금 어떤 상태이고, 언제 시작했고, 절정이 언제이고, 지도 어디인가 */
 export interface MountainSpotView {
   location: Location;
   entity: NatureEntity;
@@ -40,14 +41,14 @@ export interface MountainSpotView {
 export function MountainDetailSheet({
   spot,
   date,
-  /** '꽃' / '단풍' — 시트 제목과 첫 줄 이름이 달라진다 */
+  /** 시트 제목과 첫 줄 이름 */
   kind,
   onClose,
   onFocusMap,
 }: {
   spot: MountainSpotView | null;
   date: DateKey;
-  kind: '꽃' | '단풍';
+  kind: '꽃';
   onClose: () => void;
   onFocusMap: () => void;
 }) {
@@ -95,7 +96,7 @@ export function MountainDetailSheet({
           </div>
 
           <dl className="divide-y divide-[color:var(--color-line-soft)]">
-            <Row label={kind === '꽃' ? '개화' : '첫 단풍'}>
+            <Row label="개화">
               {formatKoreanDate(toDateKey(spot.window.start))}
             </Row>
             {spot.peakWindow && (
@@ -104,7 +105,7 @@ export function MountainDetailSheet({
                 {formatKoreanDate(toDateKey(spot.peakWindow.end))}
               </Row>
             )}
-            <Row label={kind === '꽃' ? '지는 때' : '끝물'}>
+            <Row label="지는 때">
               {formatKoreanDate(toDateKey(spot.window.end))}
             </Row>
             <Row label="보는 날짜">{formatKoreanDate(date)}</Row>

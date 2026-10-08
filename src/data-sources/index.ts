@@ -1,6 +1,5 @@
 import { birdDataSource } from './bird/adapter';
 import { flowerDataSource } from './flower/adapter';
-import { foliageDataSource } from './foliage/adapter';
 import { marineDataSource } from './marine';
 import { wildlifeDataSource } from './wildlife/adapter';
 import type { NatureCategory } from '@/domain/types';
@@ -9,8 +8,13 @@ import type { NatureDataSource } from './types';
 /**
  * 데이터 소스 레지스트리.
  *
- * Phase 1 은 바다, Phase 2 는 산(꽃 · 단풍)이다.
+ * Phase 1 은 바다, Phase 2 는 산이다.
  * 철새 · 자연현상 소스는 삭제하지 않고 enabled 만 false 로 둔다.
+ *
+ * 단풍 소스는 아예 없다. 단풍은 시작일 · 절정 구간 · 종료일을 가정해서
+ * 만들던 자료였는데, 지금은 공식 절정 예측일만 쓴다
+ * (src/domain/official-foliage-forecast.ts). 가정한 날짜를 레지스트리에
+ * 남겨 두면 도감과 추천이 그 날짜를 사실처럼 다시 말하게 된다.
  * 데이터 파일과 adapter 는 그대로 살아 있으므로
  * 다시 켤 때는 이 플래그 하나만 바꾸면 지도 · 타임라인 · 도감 · 추천이 전부 따라온다.
  */
@@ -24,7 +28,6 @@ interface RegisteredSource {
 const REGISTRY: RegisteredSource[] = [
   { source: marineDataSource, categories: ['fishing'], enabled: true },
   { source: flowerDataSource, categories: ['flower'], enabled: true },
-  { source: foliageDataSource, categories: ['foliage'], enabled: true },
   { source: birdDataSource, categories: ['bird'], enabled: false },
   // wildlife 는 해양생물(물범·돌고래)과 자연현상(반딧불이·상고대)을 함께 담는다
   { source: wildlifeDataSource, categories: ['marine', 'nature'], enabled: false },
