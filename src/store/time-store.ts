@@ -23,6 +23,8 @@ export const PLAYBACK_DAYS_PER_SECOND = 52;
 interface TimeState {
   selectedDate: DateKey;
   isPlaying: boolean;
+  playbackRate: 1 | 0.25;
+  setPlaybackRate: (rate: 1 | 0.25) => void;
   /** 사용자가 슬라이더를 직접 잡고 있는 동안 true */
   isScrubbing: boolean;
   setDate: (date: DateKey, options?: { stopPlayback?: boolean }) => void;
@@ -40,6 +42,8 @@ interface TimeState {
 export const useTimeStore = create<TimeState>((set, get) => ({
   selectedDate: todayKey(),
   isPlaying: false,
+  playbackRate: 1,
+  setPlaybackRate: (playbackRate) => set({ playbackRate }),
   isScrubbing: false,
 
   setDate: (date, options) => {

@@ -94,7 +94,7 @@ export function CurrentStateSummary({
             )}
           </p>
           {sourceNote && (
-            <p className="truncate text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
+            <p className="text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
               {sourceNote}
             </p>
           )}
@@ -130,7 +130,7 @@ export function CurrentStateSummary({
             </p>
           )}
           {sourceNote && (
-            <p className="truncate text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
+            <p className="text-[10.5px] leading-[14px] text-[color:var(--color-faint)]">
               {sourceNote}
             </p>
           )}

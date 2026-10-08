@@ -1,56 +1,33 @@
 'use client';
 
-import type { PaintAnchor } from '@/services/official-foliage-service';
-import { shortDate } from '@/services/official-foliage-service';
-import { VIEW } from './terrain-shapes';
+import type { DateKey } from '@/domain/date';
+import { shortDate, type PaintAnchor } from '@/services/official-foliage-service';
 
-/* ────────────────────────────────────────────────────────────
- * 공식 예측 지점 보기.
- *
- * 기본은 꺼짐이다. 지점 이름이 늘 떠 있으면 지도가 아니라 공공기관 포스터가
- * 된다 — 사용자가 읽는 것은 색의 흐름이지 지명 목록이 아니다.
- *
- * 켜면 지도에 이어진 공식 지점만 작은 점과 날짜로 보인다.
- * 예측일이 지난 곳은 채워지고, 아직인 곳은 테두리만 남는다.
- * ──────────────────────────────────────────────────────────── */
-
-export function ForecastPointsOverlay({ anchors }: { anchors: PaintAnchor[] }) {
-  if (anchors.length === 0) return null;
-
+export function ForecastPointsOverlay({ anchors, date, selectedId, onSelect }: {
+  anchors: PaintAnchor[];
+  date: DateKey;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
   return (
-    <svg
-      aria-hidden
-      viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
-      className="pointer-events-none absolute inset-0 h-full w-full"
-    >
+    <div className="pointer-events-none absolute inset-0" aria-label="절정 예측 지점">
       {anchors.map((a) => {
-        const x = a.anchor.x * VIEW.width;
-        const y = a.anchor.y * VIEW.height;
+        const selected = selectedId === a.id;
+        const today = date === a.peakForecastDate;
+        const passed = date > a.peakForecastDate;
+        const state = today ? '선택 날짜에 절정 예측' : passed ? '예측일 지남' : '예측일 전';
         return (
-          <g key={a.id}>
-            <circle
-              cx={x}
-              cy={y}
-              r={6}
-              fill={a.reached ? '#b8532a' : '#ffffff'}
-              stroke={a.reached ? '#ffffff' : '#6c7883'}
-              strokeWidth={2}
-            />
-            <text
-              x={x + 11}
-              y={y + 5}
-              fontSize={16}
-              fontWeight={600}
-              fill="#000a14"
-              stroke="#ffffff"
-              strokeWidth={4}
-              paintOrder="stroke"
-            >
-              {a.name} {shortDate(a.peakForecastDate)}
-            </text>
-          </g>
+          <button key={a.id} type="button"
+            aria-label={`${a.name} · ${shortDate(a.peakForecastDate)} · ${state}`}
+            aria-pressed={selected} title={`${a.name} · ${shortDate(a.peakForecastDate)} · ${state}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onSelect(a.id); }}
+            className="pointer-events-auto absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+            style={{ left: `${a.anchor.x * 100}%`, top: `${a.anchor.y * 100}%`, zIndex: selected ? 2 : 1 }}>
+            <span className={`block rounded-full border-2 ${selected ? 'h-4 w-4 ring-4 ring-amber-200' : 'h-3 w-3'} ${today ? 'border-white bg-[#b8532a]' : passed ? 'border-white bg-[#6c7883]' : 'border-[#6c7883] bg-white'}`} />
+          </button>
         );
       })}
-    </svg>
+    </div>
   );
 }

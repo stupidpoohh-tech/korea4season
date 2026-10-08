@@ -13,7 +13,6 @@ import {
 } from '@/services/map-service';
 import { seasonAxesAt } from '@/services/terrain-season';
 import { FLOWER_STATE_LABEL, getFlowerPicks } from '@/services/flower-service';
-import { PEAK_CRITERION } from '@/domain/official-foliage-forecast';
 import type { ForecastRow } from '@/services/official-foliage-service';
 import {
   buildMountainNow,
@@ -33,6 +32,7 @@ import type { MapPosition } from '@/domain/projection';
 import { BASE_MAP_HEIGHT_CQW } from '@/lib/map-asset';
 import { SnowfallOverlay } from './SnowfallOverlay';
 import { ForecastList } from './ForecastList';
+import { ForecastSheet } from './ForecastSheet';
 import { ForecastPointsOverlay } from './ForecastPointsOverlay';
 import { useWideScreen } from '@/lib/use-wide-screen';
 import { useMapStore } from '@/store/map-store';
@@ -369,6 +369,11 @@ export function MapScreen() {
   /* ── 상단 계층 ──────────────────────────────────────────── */
   const [filterOpen, setFilterOpen] = useState(false);
   const [picksOpen, setPicksOpen] = useState(false);
+  const [forecastOpen, setForecastOpen] = useState(false);
+  const [forecastSelection, setForecastSelection] = useState<{ id: string; group: string } | null>(null);
+  const selectedForecast = forecastLeads && forecastSelection?.group === treeGroup
+    ? mountain?.forecast.rows.find((r) => r.forecast.locationId === forecastSelection.id) ?? null
+    : null;
 
   /* 철새 Prototype 에는 거는 축이 아직 없다 */
   const filtered =
@@ -409,13 +414,15 @@ export function MapScreen() {
   /**
    * 공식 목록에서 고른 지점을 지도에서 집어 준다.
    *
-   * 지도에 이을 anchor 가 없는 지점(공식 자료에는 있으나 좌표가 없는 곳)은
-   * 목록에서 누를 수 없다 — 좌표를 지어내서 대충 올리지 않는다.
+   * 좌표 미연결 지점도 날짜를 확인할 수 있다. 위치를 추측해 찍지는 않는다.
    */
   const showForecastOnMap = useCallback(
     (row: ForecastRow) => {
-      if (!row.position) return;
-      focusOn(row.position, { scale: 1.5, anchorX: 0.36 });
+      useTimeStore.getState().pause();
+      setForecastSelection({ id: row.forecast.locationId, group: row.forecast.treeGroup });
+      setForecastOpen(false);
+      useMapStore.setState({ showForecastPoints: true });
+      if (row.position) focusOn(row.position, { scale: 1.5, anchorX: 0.5, anchorY: 0.45 });
     },
     [focusOn],
   );
@@ -478,7 +485,7 @@ export function MapScreen() {
       headline={bird?.headline ?? mountain?.headline ?? ''}
       /* 단풍에서는 공식 날짜를 센 결과를 요약 아랫줄에 둔다 */
       caption={forecastLeads ? mountain?.caption : undefined}
-      sourceNote={forecastLeads ? `공식 예측 · ${PEAK_CRITERION} 기준` : undefined}
+      sourceNote={forecastLeads ? '2026 절정 예측 · 실시간 단풍 현황 아님' : undefined}
       phase={phase}
       forecastLeads={forecastLeads}
       mode={layout.mode}
@@ -516,7 +523,7 @@ export function MapScreen() {
             지점의 날짜뿐이므로, 목록도 지점과 날짜로 둔다.
           */}
           {forecastLeads && mountain ? (
-            <ForecastList forecast={mountain.forecast} onSelect={showForecastOnMap} />
+            <ForecastList forecast={mountain.forecast} onSelect={showForecastOnMap} selectedId={selectedForecast?.forecast.locationId} />
           ) : layer === 'mountain' && layout.mode === 'zone' ? (
             <MountainRegionList
               title={isFlower ? '남쪽부터 북쪽으로' : '북쪽부터 남쪽으로'}
@@ -586,7 +593,12 @@ export function MapScreen() {
                   )}
                   {/* 공식 예측 지점 보기 — 기본은 꺼짐 */}
                   {forecastLeads && showForecastPoints && (
-                    <ForecastPointsOverlay anchors={mountain.forecast.paint} />
+                    <ForecastPointsOverlay anchors={mountain.forecast.paint} date={date}
+                      selectedId={selectedForecast?.forecast.locationId ?? null}
+                      onSelect={(id) => {
+                        const row = mountain.forecast.rows.find((r) => r.forecast.locationId === id);
+                        if (row) showForecastOnMap(row);
+                      }} />
                   )}
                   {/*
                    * 눈은 겨울에만 내린다.
@@ -601,13 +613,19 @@ export function MapScreen() {
             }
           />
 
+          {forecastLeads && (
+            <p className="pointer-events-none absolute inset-x-3 top-1 z-20 mx-auto w-fit rounded-lg bg-white/90 px-2 py-1 text-center text-[10.5px] text-[color:var(--color-muted)]">
+              산의 가을색 = 예측일 도달 · 현재 단풍률 아님
+            </p>
+          )}
+
           {/*
             지도 아래 한 줄. 가운데는 행동으로 넘어가는 자리(추천),
             오른쪽은 지도 자체를 다루는 확대/축소다.
             가운데 열을 auto 로 두어 CTA 는 컨트롤 폭과 무관하게 가운데 온다.
           */}
-          <div className="pointer-events-none absolute inset-x-2.5 bottom-3 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <span />
+          <div className={"pointer-events-none absolute inset-x-2.5 bottom-3 z-20 items-center gap-2 " + (forecastLeads ? "flex justify-between" : "grid grid-cols-[1fr_auto_1fr]")}>
+            {!forecastLeads && <span />}
             {/*
               철새 Prototype 에는 추천이 없다.
               추천을 만들려면 어디로 가면 좋은지 말해야 하는데, 지금 들고 있는 것은
@@ -617,9 +635,14 @@ export function MapScreen() {
               단풍에는 추천 시트를 두지 않는다. 추천은 '어디가 좋은지' 를
               말하는 것인데, 공식 자료가 주는 것은 날짜뿐이다 —
               어느 산이 더 좋은지는 여기서 말할 수 없다.
-              대신 공식 목록을 좌측 레일에 늘 띄워 둔다.
+              데스크톱은 레일, 모바일은 시트에서 같은 예측 목록을 연다.
             */}
-            {layer === 'bird' || forecastLeads ? (
+            {forecastLeads ? (
+              <button type="button" onClick={() => { useTimeStore.getState().pause(); setForecastOpen(true); }}
+                className="pointer-events-auto min-h-11 rounded-full border border-[color:var(--color-line)] bg-white px-4 text-[13px] font-medium shadow-[var(--shadow-soft)] lg:invisible">
+                예측 장소·날짜 보기
+              </button>
+            ) : layer === 'bird' ? (
               <span />
             ) : (
               <WeeklyRecommendationCTA
@@ -660,6 +683,23 @@ export function MapScreen() {
         </div>
       </div>
 
+      {selectedForecast && (
+        <div className="flex shrink-0 items-center gap-2 rounded-xl border border-[color:var(--color-line)] bg-white px-3 py-2" aria-label="선택한 예측 장소">
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold">{selectedForecast.forecast.locationName} · {mountain?.forecast.groupLabel}</p>
+            <p className="text-[11.5px] text-[color:var(--color-muted)]">
+              절정 예측 {formatKoreanDate(selectedForecast.forecast.peakForecastDate as typeof date)}
+              {!selectedForecast.position && ' · 지도 위치 미연결'}
+            </p>
+          </div>
+          <button type="button" onClick={() => setDate(selectedForecast.forecast.peakForecastDate as typeof date, { stopPlayback: true })}
+            className="min-h-11 shrink-0 rounded-lg border border-[color:var(--color-line)] px-2 text-[11px]">
+            이 예측일로 이동
+          </button>
+          <button type="button" onClick={() => setForecastSelection(null)} aria-label="예측 장소 선택 해제" className="h-11 w-8 shrink-0">✕</button>
+        </div>
+      )}
+
       <NatureTimeline
         date={date}
         /*
@@ -682,6 +722,12 @@ export function MapScreen() {
             : undefined
         }
       />
+
+      {forecastLeads && mountain && (
+        <ForecastSheet open={forecastOpen} onClose={() => setForecastOpen(false)}
+          forecast={mountain.forecast} onSelect={showForecastOnMap}
+          selectedId={selectedForecast?.forecast.locationId ?? null} />
+      )}
 
       <MarineFilterSheet
         open={filterOpen}

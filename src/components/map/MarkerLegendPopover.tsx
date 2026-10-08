@@ -212,7 +212,7 @@ export function MarkerLegendPopover({
           여기서 분명히 말한다 — 공식 자료가 주는 것은 날짜뿐이다.
         */}
         <p className="border-t border-[color:var(--color-line-soft)] pt-2 text-[color:var(--color-muted)]">
-          2026 공식 단풍절정 예측지도 기반. 각 수종의 {PEAK_CRITERION} 시점을 절정 기준으로
+          2026 제공된 단풍절정 예측지도 기반. 발행처·원문·발행일은 확인 중입니다. 각 수종의 {PEAK_CRITERION} 시점을 절정 기준으로
           사용합니다. 지도 색 변화는 공식 절정 예측일의 시간적 흐름을 시각화한 것입니다.
         </p>
 

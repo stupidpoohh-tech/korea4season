@@ -120,20 +120,21 @@ export function buildMountainNow(
    * 공식 예측 구간 밖이어도 가을에는 공식 날짜를 먼저 말한다.
    * "여름 · 산이 짙어졌습니다" 는 10월 초의 지도가 할 말이 아니다.
    */
-  const beforeSeason =
-    phase === 'green' && forecast.season !== null && date < forecast.season.first;
+  const month = Number(date.slice(5, 7));
+  const forecastLeads = phase === 'foliage' ||
+    (month >= 9 && month <= 11 && phase !== 'winter' && phase !== 'flower');
 
   const headline =
     phase === 'flower'
       ? bloomSummary(flowerRegions)
-      : phase === 'foliage' || beforeSeason
+      : forecastLeads
         ? forecast.headline
         : PHASE_HEADLINE[phase === 'winter' ? 'winter' : 'green'];
 
   const caption =
     phase === 'flower'
       ? summarizeFlowers(flowerCounts)
-      : phase === 'foliage' || beforeSeason
+      : forecastLeads
         ? forecast.caption
         : PHASE_CAPTION[phase === 'winter' ? 'winter' : 'green'];
 
@@ -146,7 +147,7 @@ export function buildMountainNow(
     flowerRegions,
     flowerCounts,
     forecast,
-    forecastLeads: phase === 'foliage' || beforeSeason,
+    forecastLeads,
     headline,
     caption,
   };

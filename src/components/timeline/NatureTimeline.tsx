@@ -35,6 +35,8 @@ export function NatureTimeline({ date, caption, events }: Props) {
   usePlayback();
 
   const [expanded, setExpanded] = useState(false);
+  const playbackRate = useTimeStore((s) => s.playbackRate);
+  const setPlaybackRate = useTimeStore((s) => s.setPlaybackRate);
   const shiftDays = useTimeStore((s) => s.shiftDays);
   const goToToday = useTimeStore((s) => s.goToToday);
   const isToday = date === todayKey();
@@ -114,6 +116,13 @@ export function NatureTimeline({ date, caption, events }: Props) {
         >
           {expanded ? '▾' : '▴'}
         </button>
+      </div>
+      <div className={'mt-2 items-center gap-2 border-t border-[color:var(--color-line-soft)] pt-2 text-[11.5px] lg:flex ' + (expanded ? 'flex' : 'hidden')}>
+        <span className="text-[color:var(--color-muted)]">재생 속도</span>
+        <button type="button" aria-pressed={playbackRate === 1} onClick={() => setPlaybackRate(1)}
+          className={'min-h-8 rounded-md px-2 ' + (playbackRate === 1 ? 'bg-[color:var(--color-line-soft)] font-semibold' : '')}>기본 · 약 7초</button>
+        <button type="button" aria-pressed={playbackRate === 0.25} onClick={() => setPlaybackRate(0.25)}
+          className={'min-h-8 rounded-md px-2 ' + (playbackRate === 0.25 ? 'bg-[color:var(--color-line-soft)] font-semibold' : '')}>천천히 · 약 28초</button>
       </div>
     </section>
   );

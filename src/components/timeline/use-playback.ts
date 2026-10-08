@@ -22,7 +22,7 @@ export function usePlayback() {
     const tick = (now: number) => {
       const delta = Math.min(now - last, 120) / 1000;
       last = now;
-      carry += delta * PLAYBACK_DAYS_PER_SECOND;
+      carry += delta * PLAYBACK_DAYS_PER_SECOND * useTimeStore.getState().playbackRate;
 
       const steps = Math.floor(carry);
       if (steps >= 1) {
