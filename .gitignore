@@ -16,3 +16,4 @@ public/map/__check.svg
 .dev.vars
 cloudflare-env.d.ts
 .test-out/
+.bench-out/

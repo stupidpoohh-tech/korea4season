@@ -1,27 +1,33 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "korea4season",
-  "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-31",
-  "compatibility_flags": ["nodejs_compat"],
 
-  // OpenNext 가 생성한 정적 자산(빌드 산출물 + public/)
+  // main 이 없다. 이 프로젝트에는 Worker 가 없고 정적 파일만 있다.
+  //
+  // 예전에는 OpenNext 가 구운 Worker 가 모든 화면 요청을 받았다. 그런데 이 앱이
+  // 서버에서 하던 일은 사실상 '오늘' 을 최신으로 유지하는 것 하나뿐이었고,
+  // 그 하나 때문에 페이지를 여는 모든 요청이 Worker 를 깨웠다 —
+  // /map 한 번이 자료 가공에만 17.6ms 를 썼다 (Workers Free 한도는 요청당 10ms).
+  //
+  // 지금은 '오늘' 을 브라우저가 정한다(src/lib/use-today.ts). HTML 에 날짜가
+  // 들어가지 않으므로 전부 미리 구울 수 있고, 미리 구운 파일은 Worker 를 거치지
+  // 않는다. Cloudflare 문서의 표현 그대로 "Requests to static assets are free
+  // and unlimited" 이다.
+  //
+  // run_worker_first 는 두지 않는다. 그것을 켜면 정적 파일 요청까지 Worker 를
+  // 깨워 과금 대상이 되고, 이 설정의 목적이 통째로 무너진다.
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "directory": "out",
+    // 없는 주소는 Next 가 구운 404 화면을 돌려준다
+    "not_found_handling": "404-page"
   },
 
-  "observability": {
-    "enabled": true
-  },
+  "observability": { "enabled": true }
 
-  // ISR 증분 캐시.
-  // 이 캐시가 없으면 빌드 시점의 "오늘" 이 그대로 굳는다 —
-  // 모든 라우트가 revalidate = 900 인 이유가 날짜 갱신 하나이기 때문이다.
-  "kv_namespaces": [
-    {
-      "binding": "NEXT_INC_CACHE_KV",
-      "id": "0bbbc1e9c7bc4aabb6a54946411e1e78"
-    }
-  ]
+  // KV(NEXT_INC_CACHE_KV)는 더 이상 쓰지 않는다 — ISR 재검증이 없기 때문이다.
+  // 바인딩만 걷었고 네임스페이스 자체는 지우지 않았다. 되돌릴 때 필요하고,
+  // 남아 있어도 읽지 않으면 비용이 들지 않는다.
+  // 되돌리려면: 이 파일에 main/kv_namespaces 를 되살리고 next.config.ts 의
+  // output: 'export' 를 걷은 뒤 opennextjs-cloudflare 로 다시 구우면 된다.
 }

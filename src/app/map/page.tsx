@@ -1,6 +1,5 @@
-import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { MapScreen } from '@/components/map/MapScreen';
+import { MapMount } from '@/components/map/MapMount';
 
 export const metadata: Metadata = {
   title: '지도',
@@ -9,19 +8,12 @@ export const metadata: Metadata = {
 };
 
 /*
- * 지도는 '오늘'에서 출발한다.
+ * 이 페이지는 정적 파일 한 장이다.
  *
- * 이 페이지를 미리 구워 두면 HTML 에는 빌드한 날짜가 박히고,
- * 브라우저는 그 HTML 위에 오늘 날짜로 다시 그린다 — 서버 9월 2일 /
- * 클라이언트 9월 3일 같은 hydration 불일치가 그래서 났다.
- * 요청마다 그리게 해서 서버와 브라우저가 같은 '오늘'을 보게 한다.
+ * 지도가 '오늘' 에서 출발한다는 것은 그대로다. 다만 그 '오늘' 을 서버가 아니라
+ * 브라우저가 정한다 (components/map/MapMount.tsx). 그래서 HTML 에 날짜가
+ * 박히지 않고, 미리 구워 두어도 어긋나지 않는다.
  */
-export const dynamic = 'force-dynamic';
-
 export default function MapPage() {
-  return (
-    <Suspense fallback={<div className="h-[70dvh]" />}>
-      <MapScreen />
-    </Suspense>
-  );
+  return <MapMount />;
 }

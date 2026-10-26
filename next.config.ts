@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 
 const nextConfig: NextConfig = {
+  output: 'export',
   reactStrictMode: true,
   /*
    * Workers 에는 Next 의 이미지 최적화 서버가 없다.

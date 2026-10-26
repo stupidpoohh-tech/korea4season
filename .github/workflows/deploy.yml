@@ -30,9 +30,12 @@ jobs:
 
       - name: 설정 점검
         run: |
-          if grep -q 'REPLACE_WITH_KV_NAMESPACE_ID' wrangler.jsonc; then
-            echo "::error::wrangler.jsonc 의 KV 네임스페이스 id 가 아직 채워지지 않았습니다."
-            echo "Cloudflare 대시보드에서 KV 네임스페이스를 만든 뒤 id 를 넣어야 합니다."
+          # 이 앱은 Worker 없이 정적 파일만 올린다. main 이 되살아나 있으면
+          # 화면 요청마다 Worker 가 깨어나 Workers Free 한도(요청당 CPU 10ms)를
+          # 넘기므로, 의도한 변경인지 사람이 보게 여기서 멈춘다.
+          if grep -q '"main"' wrangler.jsonc; then
+            echo "::error::wrangler.jsonc 에 main 이 있습니다 — 정적 전용 배포가 아닙니다."
+            echo "의도한 것이라면 이 점검을 함께 고쳐 주세요."
             exit 1
           fi
 

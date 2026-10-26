@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit",
     "map:generate": "node scripts/generate-base-map.mjs",
     "map:coastline": "node scripts/extract-coastline.mjs",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-build": "opennextjs-cloudflare build",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "sprites:build": "python3 scripts/build-species-sprites.py"
+    "preview": "next build && wrangler dev",
+    "deploy": "next build && wrangler deploy",
+    "sprites:build": "python3 scripts/build-species-sprites.py",
+    "serve:static": "node scripts/serve-static.mjs out 4000",
+    "bench": "tsc -p tsconfig.bench.json && node --require ./bench/alias.cjs .bench-out/bench/pipeline.js"
   },
   "dependencies": {
     "motion": "^13.1.1",

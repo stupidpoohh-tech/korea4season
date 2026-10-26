@@ -67,9 +67,9 @@ function subscribeFlag(listener: () => void): () => void {
 }
 
 interface Props {
-  /** 이 HTML 을 서버가 그린 시각 (ISO). 미리 구운 페이지면 빌드 시각이 남는다. */
+  /** 이 HTML 을 구운 시각 (ISO). 이제 모든 화면이 빌드 때 구워지므로 빌드 시각이다. */
   serverRenderedAt: string;
-  /** 서버가 본 '한국의 오늘' */
+  /** HTML 을 구운 날의 '한국의 오늘'. 화면이 쓰는 날짜가 아니라 HTML 의 나이를 재는 기준이다. */
   serverToday: string;
   commit: string;
   buildAt: string;
@@ -99,10 +99,16 @@ export function DebugPanel({ serverRenderedAt, serverToday, commit, buildAt }: P
       `주소      ${window.location.pathname}${window.location.search}`,
       `배포      ${commit} · 빌드 ${buildAt}`,
       '',
-      `서버 렌더 ${serverRenderedAt}  (이 HTML 의 나이 ${ageMin}분)`,
-      `서버 오늘 ${serverToday}`,
+      /*
+       * 이제 모든 화면이 미리 구워진 정적 파일이고, 화면이 쓰는 '오늘' 은
+       * 브라우저가 정한다. 그래서 아래 두 날짜가 다른 것은 정상이다 —
+       * HTML 이 구워진 날과 지금 보고 있는 날이 다를 뿐이다.
+       * 예전처럼 '불일치' 를 오류로 적으면 늘 거짓 경보가 난다.
+       */
+      `HTML 구움 ${serverRenderedAt}  (나이 ${ageMin}분)`,
+      `구운 날   ${serverToday}`,
       `브라우저  ${browserToday}  (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
-      `날짜 판정 ${serverToday === browserToday ? '일치' : '불일치 — 미리 구워진 HTML'}`,
+      `화면 날짜 ${selectedDate}  (브라우저가 정한다 — 구운 날과 달라도 정상)`,
       '',
       `화면      ${window.innerWidth}x${window.innerHeight} @${window.devicePixelRatio}x`,
       `가로 넘침 ${doc.scrollWidth - doc.clientWidth}px`,

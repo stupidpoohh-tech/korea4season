@@ -1,18 +1,21 @@
+/*
+ * 지금 배포 경로에서 쓰이지 않는다.
+ *
+ * 이 앱은 정적 내보내기(next.config.ts 의 output: 'export')로 바뀌었고,
+ * wrangler 는 out/ 을 정적 파일로만 올린다 — Worker 가 없다.
+ * 이 파일은 SSR 로 되돌릴 때를 위해 남겨 둔다.
+ *
+ * 되돌리는 순서:
+ *   1. next.config.ts 에서 output: 'export' 제거
+ *   2. wrangler.jsonc 에 main 과 kv_namespaces 복구
+ *   3. package.json 의 deploy 를 opennextjs-cloudflare 로 복구
+ *
+ * 되돌리면 화면 요청마다 Worker 가 깨어나므로 Workers Free(요청당 CPU 10ms)
+ * 로는 운영할 수 없다. 그때는 유료 플랜이 필요하다.
+ */
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 import kvIncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cache/kv-incremental-cache';
 
-/**
- * Cloudflare Workers 배포 설정.
- *
- * 이 앱이 서버에서 하는 일은 사실상 하나다 — "오늘" 을 최신으로 유지하는 것.
- * 모든 라우트가 `revalidate = 900` 이고 revalidateTag/revalidatePath 는 쓰지 않는다.
- *
- *  - incrementalCache: 재검증된 페이지를 KV 에 쓴다.
- *    이게 없으면 빌드 시점의 "오늘" 이 그대로 굳는다.
- *  - queue: "direct" — 재검증을 요청 안에서 바로 처리한다.
- *    태그 기반 on-demand 재검증이 없으므로 Durable Object 큐가 필요 없다.
- *  - tagCache: 태그를 쓰지 않으므로 두지 않는다 (기본 dummy).
- */
 export default defineCloudflareConfig({
   incrementalCache: kvIncrementalCache,
   queue: 'direct',

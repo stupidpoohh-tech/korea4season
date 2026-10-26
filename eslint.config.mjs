@@ -8,6 +8,10 @@ const eslintConfig = [
       '.next/**',
       // 테스트 전용 컴파일 결과 (npm test 가 만든다)
       '.test-out/**',
+      // 측정 전용 컴파일 결과 (npm run bench 가 만든다)
+      '.bench-out/**',
+      // 정적 내보내기 산출물 (next build 가 만든다)
+      'out/**',
       '.open-next/**',
       '.wrangler/**',
       'node_modules/**',
@@ -25,7 +29,7 @@ const eslintConfig = [
   },
   {
     // node --require 로 먼저 실려야 하는 파일이라 CommonJS 여야 한다
-    files: ['tests/**/*.cjs'],
+    files: ['tests/**/*.cjs', 'bench/**/*.cjs'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 ];
