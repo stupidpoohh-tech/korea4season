@@ -37,7 +37,7 @@ bench('지도 /map  buildMapLayout(바다)', 30, () => {
 });
 bench('지도 /map  buildMapLayout(산)', 30, () => {
   const terrain = buildTerrainNow(date);
-  buildMountainNow(date, terrain);
+  buildMountainNow(date, terrain, 'MAPLE');
   buildMapLayout({ date, layer: 'mountain', mode: 'zone', mountainPhase: 'foliage' });
 });
 bench('오늘 /home  헤드라인+추천+지도미리보기', 20, () => {
