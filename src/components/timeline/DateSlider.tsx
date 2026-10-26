@@ -13,6 +13,14 @@ import { useTimeStore } from '@/store/time-store';
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
+/** 슬라이더 위에 찍는 날짜 표식 */
+export interface TimelineEvent {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 그 날짜에 걸린 지점 수 — 많은 날이 진하게 보인다 */
+  count: number;
+}
+
 /**
  * 월 선택기가 아니라 '일 단위' 슬라이더다. (요구사항 #6)
  * range input 을 쓰므로 키보드 조작과 스크린리더 지원을 그대로 얻는다.
@@ -29,7 +37,20 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
  * 그때마다 지도 전체를 다시 만들면 렌더러가 버티지 못한다
  * (iOS 에서 '이 페이지를 불러올 수 없음').
  */
-export function DateSlider({ date }: { date: DateKey }) {
+export function DateSlider({
+  date,
+  events = [],
+}: {
+  date: DateKey;
+  /**
+   * 그 해에 무슨 날이 있는지 트랙 아래에 찍는다.
+   *
+   * 단풍에서는 공식 절정 예측일이다 — 손잡이를 어디로 옮기면 무언가
+   * 일어나는지가 슬라이더만 보고도 읽힌다. 지어낸 구간이 아니라
+   * 공식 자료에 적힌 날짜 그대로다.
+   */
+  events?: TimelineEvent[];
+}) {
   const setDayOfYear = useTimeStore((s) => s.setDayOfYear);
   const setDate = useTimeStore((s) => s.setDate);
   const setScrubbing = useTimeStore((s) => s.setScrubbing);
@@ -86,6 +107,19 @@ export function DateSlider({ date }: { date: DateKey }) {
     [],
   );
 
+  /* 같은 해의 날짜만 찍는다 — 다른 해의 날은 이 트랙에 자리가 없다 */
+  const eventTicks = useMemo(() => {
+    const maxCount = events.reduce((m, e) => Math.max(m, e.count), 0);
+    return events
+      .filter((e) => Number(e.date.slice(0, 4)) === year)
+      .map((e) => ({
+        key: e.date,
+        count: e.count,
+        percent: ((dayOfYear(e.date as DateKey) - 1) / (total - 1)) * 100,
+        opacity: maxCount > 0 ? 0.45 + (e.count / maxCount) * 0.55 : 0.8,
+      }));
+  }, [events, year, total]);
+
   const monthTicks = useMemo(
     () =>
       MONTHS.map((month) => ({
@@ -128,6 +162,22 @@ export function DateSlider({ date }: { date: DateKey }) {
           onBlur={endScrub}
         />
       </div>
+
+      {eventTicks.length > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none relative mt-[1px] h-[5px]"
+          title="공식 절정 예측일"
+        >
+          {eventTicks.map((tick) => (
+            <span
+              key={tick.key}
+              className="absolute top-0 h-[5px] w-[2px] -translate-x-1/2 rounded-full bg-[#b8532a]"
+              style={{ left: `${tick.percent}%`, opacity: tick.opacity }}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="relative mt-1 h-4 select-none">
         {monthTicks.map(({ month, percent }) => (

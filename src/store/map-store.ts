@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import type { MapPosition } from '@/domain/projection';
 import type { NatureCategory } from '@/domain/types';
 import type { MapLayerId } from '@/domain/nature-categories';
-import type { FoliageState } from '@/services/foliage-service';
+import { FOLIAGE_TREE_GROUPS, type FoliageTreeGroup } from '@/domain/official-foliage-forecast';
 import type { MapMode, SeasonFilter } from '@/services/map-service';
 
 export interface Viewport {
@@ -36,8 +36,10 @@ interface MapState {
    * 달리 조건이 아니라 대상 자체를 고르는 축이라 따로 둔다.
    */
   focusedSpecies: { slug: string; name: string } | null;
-  /** 단풍 상태 필터. 'all' 이면 물드는 중인 곳 전부. */
-  foliageState: FoliageState | 'all';
+  /** 단풍 화면에서 보는 수종. 공식 예측지도가 수종마다 따로 나온다. */
+  treeGroup: FoliageTreeGroup;
+  /** 공식 예측 지점을 지도에 점으로 보일 것인가 (기본 꺼짐) */
+  showForecastPoints: boolean;
   /** 꽃 종류 필터 (slug). 'all' 이면 지금 피어 있는 곳 전부. */
   flowerSpecies: string;
   /** 어종 중심 / 권역 중심 */
@@ -51,7 +53,8 @@ interface MapState {
   toggleLegalOnly: () => void;
   /** 어종 하나만 남긴다. null 이면 해제 */
   focusSpecies: (species: { slug: string; name: string } | null) => void;
-  setFoliageState: (state: FoliageState | 'all') => void;
+  setTreeGroup: (group: FoliageTreeGroup) => void;
+  toggleForecastPoints: () => void;
   setFlowerSpecies: (slug: string) => void;
   /** 자연 카테고리를 바꾼다. 앞 카테고리의 선택과 필터는 전부 내려놓는다. */
   setLayer: (layer: MapLayerId) => void;
@@ -98,15 +101,24 @@ export function clampViewport({ scale, x, y }: Viewport): Viewport {
 }
 
 export const useMapStore = create<MapState>((set) => ({
-  layer: 'marine',
+  /*
+   * 첫 화면은 산이다.
+   *
+   * 이 서비스가 먼저 말하려는 것은 '지금 대한민국 자연이 이렇게 움직이고
+   * 있구나' 이고, 그것이 가장 잘 보이는 것이 계절이 지도를 칠하는 산이다.
+   * 바다는 sprite 의 개수가 바뀌지만 산은 지도 자체가 바뀐다.
+   */
+  layer: 'mountain',
   selectedCategories: [],
   seasonFilter: 'all',
   startingOnly: false,
   legalOnly: false,
   focusedSpecies: null,
-  foliageState: 'all',
+  treeGroup: FOLIAGE_TREE_GROUPS[0],
+  showForecastPoints: false,
   flowerSpecies: 'all',
-  mode: 'species',
+  /* 산의 기본 보기는 지역별이다 — setLayer 의 규칙과 같은 값이어야 한다 */
+  mode: 'zone',
   selectedOccurrenceId: null,
   openZoneSlug: null,
   viewport: DEFAULT_VIEWPORT,
@@ -118,7 +130,8 @@ export const useMapStore = create<MapState>((set) => ({
     set((state) => ({ legalOnly: !state.legalOnly, selectedOccurrenceId: null })),
   focusSpecies: (species) => set({ focusedSpecies: species, selectedOccurrenceId: null }),
 
-  setFoliageState: (state) => set({ foliageState: state, selectedOccurrenceId: null }),
+  setTreeGroup: (group) => set({ treeGroup: group, selectedOccurrenceId: null }),
+  toggleForecastPoints: () => set((state) => ({ showForecastPoints: !state.showForecastPoints })),
   setFlowerSpecies: (slug) => set({ flowerSpecies: slug, selectedOccurrenceId: null }),
 
   /*
@@ -140,7 +153,6 @@ export const useMapStore = create<MapState>((set) => ({
       startingOnly: false,
       legalOnly: false,
       focusedSpecies: null,
-      foliageState: 'all',
       flowerSpecies: 'all',
       viewport: DEFAULT_VIEWPORT,
     }),
@@ -151,7 +163,6 @@ export const useMapStore = create<MapState>((set) => ({
       startingOnly: false,
       legalOnly: false,
       focusedSpecies: null,
-      foliageState: 'all',
       flowerSpecies: 'all',
       selectedOccurrenceId: null,
     }),
@@ -172,7 +183,6 @@ export const useMapStore = create<MapState>((set) => ({
       startingOnly: false,
       focusedSpecies: null,
       /* 지역별 보기에는 걸 곳이 없다 — 남겨 두면 칩만 떠 있고 지도는 그대로다 */
-      foliageState: 'all',
       flowerSpecies: 'all',
     }),
   setOpenZone: (slug) => set({ openZoneSlug: slug }),

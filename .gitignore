@@ -17,3 +17,6 @@ public/map/__check.svg
 cloudflare-env.d.ts
 .test-out/
 .bench-out/
+
+# 검증 하네스가 찍은 화면
+verify-shots/

@@ -18,14 +18,13 @@ export function useActiveFilterCount(): number {
   const legalOnly = useMapStore((s) => s.legalOnly);
   const focusedSpecies = useMapStore((s) => s.focusedSpecies);
   const layer = useMapStore((s) => s.layer);
-  const foliageState = useMapStore((s) => s.foliageState);
   const flowerSpecies = useMapStore((s) => s.flowerSpecies);
 
   // 철새 Prototype 에는 아직 거를 축이 없다 (필터 트리거 자체를 그리지 않는다)
   if (layer === 'bird') return 0;
   // 산은 계절이 정하는 축(단풍 상태 · 꽃 종류)만 거른다
   if (layer === 'mountain') {
-    return (foliageState === 'all' ? 0 : 1) + (flowerSpecies === 'all' ? 0 : 1);
+    return flowerSpecies === 'all' ? 0 : 1;
   }
   // 권역 모드에는 시즌 축 필터가 없다 (map-service 의 zoneSprites 주석 참고)
   if (mode === 'zone') return legalOnly ? 1 : 0;

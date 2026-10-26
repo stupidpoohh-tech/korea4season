@@ -6,12 +6,6 @@ import type { NatureCategory, NatureEntity, ResolvedOccurrence } from '@/domain/
 import { SEASON_STRENGTH_ORDER, type SeaRegion, type SeasonState } from '@/domain/marine';
 import { isLegallyBlocked, type LegalStatusCode } from '@/domain/regulation';
 import { locationPosition, resolveAll } from './nature-service';
-import {
-  buildFoliageSpots,
-  isColoring,
-  type FoliageSpot,
-  type FoliageState,
-} from './foliage-service';
 import { buildFlowerSpots, isBlooming, type FlowerSpot } from './flower-service';
 import { buildBirdNow, type BirdPresence } from './bird-service';
 import type { MapLayerId } from '@/domain/nature-categories';
@@ -65,7 +59,6 @@ export type MapSubject =
   | { kind: 'nature'; resolved: ResolvedOccurrence }
   | { kind: 'marine'; item: MarineMapItem }
   | { kind: 'zone'; marker: ZoneMarker }
-  | { kind: 'foliage'; spot: FoliageSpot }
   | { kind: 'flower'; spot: FlowerSpot }
   | { kind: 'bird'; presence: BirdPresence };
 
@@ -133,8 +126,6 @@ export interface MapQuery {
   speciesSlug?: string;
   /** 어떤 자연을 볼 것인가. 카테고리마다 지도에 올리는 단위가 다르다. */
   layer?: MapLayerId;
-  /** 단풍 상태 필터. 'all' 이면 물드는 중인 곳 전부. */
-  foliageState?: FoliageState | 'all';
   /** 꽃 종류 필터 (slug). 'all' 이면 지금 피어 있는 곳 전부. */
   flowerSpecies?: string;
   /**
@@ -328,8 +319,6 @@ function bucketOf(sprite: MapSprite): string {
       return sprite.subject.item.seaRegion;
     case 'zone':
       return sprite.subject.marker.zone.seaRegion;
-    case 'foliage':
-      return `land:${sprite.subject.spot.location.region}`;
     default:
       return `land:${sprite.placeLabel}`;
   }
@@ -422,7 +411,7 @@ function natureSprites(query: MapQuery): MapSprite[] {
   const out: MapSprite[] = [];
 
   for (const item of resolveAll({ date: query.date })) {
-    // 꽃과 단풍은 '지금 산' 이 명소 단위로 따로 그린다 (flowerSprites · foliageSprites)
+    // 꽃은 '지금 산' 이 따로 그리고, 단풍은 지형의 색으로만 나타난다
     if (
       item.entity.category === 'fishing' ||
       item.entity.category === 'foliage' ||
@@ -500,52 +489,6 @@ function zoneSprites(query: MapQuery): MapSprite[] {
 }
 
 /**
- * 단풍 명소 하나 = sprite 하나.
- *
- * 바다는 어종 × 해역이 단위지만 단풍은 산이 단위다 —
- * 사용자가 묻는 것은 "설악산이 지금 어떤가" 이지 "설악산의 단풍나무" 가 아니다.
- * 아직 물들지 않았거나 이미 끝난 곳은 지도에 올리지 않는다.
- * (산 색은 sprite 가 아니라 FoliageOverlay 가 칠한다)
- */
-function foliageSprites(query: MapQuery): MapSprite[] {
-  const filter = query.foliageState ?? 'all';
-
-  /*
-   * 지역별 보기에서는 지도에 그림을 하나도 놓지 않는다.
-   *
-   * 단풍에서 일어나는 일은 산과 숲의 색이 바뀌는 것이지 명소가 늘어나는 것이
-   * 아니다. 큰 단풍잎을 12개 뿌려 두면 사용자는 색의 위치가 아니라
-   * 잎의 개수를 읽는다. 대표 명소를 짚어 보고 싶을 때만 명소별로 바꾼다.
-   */
-  if ((query.mode ?? 'zone') === 'zone') return [];
-
-  return buildFoliageSpots(query.date)
-    .filter((spot) => isColoring(spot.state))
-    .filter((spot) => filter === 'all' || spot.state === filter)
-    .map((spot) => {
-      const prominence = spot.state === 'peak' ? 1 : spot.state === 'good' ? 0.86 : 0.72;
-      return {
-        key: `foliage:${spot.location.id}`,
-        selectionId: `foliage:${spot.location.slug}`,
-        entity: spot.entity,
-        name: spot.location.name,
-        placeLabel: spot.location.region,
-        position: spot.position,
-        basePosition: spot.position,
-        prominence,
-        seasonState: null,
-        starting: spot.state === 'starting',
-        restricted: false,
-        legalStatus: 'open',
-        accent: spot.state === 'peak' ? ACCENT.peak : ACCENT.nature,
-        // 지형이 주인공이므로 명소 표시는 작게. 고른 것만 커진다.
-        compact: true,
-        subject: { kind: 'foliage', spot },
-      } satisfies MapSprite;
-    });
-}
-
-/**
  * 꽃 명소.
  *
  * 단풍과 같은 자리(명소별 보기)에 같은 크기로 놓는다. 지형에서 일어나는 일이
@@ -555,7 +498,7 @@ function foliageSprites(query: MapQuery): MapSprite[] {
 function flowerSprites(query: MapQuery): MapSprite[] {
   const filter = query.flowerSpecies ?? 'all';
 
-  // 지역별 보기에서는 지도에 그림을 하나도 놓지 않는다 (foliageSprites 주석 참고)
+  // 지역별 보기에서는 지도에 그림을 하나도 놓지 않는다 — 지형의 색이 주인공이다
   if ((query.mode ?? 'zone') === 'zone') return [];
 
   return buildFlowerSpots(query.date)
@@ -602,11 +545,16 @@ export function buildMapLayout(query: MapQuery): MapLayout {
 
   const candidates =
     query.layer === 'mountain'
-      ? query.mountainPhase === 'flower'
+      ? /*
+         * 단풍에서는 지도에 그림을 하나도 놓지 않는다.
+         *
+         * 일어나는 일은 산과 숲의 색이 공식 절정 예측일에 맞춰 바뀌는 것이지
+         * 명소가 늘어나는 것이 아니다. 공식 지점을 보고 싶으면
+         * '공식 예측 지점 보기' 가 따로 얹는다.
+         */
+        query.mountainPhase === 'flower'
         ? flowerSprites({ ...query, mode })
-        : query.mountainPhase === 'foliage'
-          ? foliageSprites({ ...query, mode })
-          : []
+        : []
       : mode === 'zone'
         ? zoneSprites(query)
         : [...marineSprites(query), ...natureSprites(query)];

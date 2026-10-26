@@ -131,6 +131,29 @@
   animation: ripple-out 2.8s ease-out infinite;
 }
 
+/*
+ * 눈.
+ *
+ * 움직이는 것은 transform 하나뿐이다 — 합성기만 일하고 화면을 다시 그리지
+ * 않는다. 내려가는 거리는 무늬 반복 간격의 정수배(--snow-fall)라
+ * 한 바퀴가 끝나는 자리와 시작하는 자리가 같은 그림이다.
+ */
+.snowfall {
+  animation-name: snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes snow-fall {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, var(--snow-fall), 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sprite-float {
     animation: none;
@@ -139,6 +162,11 @@
   /* 멈춘 링은 남겨 두면 과녁처럼 보이므로 아예 감춘다 */
   .sprite-ripple {
     display: none;
+  }
+
+  /* 눈은 멈춰 있어도 '내린 눈' 으로 읽히므로 지우지 않고 세우기만 한다 */
+  .snowfall {
+    animation: none;
   }
 
   *,

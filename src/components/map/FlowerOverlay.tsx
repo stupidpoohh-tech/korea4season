@@ -2,107 +2,158 @@
 
 import { useMemo } from 'react';
 import type { FlowerRegion } from '@/services/flower-service';
-import { VIEW, buildTerrainShapes, circlePath } from './terrain-shapes';
+import { flowerRegionAnchors } from '@/services/flower-service';
+import { blossomSpots, clustersByRegion, leafSpots, type FlowerCluster } from './flower-clusters';
+import {
+  BLOSSOM_KIND,
+  blossomCore,
+  blossomPath,
+  leafPath,
+  type BlossomKind,
+} from './flower-shapes';
+import { VIEW } from './terrain-shapes';
 
 /* ────────────────────────────────────────────────────────────
  * 꽃이 핀다.
  *
  * 단풍은 산 자체의 색이 바뀌지만, 꽃은 그 위에 **무리로 얹힌다.**
- * 그래서 지형을 다시 칠하지 않고, 그 권역의 숲과 산자락에 꽃송이를 흩는다.
  *
- * 큰 꽃 스티커를 명소마다 하나씩 찍지 않는다. 그렇게 하면 사용자가
- * 개화의 위치가 아니라 아이콘의 개수를 세게 된다. 대신 피는 정도만큼
- * 무리가 촘촘해지고, 그 촘촘한 자리가 남에서 북으로 올라간다.
+ * 세 가지가 이 레이어의 규칙이다.
  *
- * 종마다 색이 다르므로 3월 말에는 노랑과 분홍이 함께 보이고,
- * 4월이면 연분홍만 남는다 — 계절이 꽃을 바꿔 준다.
+ * 1. 자리는 고정이다.
+ *    군집은 terrain.json 에서 한 번 뽑고, 군집 안에서 종이 앉는 자리도
+ *    (군집 id + 종 slug)에서 뽑는다 — flower-clusters.ts 가 그 일을 한다.
+ *    날짜 · 재생 · 다른 종의 유무가 자리를 바꾸지 않는다.
+ *
+ * 2. 종은 생김새로 갈린다.
+ *    색만 다르면 지도에서는 '무슨 색 점' 으로 읽힌다. 벚꽃은 끝이 갈라진
+ *    다섯 장, 진달래는 뾰족한 다섯 장, 개나리는 갸름한 네 장이다.
+ *
+ * 3. 날짜가 바꾸는 것은 셋이다.
+ *    퍼짐(coverage)  그 권역의 몇 군집까지 갔는가
+ *    풍성함(density) 한 자리에 몇 송이가 얼마나 크게
+ *    꽃과 잎의 비율   끝물에는 같은 자리에서 잎이 드러난다
  * ──────────────────────────────────────────────────────────── */
 
-/** 한 자리에 얹는 꽃송이 수의 상한. 절정에서도 이 이상은 찍지 않는다. */
-const MAX_PETALS = 3;
+/** 한 자리에 놓는 꽃송이 수의 상한. 더 늘리면 서로 겹쳐 종류를 알아볼 수 없다. */
+export const MAX_BLOSSOMS = 2;
 
-/** 꽃송이 크기 (viewBox 단위). 나무 한 그루가 7~11 이다. */
-const PETAL_R = 4.6;
+/** 절정의 꽃 반지름 (viewBox px). 나무 한 그루가 7~11 이다. */
+export const BLOSSOM_R = 13;
+
+/** 시작 무렵의 꽃은 이만큼으로 작다 */
+export const MIN_SCALE = 0.3;
+
+/*
+ * 잎은 지도의 초록보다 한 톤 짙게 두고 흰 테두리를 준다.
+ * 배경과 같은 초록이면 '잎이 났다' 가 아니라 '꽃이 지워졌다' 로만 보인다.
+ */
+const LEAF_COLOR = '#3f8f3c';
+
+interface Layer {
+  slug: string;
+  kind: BlossomKind;
+  petal: string;
+  center: string;
+  flowers: string[];
+  cores: string[];
+  leaves: string[];
+}
+
+let assignment: Map<string, FlowerCluster[]> | null = null;
+function clustersOf(regionId: string): FlowerCluster[] {
+  assignment ??= clustersByRegion(flowerRegionAnchors());
+  return assignment.get(regionId) ?? [];
+}
 
 export function FlowerOverlay({
   regions,
   fast = false,
 }: {
   regions: FlowerRegion[];
-  /** 슬라이더를 끄는 중 · 1년 재생 중 — 전환을 끈다 */
+  /** 슬라이더를 끄는 중 · 1년 재생 중 — 전환만 끈다. 그림은 달라지지 않는다. */
   fast?: boolean;
 }) {
-  const key = regions.map((r) => r.id).join('|');
-  const shapes = useMemo(
-    () => buildTerrainShapes(regions.map((r) => r.anchor)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [key],
-  );
-
   /*
-   * 밀도는 단계로 끊는다. 하루마다 꽃송이 수가 한 개씩 늘고 주는 것은
-   * 눈에 보이지 않으면서 매 프레임 path 를 새로 만들게 한다.
-   * 끄는 동안에는 더 굵게 끊는다 — 1년을 훑는 사이 path 를 다시 만드는
-   * 횟수가 그만큼 줄어든다.
+   * 값을 단계로 끊는다. 하루마다 꽃 하나가 늘고 주는 것은 눈에 보이지 않으면서
+   * 매 프레임 path 를 새로 만들게 한다.
+   *
+   * 이 단계는 재생 여부와 무관하다. 끊는 폭이 달라지면 같은 날짜가
+   * 슬라이더를 끌 때와 손을 뗐을 때 서로 다른 그림이 된다.
    */
-  const steps = fast ? 4 : 10;
-  const densityKey = regions
-    .map((r) => r.blooms.map((b) => `${b.slug}:${Math.round(b.density * steps)}`).join('+'))
+  const q = (v: number) => Math.round(v * 12) / 12;
+
+  const key = regions
+    .map(
+      (r) => `${r.id}:${r.blooms.map((b) => `${b.slug}${q(b.density)}/${q(b.coverage)}`).join('+')}`,
+    )
     .join('|');
 
-  const clusters = useMemo(() => {
-    const bySpecies = new Map<
-      string,
-      { petal: string; center: string; d: string[]; core: string[] }
-    >();
+  const layers = useMemo(() => {
+    const bySpecies = new Map<string, Layer>();
 
-    shapes.forEach((shape) => {
-      const region = regions[shape.regionIndex];
-      if (!region) return;
+    for (const region of regions) {
+      const clusters = clustersOf(region.id);
+      if (clusters.length === 0) continue;
 
-      /*
-       * 종마다 각도를 어긋나게 두어 같은 자리에 겹쳐 찍히지 않게 한다.
-       * 자리와 순번에서 뽑으므로 날짜가 바뀌어도 꽃이 제자리에서 흔들리지 않는다.
-       */
-      region.blooms.forEach((bloom, speciesIndex) => {
-        const count = Math.round(bloom.density * MAX_PETALS);
-        if (count <= 0) return;
+      for (const bloom of region.blooms) {
+        const kind = BLOSSOM_KIND[bloom.slug];
+        if (!kind) continue;
 
-        const bucket = bySpecies.get(bloom.slug) ?? {
+        const density = q(bloom.density);
+        const coverage = q(bloom.coverage);
+        if (coverage <= 0) continue;
+
+        /*
+         * 몇 군집까지 갈 것인가. 앞에서부터 채우므로 퍼짐이 늘면 뒤가 켜지고
+         * 줄면 뒤부터 꺼진다 — 이미 켜진 자리는 움직이지 않는다.
+         */
+        const reach = Math.max(1, Math.round(coverage * clusters.length));
+
+        const layer = bySpecies.get(bloom.slug) ?? {
+          slug: bloom.slug,
+          kind,
           petal: bloom.petal,
           center: bloom.center,
-          d: [],
-          core: [],
+          flowers: [],
+          cores: [],
+          leaves: [],
         };
 
-        shape.anchors.forEach((anchor, anchorIndex) => {
-          for (let k = 0; k < count; k += 1) {
-            const seed = anchorIndex * 3 + k + speciesIndex * 7;
-            const angle = seed * 2.399963; // 황금각 — 고르게 흩어진다
-            const radius = anchor.r * (0.35 + ((seed % 5) / 5) * 0.6);
-            const x = anchor.x + Math.cos(angle) * radius;
-            const y = anchor.y + Math.sin(angle) * radius * 0.7;
-            const r = PETAL_R * (0.8 + ((seed % 3) / 3) * 0.45);
-            bucket.d.push(circlePath(x, y, r));
-            /* 꽃술 — 나무 윗면과 같은 방식으로 살짝 어긋나게 얹는다 */
-            bucket.core.push(circlePath(x - r * 0.22, y - r * 0.24, r * 0.44));
+        for (let i = 0; i < reach; i += 1) {
+          const cluster = clusters[i]!;
+
+          for (const p of blossomSpots(
+            cluster,
+            bloom.slug,
+            density,
+            BLOSSOM_R,
+            MAX_BLOSSOMS,
+            MIN_SCALE,
+          )) {
+            layer.flowers.push(blossomPath(kind, p.x, p.y, p.r, p.rot));
+            // 꽃술은 꽃이 작아지면 화면에서 한 픽셀도 되지 않는다 — 그리지 않는다
+            if (p.r >= 7) layer.cores.push(blossomCore(kind, p.x, p.y, p.r));
           }
-        });
 
-        bySpecies.set(bloom.slug, bucket);
-      });
-    });
+          /*
+           * 꽃이 줄어든 만큼 잎이 난다. 지우기만 하면 '없어졌다' 이지
+           * '잎이 났다' 가 아니다 — 끝물의 산은 비어 있지 않다.
+           */
+          for (const p of leafSpots(cluster, bloom.slug, density, BLOSSOM_R)) {
+            layer.leaves.push(leafPath(p.x, p.y, p.r, p.rot));
+          }
+        }
 
-    return [...bySpecies.entries()].map(([slug, v]) => ({
-      slug,
-      ...v,
-      d: v.d.join(' '),
-      core: v.core.join(' '),
-    }));
+        bySpecies.set(bloom.slug, layer);
+      }
+    }
+
+    return [...bySpecies.values()];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shapes, densityKey]);
+  }, [key]);
 
-  if (clusters.length === 0) return null;
+  if (layers.length === 0) return null;
 
   return (
     <svg
@@ -110,18 +161,29 @@ export function FlowerOverlay({
       viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
       className="pointer-events-none absolute inset-0 h-full w-full"
     >
-      {clusters.map((c) => (
-        <g key={c.slug} style={{ transition: fast ? 'none' : 'opacity 320ms ease-out' }}>
-          {/*
-           * 바깥은 꽃잎, 가운데는 밝게 — 작아도 꽃송이로 읽히게 한다.
-           *
-           * 밝게 하는 데 mix-blend-mode 를 쓰지 않는다. 혼합 모드는 이 SVG 만
-           * 한 별도의 버퍼를 잡아 두고 합성하는데, 화면 전체를 덮는 레이어라
-           * 그 버퍼가 곧 화면 크기다. 대신 나무 윗면과 같은 방식으로
-           * 작은 밝은 원을 어긋나게 얹는다.
-           */}
-          <path d={c.d} fill={c.petal} opacity={0.92} />
-          <path d={c.core} fill={c.center} opacity={0.85} />
+      {/* 잎이 먼저다 — 꽃 뒤에 깔려야 꽃이 잎 위에 핀 것으로 보인다 */}
+      {layers.map((l) => (
+        <path
+          key={`${l.slug}-leaf`}
+          d={l.leaves.join(' ')}
+          fill={LEAF_COLOR}
+          stroke="#ffffff"
+          strokeWidth={0.8}
+          strokeLinejoin="round"
+          opacity={0.9}
+        />
+      ))}
+
+      {layers.map((l) => (
+        <g key={l.slug} style={{ transition: fast ? 'none' : 'opacity 320ms ease-out' }}>
+          <path
+            d={l.flowers.join(' ')}
+            fill={l.petal}
+            stroke="#ffffff"
+            strokeWidth={0.9}
+            strokeLinejoin="round"
+          />
+          <path d={l.cores.join(' ')} fill={l.center} />
         </g>
       ))}
     </svg>

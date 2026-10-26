@@ -15,6 +15,8 @@
     "preview": "next build && wrangler dev",
     "deploy": "next build && wrangler deploy",
     "sprites:build": "python3 scripts/build-species-sprites.py",
+    "verify": "node scripts/verify/run.mjs",
+    "verify:shot": "node scripts/verify/shot.mjs",
     "serve:static": "node scripts/serve-static.mjs out 4000",
     "bench": "tsc -p tsconfig.bench.json && node --require ./bench/alias.cjs .bench-out/bench/pipeline.js"
   },

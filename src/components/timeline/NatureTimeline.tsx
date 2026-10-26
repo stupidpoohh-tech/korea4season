@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { formatKoreanDate, todayKey, type DateKey } from '@/domain/date';
 import { seasonMeta } from '@/lib/season';
 import { useTimeStore } from '@/store/time-store';
-import { DateSlider } from './DateSlider';
+import { DateSlider, type TimelineEvent } from './DateSlider';
 import { PlaybackControl } from './PlaybackControl';
 import { usePlayback } from './use-playback';
 
@@ -17,6 +17,11 @@ interface Props {
    * 단풍은 어떤 상태가 몇 곳인지다. 무엇을 셀지는 호출자가 정한다.
    */
   caption: string;
+  /**
+   * 트랙 아래에 찍을 날짜들. 단풍에서는 공식 절정 예측일이다.
+   * 무엇을 찍을지는 화면이 정한다 — 타임라인은 날짜만 받는다.
+   */
+  events?: TimelineEvent[];
 }
 
 /**
@@ -26,10 +31,12 @@ interface Props {
  * 접힌 상태에도 날짜 · 슬라이더 · 오늘 · 재생은 남는다 — 여기까지가
  * "시간을 움직이면 지도가 바뀐다" 를 이해하는 데 필요한 최소한이다.
  */
-export function NatureTimeline({ date, caption }: Props) {
+export function NatureTimeline({ date, caption, events }: Props) {
   usePlayback();
 
   const [expanded, setExpanded] = useState(false);
+  const playbackRate = useTimeStore((s) => s.playbackRate);
+  const setPlaybackRate = useTimeStore((s) => s.setPlaybackRate);
   const shiftDays = useTimeStore((s) => s.shiftDays);
   const goToToday = useTimeStore((s) => s.goToToday);
   const isToday = date === todayKey();
@@ -88,7 +95,7 @@ export function NatureTimeline({ date, caption }: Props) {
         </button>
 
         <div className="min-w-0 flex-1">
-          <DateSlider date={date} />
+          <DateSlider date={date} events={events} />
         </div>
 
         <button
@@ -109,6 +116,13 @@ export function NatureTimeline({ date, caption }: Props) {
         >
           {expanded ? '▾' : '▴'}
         </button>
+      </div>
+      <div className={'mt-2 items-center gap-2 border-t border-[color:var(--color-line-soft)] pt-2 text-[11.5px] lg:flex ' + (expanded ? 'flex' : 'hidden')}>
+        <span className="text-[color:var(--color-muted)]">재생 속도</span>
+        <button type="button" aria-pressed={playbackRate === 1} onClick={() => setPlaybackRate(1)}
+          className={'min-h-8 rounded-md px-2 ' + (playbackRate === 1 ? 'bg-[color:var(--color-line-soft)] font-semibold' : '')}>기본 · 약 7초</button>
+        <button type="button" aria-pressed={playbackRate === 0.25} onClick={() => setPlaybackRate(0.25)}
+          className={'min-h-8 rounded-md px-2 ' + (playbackRate === 0.25 ? 'bg-[color:var(--color-line-soft)] font-semibold' : '')}>천천히 · 약 28초</button>
       </div>
     </section>
   );

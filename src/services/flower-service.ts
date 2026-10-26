@@ -6,7 +6,7 @@ import {
 } from '@/domain/flower-regions';
 import type { MapPosition } from '@/domain/projection';
 import type { Location, NatureEntity, OccurrenceStatus, ResolvedOccurrence } from '@/domain/types';
-import { locationPosition, resolveAll } from './nature-service';
+import { locationBySlug, locationPosition, resolveAll } from './nature-service';
 import { WAVE_AT_PEAK_END, WAVE_AT_PEAK_START, alreadyPassed, waveOf } from './season-wave';
 
 /* ────────────────────────────────────────────────────────────
@@ -71,6 +71,57 @@ export function bloomDensity(wave: number): number {
   if (wave < WAVE_AT_PEAK_START) return 0.25 + (0.75 * wave) / WAVE_AT_PEAK_START;
   if (wave <= WAVE_AT_PEAK_END) return 1;
   return Math.max(0, 1 - (wave - WAVE_AT_PEAK_END) / (0.97 - WAVE_AT_PEAK_END));
+}
+
+/* ────────────────────────────────────────────────────────────
+ * 엔진 6단계 → 화면 5단계.
+ *
+ * 날짜 계산 · 목록 · 추천은 예전대로 여섯 상태를 쓴다. 지도만 다섯으로 읽는다 —
+ * 'good' 과 'peak' 은 같은 그림이고 풍성함만 다르기 때문이다(밀도가 그것을 말한다).
+ *
+ *   pre      → NOT_STARTED   아직 아무것도 그리지 않는다
+ *   starting → STARTING      작은 꽃 · 낮은 밀도 · 잎이 더 많다
+ *   good     → PEAK          같은 그림, 덜 풍성
+ *   peak     → PEAK          가장 풍성 · 종이 전국 뷰에서 읽힌다
+ *   ending   → ENDING        같은 자리에서 꽃이 줄고 잎이 드러난다
+ *   ended    → ENDED         자리를 비운다
+ * ──────────────────────────────────────────────────────────── */
+
+export const FLOWER_VISUAL_STAGES = [
+  'NOT_STARTED',
+  'STARTING',
+  'PEAK',
+  'ENDING',
+  'ENDED',
+] as const;
+export type FlowerVisualStage = (typeof FLOWER_VISUAL_STAGES)[number];
+
+const VISUAL_STAGE: Record<FlowerState, FlowerVisualStage> = {
+  pre: 'NOT_STARTED',
+  starting: 'STARTING',
+  good: 'PEAK',
+  peak: 'PEAK',
+  ending: 'ENDING',
+  ended: 'ENDED',
+};
+
+export function flowerVisualStage(state: FlowerState): FlowerVisualStage {
+  return VISUAL_STAGE[state];
+}
+
+/**
+ * 이 종이 그 권역의 군집 가운데 몇 곳까지 퍼졌는가 (0~1).
+ *
+ * 밀도(bloomDensity)와 다른 축이다. 밀도는 '한 자리가 얼마나 풍성한가' 이고
+ * 이것은 '몇 자리에 퍼졌는가' 다. 끝물에 꽃이 줄어들 때 자리 수까지 함께
+ * 줄면 꽃이 사라지는 것으로 보인다 — 실제로는 같은 자리에서 잎으로 바뀐다.
+ * 그래서 퍼짐은 절정을 지나서도 유지하고 다 진 뒤에야 거둔다.
+ */
+export function bloomCoverage(wave: number): number {
+  if (wave <= 0 || wave >= 0.97) return 0;
+  if (wave < WAVE_AT_PEAK_START) return 0.3 + (0.7 * wave) / WAVE_AT_PEAK_START;
+  if (wave <= 0.92) return 1;
+  return Math.max(0, 1 - (wave - 0.92) / (0.97 - 0.92));
 }
 
 const STATE_ORDER: Record<FlowerState, number> = {
@@ -173,9 +224,12 @@ export interface RegionBloom {
   /** 꽃 slug (forsythia · azalea · king-cherry) */
   slug: string;
   name: string;
-  /** 얼마나 풍성한가 (0~1) — 꽃송이 무리의 밀도를 정한다 */
+  /** 얼마나 풍성한가 (0~1) — 한 자리에 놓이는 꽃의 크기와 수를 정한다 */
   density: number;
+  /** 그 권역의 군집 가운데 몇 곳까지 퍼졌는가 (0~1) */
+  coverage: number;
   state: FlowerState;
+  stage: FlowerVisualStage;
   petal: string;
   center: string;
 }
@@ -193,6 +247,34 @@ export interface FlowerRegion {
   spots: FlowerSpot[];
 }
 
+/**
+ * 권역이 지도의 어디인가.
+ *
+ * 그날 자료에 걸린 명소들의 평균을 쓰면 권역 자리가 날짜마다 조금씩 움직이고,
+ * 그 자리를 기준으로 군집을 나누는 지도 레이어에서는 꽃이 통째로 이동한다.
+ * 그래서 설정에 적힌 명소 전체로 한 번만 구하고 그대로 쓴다.
+ */
+let anchorCache: { id: string; anchor: MapPosition }[] | null = null;
+
+export function flowerRegionAnchors(): { id: string; anchor: MapPosition }[] {
+  anchorCache ??= FLOWER_REGIONS.map((config) => {
+    const points = config.locationSlugs
+      .map((slug) => locationBySlug(slug))
+      .filter((l): l is Location => l !== null)
+      .map(locationPosition);
+
+    const anchor =
+      points.length === 0
+        ? { x: 0.5, y: 0.5 }
+        : {
+            x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+            y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+          };
+    return { id: config.id, anchor };
+  });
+  return anchorCache;
+}
+
 export function groupFlowerRegions(spots: FlowerSpot[]): FlowerRegion[] {
   const byRegion = new Map<string, FlowerSpot[]>();
 
@@ -206,6 +288,9 @@ export function groupFlowerRegions(spots: FlowerSpot[]): FlowerRegion[] {
   }
 
   const regions: FlowerRegion[] = [];
+  const anchors = flowerRegionAnchors();
+  const anchorOf = (id: string) =>
+    anchors.find((a) => a.id === id)?.anchor ?? { x: 0.5, y: 0.5 };
 
   for (const config of FLOWER_REGIONS) {
     const group = byRegion.get(config.id);
@@ -231,10 +316,12 @@ export function groupFlowerRegions(spots: FlowerSpot[]): FlowerRegion[] {
         slug,
         name: v.name,
         density: bloomDensity(v.wave),
+        coverage: bloomCoverage(v.wave),
         state: flowerStateFromWave(v.wave),
+        stage: flowerVisualStage(flowerStateFromWave(v.wave)),
         ...flowerColor(slug),
       }))
-      .filter((b) => b.density > 0.02)
+      .filter((b) => b.coverage > 0.02)
       .sort((a, b) => b.density - a.density);
 
     /*
@@ -260,10 +347,7 @@ export function groupFlowerRegions(spots: FlowerSpot[]): FlowerRegion[] {
       id: config.id,
       label: config.label,
       shortLabel: config.shortLabel,
-      anchor: {
-        x: group.reduce((sum, s) => sum + s.position.x, 0) / group.length,
-        y: group.reduce((sum, s) => sum + s.position.y, 0) / group.length,
-      },
+      anchor: anchorOf(config.id),
       state,
       lead,
       blooms,

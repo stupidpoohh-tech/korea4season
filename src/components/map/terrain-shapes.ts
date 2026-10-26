@@ -4,10 +4,9 @@ import type { MapPosition } from '@/domain/projection';
 /* ────────────────────────────────────────────────────────────
  * base map 이 그린 산과 나무의 자리.
  *
- * 계절 레이어(단풍 · 꽃)는 지도를 다시 굽지 않고 **바로 그 형태 위에**
- * 같은 좌표로 덧그린다. 그 좌표를 여기서 한 번만 읽고,
- * 권역에 나눠 붙이는 일도 여기서 한다 — 단풍은 단풍 권역으로,
- * 꽃은 꽃 권역으로 나누되 나누는 방법은 같기 때문이다.
+ * 계절 레이어는 지도를 다시 굽지 않고 **바로 그 형태 위에** 같은 좌표로
+ * 덧그린다. 그 좌표를 여기서 한 번만 읽고, 공식 절정 예측 지점에 나눠 붙이는
+ * 일도 여기서 한다.
  *
  * 색이 같은 것들은 하나의 path 로 합친다.
  * 나무 399그루를 각각 <circle> 로 두면 DOM 이 1000개를 넘는다.
@@ -79,10 +78,16 @@ export const SNOW_D = MOUNTAINS.filter((m) => m.snow)
 
 export interface TerrainShapes {
   id: string;
-  /** 색을 가져올 권역 */
-  regionIndex: number;
-  /** 이 묶음이 며칠 앞서거나 뒤처지는가 */
-  shiftDays: number;
+  /**
+   * 색을 가져올 자리.
+   *
+   * 공식 절정 예측 지점의 번호다. -1 은 "가까운 공식 지점이 없다" 는 뜻이고,
+   * 그 지형은 계절색을 입지 않는다 — 자료가 없는 곳을 옆 지점의 날짜로
+   * 칠하면 공식 예측이 없는 자리에 공식처럼 보이는 색이 생긴다.
+   */
+  anchorIndex: number;
+  /** 이 묶음이 지도 세로의 어디쯤인가 (0 북 ~ 1 남). 배경 식생의 시차에 쓴다. */
+  northSouth: number;
   /** 숲 덩어리 */
   mass: string;
   /** 나무 몸통 */
@@ -93,31 +98,27 @@ export interface TerrainShapes {
   face: string;
   /** 산 그늘면 */
   faceDark: string;
-  /** 꽃 무리를 얹을 자리 (숲 중심 · 산자락) */
-  anchors: { x: number; y: number; r: number }[];
 }
 
 /**
- * 지형을 권역에 나눠 붙이고, 묶음마다 하나의 path 로 합친다.
+ * 지형을 공식 예측 지점에 나눠 붙이고, 묶음마다 하나의 path 로 합친다.
  *
- * 권역 경계를 부드럽게 섞지 않는다. 산과 나무는 이어진 면이 아니라
- * 떨어진 형태들이라 경계에 이음매가 생기지 않고,
- * 대신 산 하나가 정확히 한 색을 가져서 색의 위치가 또렷하게 읽힌다.
- *
- * microDays 는 한 권역 안에서 산마다 며칠씩 어긋나게 두는 값이다.
- * 전부 같은 날 같은 색이면 지역이 통째로 칠해진 것처럼 보인다.
- * 다만 권역 사이 간격보다 훨씬 작아야 흐름이 잡음에 묻히지 않는다.
+ * 가장 가까운 지점에 붙되 maxDistance 보다 멀면 어디에도 붙이지 않는다.
+ * 공식 지도에 점이 몇 개뿐인 수종(은행나무)에서 특히 중요하다 — 반경을 두지
+ * 않으면 강원의 산이 충청 지점의 날짜로 물든다.
  */
 export function buildTerrainShapes(
   anchorPositions: MapPosition[],
-  microDays: number[] = [0],
+  maxDistance = 0.3,
 ): TerrainShapes[] {
-  const anchors = anchorPositions.map((a) => ({ x: a.x * VIEW.width, y: a.y * VIEW.height }));
-  if (anchors.length === 0) return [];
+  const anchors = anchorPositions.map((a) => ({ x: a.x, y: a.y }));
 
-  const nearest = (x: number, y: number): number => {
-    let best = 0;
-    let bestD = Infinity;
+  /** 가장 가까운 지점. 반경 밖이면 -1. */
+  const nearest = (px: number, py: number): number => {
+    const x = px / VIEW.width;
+    const y = py / VIEW.height;
+    let best = -1;
+    let bestD = maxDistance * maxDistance;
     for (let i = 0; i < anchors.length; i += 1) {
       const d = (anchors[i]!.x - x) ** 2 + (anchors[i]!.y - y) ** 2;
       if (d < bestD) {
@@ -128,66 +129,72 @@ export function buildTerrainShapes(
     return best;
   };
 
-  /* 자리에서 뽑으므로 같은 산은 언제나 같은 편차를 갖는다 (재생 중에도 흔들리지 않는다) */
-  const micro = (x: number, y: number) => Math.abs(Math.round(x * 7 + y * 13)) % microDays.length;
+  const buckets = new Map<
+    number,
+    {
+      mass: string[];
+      tree: string[];
+      treeTop: string[];
+      face: string[];
+      faceDark: string[];
+      ySum: number;
+      n: number;
+    }
+  >();
 
-  const parts = anchors.flatMap((_, regionIndex) =>
-    microDays.map((shiftDays, bucket) => ({
-      key: `${regionIndex}:${bucket}`,
-      regionIndex,
-      shiftDays,
-      mass: [] as string[],
-      tree: [] as string[],
-      treeTop: [] as string[],
-      face: [] as string[],
-      faceDark: [] as string[],
-      anchors: [] as { x: number; y: number; r: number }[],
-    })),
-  );
-  const at = (regionIndex: number, bucket: number) => parts[regionIndex * microDays.length + bucket];
+  const bucket = (index: number) => {
+    let b = buckets.get(index);
+    if (!b) {
+      b = { mass: [], tree: [], treeTop: [], face: [], faceDark: [], ySum: 0, n: 0 };
+      buckets.set(index, b);
+    }
+    return b;
+  };
+
+  const add = (index: number, y: number) => {
+    const b = bucket(index);
+    b.ySum += y / VIEW.height;
+    b.n += 1;
+    return b;
+  };
 
   for (const m of MOUNTAINS) {
-    const bucket = at(nearest(m.x, m.y), micro(m.x, m.y));
-    if (!bucket) continue;
+    const b = add(nearest(m.x, m.y), m.y);
     const half = m.w / 2;
-    bucket.face.push(
+    b.face.push(
       `M ${n(m.x - half)} ${n(m.y)} L ${n(m.x)} ${n(m.y - m.h)} L ${n(m.x + half)} ${n(m.y)} Z`,
     );
-    bucket.faceDark.push(
+    b.faceDark.push(
       `M ${n(m.x)} ${n(m.y - m.h)} L ${n(m.x + half)} ${n(m.y)} L ${n(m.x)} ${n(m.y)} Z`,
     );
-    // 꽃은 산꼭대기가 아니라 산자락에 핀다
-    bucket.anchors.push({ x: m.x, y: m.y - m.h * 0.1, r: half * 0.9 });
   }
 
   /* 섬 나무도 같은 규칙으로 물든다 — 겨울에 섬만 초록으로 남지 않게 */
   for (const t of ISLAND_TREES) {
-    const bucket = at(nearest(t.x, t.y), micro(t.x, t.y));
-    if (!bucket) continue;
-    bucket.tree.push(circlePath(t.x, t.y, t.s));
-    bucket.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
+    const b = add(nearest(t.x, t.y), t.y);
+    b.tree.push(circlePath(t.x, t.y, t.s));
+    b.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
   }
 
   for (const g of GROVES) {
-    const bucket = at(nearest(g.x, g.y), micro(g.x, g.y));
-    if (!bucket) continue;
-    bucket.mass.push(g.mass);
-    bucket.anchors.push({ x: g.x, y: g.y, r: 16 });
+    const b = add(nearest(g.x, g.y), g.y);
+    b.mass.push(g.mass);
     for (const t of g.trees) {
-      bucket.tree.push(circlePath(t.x, t.y, t.s));
-      bucket.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
+      b.tree.push(circlePath(t.x, t.y, t.s));
+      b.treeTop.push(circlePath(t.x - t.s * 0.3, t.y - t.s * 0.32, t.s * 0.6));
     }
   }
 
-  return parts.map((p) => ({
-    id: p.key,
-    regionIndex: p.regionIndex,
-    shiftDays: p.shiftDays,
-    mass: p.mass.join(' '),
-    tree: p.tree.join(' '),
-    treeTop: p.treeTop.join(' '),
-    face: p.face.join(' '),
-    faceDark: p.faceDark.join(' '),
-    anchors: p.anchors,
-  }));
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([anchorIndex, b]) => ({
+      id: `a${anchorIndex}`,
+      anchorIndex,
+      northSouth: b.n > 0 ? b.ySum / b.n : 0.5,
+      mass: b.mass.join(' '),
+      tree: b.tree.join(' '),
+      treeTop: b.treeTop.join(' '),
+      face: b.face.join(' '),
+      faceDark: b.faceDark.join(' '),
+    }));
 }

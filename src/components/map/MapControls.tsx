@@ -18,7 +18,7 @@ export function MapControls() {
   const moved = viewport.scale !== 1 || viewport.x !== 0 || viewport.y !== 0;
 
   const btn =
-    'flex h-8 w-8 items-center justify-center rounded-full text-[15px] leading-none text-[color:var(--color-ink-soft)] transition-colors hover:bg-[color:var(--color-line-soft)] disabled:opacity-30 disabled:hover:bg-transparent';
+    'flex h-8 w-8 shrink-0 whitespace-nowrap items-center justify-center rounded-full text-[15px] leading-none text-[color:var(--color-ink-soft)] transition-colors hover:bg-[color:var(--color-line-soft)] disabled:opacity-30 disabled:hover:bg-transparent';
 
   return (
     /*
